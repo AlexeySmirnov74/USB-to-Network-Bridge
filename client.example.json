@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "server": "",
+  "server_id": null,
+  "discovery": true,
+  "discovery_port": 3241,
+  "poll_seconds": 3,
+  "retry_max_seconds": 30,
+  "devices": []
+}

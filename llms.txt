@@ -1,0 +1,27 @@
+# USB to Network Bridge
+
+> Open-source USB over IP (USB/IP) redirector for Windows 11 x64, implemented in Rust. A server shares physical USB devices over LAN/VPN and Windows clients import selected devices through signed upstream USB drivers.
+
+Project code is MIT-licensed. There is no project activation, trial timer or license-based device count. Native Rust and stock usbipd-win are selectable server backends sharing the same signed VBoxUSB capture driver. The Windows client uses signed USBIP-WIN2. Camera, Android phone/ADB and selected HID scenarios are documented; compatibility depends on hardware and drivers.
+
+## Start here
+
+- [English README](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/README.md): features, backend comparison, screenshots and quick start.
+- [Project FAQ](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/docs/project-overview.md): factual product description and common questions.
+- [Latest release](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest): MSI, portable Windows x64 ZIP, sources and checksums.
+- [Installation](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/docs/installation.md): server/client setup and maintenance.
+
+## Technical documentation
+
+- [Architecture](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/docs/architecture.md): transport, driver dependencies and ownership.
+- [Performance](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/docs/performance.md): measurements with conditions; not a universal speed guarantee.
+- [Camera testing](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/docs/camera-preview.md): received/decoded FPS and low-light control.
+- [Hardware observations](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/docs/hardware-tests.md): actual device checks.
+- [Command line](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/docs/command-line.md): automation and controls.
+
+## Other languages
+
+- [French](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/README.fr.md)
+- [Russian](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/README.ru.md)
+- [German](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/README.de.md)
+- [Simplified Chinese](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/blob/main/README.zh-CN.md)

@@ -1,0 +1,1766 @@
+{
+  "Low-light compensation (may reduce FPS)": {
+    "en": "Low-light compensation (may reduce FPS)",
+    "ru": "Компенсация слабого освещения (может снижать FPS)",
+    "de": "Ausgleich bei wenig Licht (kann FPS reduzieren)",
+    "fr": "Compensation de faible éclairage (peut réduire les FPS)",
+    "zh": "低光补偿（可能降低帧率）"
+  },
+  "Camera setting applied": {
+    "en": "Camera setting applied",
+    "ru": "Настройка камеры применена",
+    "de": "Kameraeinstellung übernommen",
+    "fr": "Réglage de la caméra appliqué",
+    "zh": "相机设置已应用"
+  },
+  "Camera setting could not be changed": {
+    "en": "Camera setting could not be changed",
+    "ru": "Не удалось изменить настройку камеры",
+    "de": "Kameraeinstellung konnte nicht geändert werden",
+    "fr": "Impossible de modifier le réglage de la caméra",
+    "zh": "无法更改相机设置"
+  },
+  "Automatic cleanup": {
+    "en": "Automatic cleanup",
+    "ru": "Автоматическое удаление",
+    "de": "Automatische Bereinigung",
+    "fr": "Nettoyage automatique",
+    "zh": "自动清理"
+  },
+  "Remove unplugged devices": {
+    "en": "Remove unplugged devices",
+    "ru": "Удалять отключённые устройства",
+    "de": "Getrennte Geräte entfernen",
+    "fr": "Supprimer les appareils débranchés",
+    "zh": "删除已拔出的设备"
+  },
+  "Days without reconnection (1–36500)": {
+    "en": "Days without reconnection (1–36500)",
+    "ru": "Дней без подключения (1–36500)",
+    "de": "Tage ohne Verbindung (1–36500)",
+    "fr": "Jours sans reconnexion (1–36500)",
+    "zh": "未重新连接的天数（1–36500）"
+  },
+  "Days must be in 1..36500": {
+    "en": "Enter a number of days from 1 to 36500",
+    "ru": "Укажите число дней от 1 до 36500",
+    "de": "Geben Sie 1 bis 36500 Tage ein",
+    "fr": "Indiquez entre 1 et 36500 jours",
+    "zh": "请输入 1 到 36500 天"
+  },
+  "Remove unplugged device": {
+    "en": "Remove unplugged device",
+    "ru": "Удалить отключённое устройство",
+    "de": "Getrenntes Gerät entfernen",
+    "fr": "Supprimer l’appareil débranché",
+    "zh": "删除已拔出的设备"
+  },
+  "Removing device…": {
+    "en": "Removing device…",
+    "ru": "Удаление устройства…",
+    "de": "Gerät wird entfernt…",
+    "fr": "Suppression de l’appareil…",
+    "zh": "正在删除设备…"
+  },
+  "Device removed": {
+    "en": "Device removed",
+    "ru": "Устройство удалено",
+    "de": "Gerät entfernt",
+    "fr": "Appareil supprimé",
+    "zh": "设备已删除"
+  },
+  "Forget an unplugged device (connected devices are refused)": {
+    "en": "Forget an unplugged device (connected devices are refused)",
+    "ru": "Удалить отключённое устройство (подключённые защищены)",
+    "de": "Getrenntes Gerät vergessen (verbundene Geräte sind geschützt)",
+    "fr": "Oublier un appareil débranché (appareils connectés protégés)",
+    "zh": "忘记已拔出的设备（已连接的设备受保护）"
+  },
+  "Сервер": {
+    "en": "Server",
+    "de": "Server",
+    "fr": "Serveur",
+    "zh": "服务器",
+    "ru": "Сервер"
+  },
+  "Клиент": {
+    "en": "Client",
+    "de": "Client",
+    "fr": "Client",
+    "zh": "客户端",
+    "ru": "Клиент"
+  },
+  "Сообщение — {} v.{}": {
+    "en": "Message — {} v.{}",
+    "de": "Meldung — {} v.{}",
+    "fr": "Message — {} v.{}",
+    "zh": "消息 — {} v.{}",
+    "ru": "Сообщение — {} v.{}"
+  },
+  "Справка": {
+    "en": "Help",
+    "de": "Hilfe",
+    "fr": "Aide",
+    "zh": "帮助",
+    "ru": "Справка"
+  },
+  "{}\r\nВерсия {}\r\n\r\nКлиент и сервер USB по сети.\r\nЛицензия исходников: MIT.\r\n{}": {
+    "en": "{}\r\nVersion {}\r\n\r\nUSB client and server over a network.\r\nSource license: MIT.\r\n{}",
+    "de": "{}\r\nVersion {}\r\n\r\nUSB-Client und -Server über das Netzwerk.\r\nQuellcode-Lizenz: MIT.\r\n{}",
+    "fr": "{}\r\nVersion {}\r\n\r\nClient et serveur USB en réseau.\r\nLicence du code source : MIT.\r\n{}",
+    "zh": "{}\r\n版本 {}\r\n\r\n通过网络连接 USB 客户端和服务器。\r\n源代码许可证：MIT。\r\n{}",
+    "ru": "{}\r\nВерсия {}\r\n\r\nКлиент и сервер USB по сети.\r\nЛицензия исходников: MIT.\r\n{}"
+  },
+  "Репозиторий на GitHub": {
+    "en": "GitHub repository",
+    "de": "GitHub-Repository",
+    "fr": "Dépôt GitHub",
+    "zh": "GitHub 仓库",
+    "ru": "Репозиторий на GitHub"
+  },
+  "Применить": {
+    "en": "Apply",
+    "de": "Übernehmen",
+    "fr": "Appliquer",
+    "zh": "应用",
+    "ru": "Применить"
+  },
+  "Закрыть": {
+    "en": "Close",
+    "de": "Schließen",
+    "fr": "Fermer",
+    "zh": "关闭",
+    "ru": "Закрыть"
+  },
+  "Отмена": {
+    "en": "Cancel",
+    "de": "Abbrechen",
+    "fr": "Annuler",
+    "zh": "取消",
+    "ru": "Отмена"
+  },
+  "Порт должен быть от 1 до 65535": {
+    "en": "Port must be between 1 and 65535",
+    "de": "Der Port muss zwischen 1 und 65535 liegen",
+    "fr": "Le port doit être compris entre 1 et 65535",
+    "zh": "端口必须介于 1 和 65535 之间",
+    "ru": "Порт должен быть от 1 до 65535"
+  },
+  "Имя сервера": {
+    "en": "Server name",
+    "de": "Servername",
+    "fr": "Nom du serveur",
+    "zh": "服务器名称",
+    "ru": "Имя сервера"
+  },
+  "TCP-порт подключения": {
+    "en": "Connection TCP port",
+    "de": "TCP-Verbindungsport",
+    "fr": "Port TCP de connexion",
+    "zh": "连接 TCP 端口",
+    "ru": "TCP-порт подключения"
+  },
+  "Порт поиска и списка устройств (UDP/TCP)": {
+    "en": "Discovery and device list port (UDP/TCP)",
+    "de": "Port für Suche und Geräteliste (UDP/TCP)",
+    "fr": "Port de découverte et de liste (UDP/TCP)",
+    "zh": "发现和设备列表端口 (UDP/TCP)",
+    "ru": "Порт поиска и списка устройств (UDP/TCP)"
+  },
+  "Разрешённые IP клиентов (по одному на строку)": {
+    "en": "Allowed client IPs (one per line)",
+    "de": "Zugelassene Client-IPs (eine pro Zeile)",
+    "fr": "IP clientes autorisées (une par ligne)",
+    "zh": "允许的客户端 IP（每行一个）",
+    "ru": "Разрешённые IP клиентов (по одному на строку)"
+  },
+  "Серверный модуль": {
+    "en": "Server backend",
+    "de": "Servermodul",
+    "fr": "Module serveur",
+    "zh": "服务器模块",
+    "ru": "Серверный модуль"
+  },
+  "Native — сервер Rust": {
+    "en": "Native — Rust server",
+    "de": "Native — Rust-Server",
+    "fr": "Native — serveur Rust",
+    "zh": "Native — Rust 服务器",
+    "ru": "Native — сервер Rust"
+  },
+  "Usbipd — штатный сервер": {
+    "en": "Usbipd — upstream server",
+    "de": "Usbipd — Originalserver",
+    "fr": "Usbipd — serveur d’origine",
+    "zh": "Usbipd — 上游服务器",
+    "ru": "Usbipd — штатный сервер"
+  },
+  "Укажите имя сервера и хотя бы один IP клиента": {
+    "en": "Enter a server name and at least one client IP",
+    "de": "Servernamen und mindestens eine Client-IP angeben",
+    "fr": "Indiquez un nom de serveur et au moins une IP cliente",
+    "zh": "请输入服务器名称和至少一个客户端 IP",
+    "ru": "Укажите имя сервера и хотя бы один IP клиента"
+  },
+  "Настройки сервера сохранены. Сервер перезапущен; клиенты восстановят подключения. Если менялся UDP-порт, укажите его и в настройках поиска клиента.": {
+    "en": "Server settings saved. The server restarted; clients will reconnect. If the discovery port changed, update it on the clients too.",
+    "de": "Servereinstellungen gespeichert. Der Server wurde neu gestartet; Clients verbinden sich erneut. Einen geänderten Suchport auch auf den Clients anpassen.",
+    "fr": "Paramètres enregistrés. Le serveur a redémarré ; les clients se reconnecteront. Si le port de découverte a changé, modifiez-le aussi sur les clients.",
+    "zh": "服务器设置已保存。服务器已重启，客户端将重新连接。如果发现端口已更改，请同时更新客户端。",
+    "ru": "Настройки сервера сохранены. Сервер перезапущен; клиенты восстановят подключения. Если менялся UDP-порт, укажите его и в настройках поиска клиента."
+  },
+  "Не удалось применить настройки": {
+    "en": "Could not apply settings",
+    "de": "Einstellungen konnten nicht übernommen werden",
+    "fr": "Impossible d’appliquer les paramètres",
+    "zh": "无法应用设置",
+    "ru": "Не удалось применить настройки"
+  },
+  "Не удалось применить настройки. Проверьте журнал сервера.": {
+    "en": "Could not apply settings. Check the server log.",
+    "de": "Einstellungen konnten nicht übernommen werden. Serverprotokoll prüfen.",
+    "fr": "Impossible d’appliquer les paramètres. Consultez le journal du serveur.",
+    "zh": "无法应用设置。请检查服务器日志。",
+    "ru": "Не удалось применить настройки. Проверьте журнал сервера."
+  },
+  "USB-серверы ({})": {
+    "en": "USB servers ({})",
+    "de": "USB-Server ({})",
+    "fr": "Serveurs USB ({})",
+    "zh": "USB 服务器 ({})",
+    "ru": "USB-серверы ({})"
+  },
+  " — недоступен": {
+    "en": " — unavailable",
+    "de": " — nicht erreichbar",
+    "fr": " — indisponible",
+    "zh": " — 不可用",
+    "ru": " — недоступен"
+  },
+  "Ожидание возвращения USB": {
+    "en": "Waiting for USB device",
+    "de": "Warten auf USB-Gerät",
+    "fr": "En attente du périphérique USB",
+    "zh": "等待 USB 设备",
+    "ru": "Ожидание возвращения USB"
+  },
+  "Не подключено": {
+    "en": "Not connected",
+    "de": "Nicht verbunden",
+    "fr": "Non connecté",
+    "zh": "未连接",
+    "ru": "Не подключено"
+  },
+  "Добавить сервер по адресу…": {
+    "en": "Add server by address…",
+    "de": "Server über Adresse hinzufügen…",
+    "fr": "Ajouter un serveur par adresse…",
+    "zh": "按地址添加服务器…",
+    "ru": "Добавить сервер по адресу…"
+  },
+  "Порты подключения…": {
+    "en": "Connection ports…",
+    "de": "Verbindungsports…",
+    "fr": "Ports de connexion…",
+    "zh": "连接端口…",
+    "ru": "Порты подключения…"
+  },
+  "Прокси сервера…": {
+    "en": "Server proxy…",
+    "de": "Serverproxy…",
+    "fr": "Proxy du serveur…",
+    "zh": "服务器代理…",
+    "ru": "Прокси сервера…"
+  },
+  "Свернуть в трей": {
+    "en": "Minimize to tray",
+    "de": "In den Infobereich minimieren",
+    "fr": "Réduire dans la zone de notification",
+    "zh": "最小化到系统托盘",
+    "ru": "Свернуть в трей"
+  },
+  "Подключить устройство": {
+    "en": "Connect device",
+    "de": "Gerät verbinden",
+    "fr": "Connecter le périphérique",
+    "zh": "连接设备",
+    "ru": "Подключить устройство"
+  },
+  "Отключить устройство": {
+    "en": "Disconnect device",
+    "de": "Gerät trennen",
+    "fr": "Déconnecter le périphérique",
+    "zh": "断开设备",
+    "ru": "Отключить устройство"
+  },
+  "Найти серверы / обновить": {
+    "en": "Find servers / refresh",
+    "de": "Server suchen / aktualisieren",
+    "fr": "Rechercher les serveurs / actualiser",
+    "zh": "查找服务器 / 刷新",
+    "ru": "Найти серверы / обновить"
+  },
+  "Файл": {
+    "en": "File",
+    "de": "Datei",
+    "fr": "Fichier",
+    "zh": "文件",
+    "ru": "Файл"
+  },
+  "Устройство": {
+    "en": "Device",
+    "de": "Gerät",
+    "fr": "Périphérique",
+    "zh": "设备",
+    "ru": "Устройство"
+  },
+  "Вид": {
+    "en": "View",
+    "de": "Ansicht",
+    "fr": "Affichage",
+    "zh": "视图",
+    "ru": "Вид"
+  },
+  "Подключить": {
+    "en": "Connect",
+    "de": "Verbinden",
+    "fr": "Connecter",
+    "zh": "连接",
+    "ru": "Подключить"
+  },
+  "Отключить": {
+    "en": "Disconnect",
+    "de": "Trennen",
+    "fr": "Déconnecter",
+    "zh": "断开",
+    "ru": "Отключить"
+  },
+  "Найти серверы": {
+    "en": "Find servers",
+    "de": "Server suchen",
+    "fr": "Rechercher les serveurs",
+    "zh": "查找服务器",
+    "ru": "Найти серверы"
+  },
+  "Добавить сервер": {
+    "en": "Add server",
+    "de": "Server hinzufügen",
+    "fr": "Ajouter un serveur",
+    "zh": "添加服务器",
+    "ru": "Добавить сервер"
+  },
+  "Порты…": {
+    "en": "Ports…",
+    "de": "Ports…",
+    "fr": "Ports…",
+    "zh": "端口…",
+    "ru": "Порты…"
+  },
+  "Прокси…": {
+    "en": "Proxy…",
+    "de": "Proxy…",
+    "fr": "Proxy…",
+    "zh": "代理…",
+    "ru": "Прокси…"
+  },
+  "Поиск серверов…": {
+    "en": "Finding servers…",
+    "de": "Server werden gesucht…",
+    "fr": "Recherche des serveurs…",
+    "zh": "正在查找服务器…",
+    "ru": "Поиск серверов…"
+  },
+  "Состояние уточняется": {
+    "en": "Checking status",
+    "de": "Status wird geprüft",
+    "fr": "Vérification de l’état",
+    "zh": "正在检查状态",
+    "ru": "Состояние уточняется"
+  },
+  "Поиск серверов и обновление устройств…": {
+    "en": "Finding servers and refreshing devices…",
+    "de": "Server suchen und Geräte aktualisieren…",
+    "fr": "Recherche des serveurs et actualisation des périphériques…",
+    "zh": "正在查找服务器并刷新设备…",
+    "ru": "Поиск серверов и обновление устройств…"
+  },
+  "Не используется": {
+    "en": "Not in use",
+    "de": "Nicht verwendet",
+    "fr": "Non utilisé",
+    "zh": "未使用",
+    "ru": "Не используется"
+  },
+  "{} — USB-порт {}{}": {
+    "en": "{} — USB port {}{}",
+    "de": "{} — USB-Port {}{}",
+    "fr": "{} — port USB {}{}",
+    "zh": "{} — USB 端口 {}{}",
+    "ru": "{} — USB-порт {}{}"
+  },
+  "; включите публикацию на сервере": {
+    "en": "; enable sharing on the server",
+    "de": "; Freigabe auf dem Server aktivieren",
+    "fr": " ; activez le partage sur le serveur",
+    "zh": "；请在服务器上启用共享",
+    "ru": "; включите публикацию на сервере"
+  },
+  "Выберите USB-устройство. Подключения сохраняются автоматически.": {
+    "en": "Select a USB device. Connections are saved automatically.",
+    "de": "USB-Gerät auswählen. Verbindungen werden automatisch gespeichert.",
+    "fr": "Sélectionnez un périphérique USB. Les connexions sont enregistrées automatiquement.",
+    "zh": "请选择 USB 设备。连接将自动保存。",
+    "ru": "Выберите USB-устройство. Подключения сохраняются автоматически."
+  },
+  "Выберите сервер и USB-устройство. Можно добавить сервер вручную по IP или имени.": {
+    "en": "Select a server and a USB device. You can add a server by IP or name.",
+    "de": "Server und USB-Gerät auswählen. Server lassen sich per IP oder Name hinzufügen.",
+    "fr": "Sélectionnez un serveur et un périphérique USB. Vous pouvez ajouter un serveur par IP ou par nom.",
+    "zh": "请选择服务器和 USB 设备。可通过 IP 或名称添加服务器。",
+    "ru": "Выберите сервер и USB-устройство. Можно добавить сервер вручную по IP или имени."
+  },
+  "Обновление…": {
+    "en": "Refreshing…",
+    "de": "Aktualisierung…",
+    "fr": "Actualisation…",
+    "zh": "正在刷新…",
+    "ru": "Обновление…"
+  },
+  "Подключение устройства…": {
+    "en": "Connecting device…",
+    "de": "Gerät wird verbunden…",
+    "fr": "Connexion du périphérique…",
+    "zh": "正在连接设备…",
+    "ru": "Подключение устройства…"
+  },
+  "Устройство запомнено. Ожидание подключения…": {
+    "en": "Device saved. Waiting for connection…",
+    "de": "Gerät gespeichert. Warten auf Verbindung…",
+    "fr": "Périphérique enregistré. En attente de connexion…",
+    "zh": "设备已保存。正在等待连接…",
+    "ru": "Устройство запомнено. Ожидание подключения…"
+  },
+  "Отключение устройства…": {
+    "en": "Disconnecting device…",
+    "de": "Gerät wird getrennt…",
+    "fr": "Déconnexion du périphérique…",
+    "zh": "正在断开设备…",
+    "ru": "Отключение устройства…"
+  },
+  "Устройство отключено; автоматическое подключение выключено.": {
+    "en": "Device disconnected; automatic connection is off.",
+    "de": "Gerät getrennt; automatische Verbindung deaktiviert.",
+    "fr": "Périphérique déconnecté ; connexion automatique désactivée.",
+    "zh": "设备已断开；自动连接已关闭。",
+    "ru": "Устройство отключено; автоматическое подключение выключено."
+  },
+  "Сохранение выбранного сервера…": {
+    "en": "Saving selected server…",
+    "de": "Ausgewählten Server speichern…",
+    "fr": "Enregistrement du serveur sélectionné…",
+    "zh": "正在保存所选服务器…",
+    "ru": "Сохранение выбранного сервера…"
+  },
+  "Сервер выбран и сохранён.": {
+    "en": "Server selected and saved.",
+    "de": "Server ausgewählt und gespeichert.",
+    "fr": "Serveur sélectionné et enregistré.",
+    "zh": "服务器已选择并保存。",
+    "ru": "Сервер выбран и сохранён."
+  },
+  "Удаление сервера…": {
+    "en": "Removing server…",
+    "de": "Server wird entfernt…",
+    "fr": "Suppression du serveur…",
+    "zh": "正在移除服务器…",
+    "ru": "Удаление сервера…"
+  },
+  "Сервер удалён из сохранённых. Если он доступен в сети, поиск сможет найти его снова.": {
+    "en": "Server removed from saved servers. Discovery may find it again if it is available.",
+    "de": "Server aus der Liste entfernt. Die Suche kann ihn erneut finden, wenn er erreichbar ist.",
+    "fr": "Serveur retiré des favoris. La découverte pourra le retrouver s’il est disponible.",
+    "zh": "服务器已从保存列表移除。如果服务器可用，发现功能可能再次找到它。",
+    "ru": "Сервер удалён из сохранённых. Если он доступен в сети, поиск сможет найти его снова."
+  },
+  "Выберите сервер в дереве устройств": {
+    "en": "Select a server in the device tree",
+    "de": "Server im Gerätebaum auswählen",
+    "fr": "Sélectionnez un serveur dans l’arborescence",
+    "zh": "请在设备树中选择服务器",
+    "ru": "Выберите сервер в дереве устройств"
+  },
+  "Способ подключения": {
+    "en": "Connection method",
+    "de": "Verbindungsart",
+    "fr": "Méthode de connexion",
+    "zh": "连接方式",
+    "ru": "Способ подключения"
+  },
+  "Напрямую": {
+    "en": "Direct",
+    "de": "Direkt",
+    "fr": "Directe",
+    "zh": "直连",
+    "ru": "Напрямую"
+  },
+  "Адрес прокси: HOST:PORT": {
+    "en": "Proxy address: HOST:PORT",
+    "de": "Proxyadresse: HOST:PORT",
+    "fr": "Adresse du proxy : HÔTE:PORT",
+    "zh": "代理地址：主机:端口",
+    "ru": "Адрес прокси: HOST:PORT"
+  },
+  "Авторизация": {
+    "en": "Authentication",
+    "de": "Authentifizierung",
+    "fr": "Authentification",
+    "zh": "身份验证",
+    "ru": "Авторизация"
+  },
+  "Без авторизации": {
+    "en": "No authentication",
+    "de": "Ohne Authentifizierung",
+    "fr": "Sans authentification",
+    "zh": "无需验证",
+    "ru": "Без авторизации"
+  },
+  "Логин и пароль": {
+    "en": "Username and password",
+    "de": "Benutzername und Passwort",
+    "fr": "Nom d’utilisateur et mot de passe",
+    "zh": "用户名和密码",
+    "ru": "Логин и пароль"
+  },
+  "Логин": {
+    "en": "Username",
+    "de": "Benutzername",
+    "fr": "Nom d’utilisateur",
+    "zh": "用户名",
+    "ru": "Логин"
+  },
+  "Пароль (пусто — сохранить прежний)": {
+    "en": "Password (blank keeps the current password)",
+    "de": "Passwort (leer: bisheriges beibehalten)",
+    "fr": "Mot de passe (vide : conserver l’actuel)",
+    "zh": "密码（留空则保留当前密码）",
+    "ru": "Пароль (пусто — сохранить прежний)"
+  },
+  "Прокси — {} v.{}": {
+    "en": "Proxy — {} v.{}",
+    "de": "Proxy — {} v.{}",
+    "fr": "Proxy — {} v.{}",
+    "zh": "代理 — {} v.{}",
+    "ru": "Прокси — {} v.{}"
+  },
+  "Укажите логин и пароль прокси": {
+    "en": "Enter the proxy username and password",
+    "de": "Proxy-Benutzernamen und Passwort angeben",
+    "fr": "Indiquez le nom d’utilisateur et le mot de passe du proxy",
+    "zh": "请输入代理用户名和密码",
+    "ru": "Укажите логин и пароль прокси"
+  },
+  "Сохранение прокси…": {
+    "en": "Saving proxy…",
+    "de": "Proxy wird gespeichert…",
+    "fr": "Enregistrement du proxy…",
+    "zh": "正在保存代理…",
+    "ru": "Сохранение прокси…"
+  },
+  "Сервер больше не сохранён. Обновите список.": {
+    "en": "Server is no longer saved. Refresh the list.",
+    "de": "Server ist nicht mehr gespeichert. Liste aktualisieren.",
+    "fr": "Le serveur n’est plus enregistré. Actualisez la liste.",
+    "zh": "服务器已不在保存列表中。请刷新列表。",
+    "ru": "Сервер больше не сохранён. Обновите список."
+  },
+  "Настройки прокси сохранены. При изменении маршрута USB-подключения восстановятся автоматически.": {
+    "en": "Proxy settings saved. USB devices will reconnect automatically if the route changed.",
+    "de": "Proxyeinstellungen gespeichert. Bei geänderter Route verbinden sich USB-Geräte automatisch erneut.",
+    "fr": "Paramètres du proxy enregistrés. Les périphériques USB se reconnecteront automatiquement si le trajet a changé.",
+    "zh": "代理设置已保存。如果路由已更改，USB 设备将自动重新连接。",
+    "ru": "Настройки прокси сохранены. При изменении маршрута USB-подключения восстановятся автоматически."
+  },
+  "Адрес сервера (IP или имя, без порта)": {
+    "en": "Server address (IP or name, without port)",
+    "de": "Serveradresse (IP oder Name, ohne Port)",
+    "fr": "Adresse du serveur (IP ou nom, sans port)",
+    "zh": "服务器地址（IP 或名称，不含端口）",
+    "ru": "Адрес сервера (IP или имя, без порта)"
+  },
+  "TCP-порт сервера": {
+    "en": "Server TCP port",
+    "de": "TCP-Port des Servers",
+    "fr": "Port TCP du serveur",
+    "zh": "服务器 TCP 端口",
+    "ru": "TCP-порт сервера"
+  },
+  "Порты подключения": {
+    "en": "Connection ports",
+    "de": "Verbindungsports",
+    "fr": "Ports de connexion",
+    "zh": "连接端口",
+    "ru": "Порты подключения"
+  },
+  "Укажите адрес без порта; порт задаётся отдельным полем": {
+    "en": "Enter the address without a port; use the port field",
+    "de": "Adresse ohne Port eingeben; separates Portfeld verwenden",
+    "fr": "Indiquez l’adresse sans port ; utilisez le champ du port",
+    "zh": "请输入不含端口的地址；端口请在单独的字段中设置",
+    "ru": "Укажите адрес без порта; порт задаётся отдельным полем"
+  },
+  "Сохранение адреса и портов…": {
+    "en": "Saving address and ports…",
+    "de": "Adresse und Ports speichern…",
+    "fr": "Enregistrement de l’adresse et des ports…",
+    "zh": "正在保存地址和端口…",
+    "ru": "Сохранение адреса и портов…"
+  },
+  "Адрес и порты сохранены.": {
+    "en": "Address and ports saved.",
+    "de": "Adresse und Ports gespeichert.",
+    "fr": "Adresse et ports enregistrés.",
+    "zh": "地址和端口已保存。",
+    "ru": "Адрес и порты сохранены."
+  },
+  "Подключить и запомнить": {
+    "en": "Connect and remember",
+    "de": "Verbinden und merken",
+    "fr": "Connecter et mémoriser",
+    "zh": "连接并记住",
+    "ru": "Подключить и запомнить"
+  },
+  "Выбрать сервер": {
+    "en": "Select server",
+    "de": "Server auswählen",
+    "fr": "Sélectionner le serveur",
+    "zh": "选择服务器",
+    "ru": "Выбрать сервер"
+  },
+  "Адрес и порты…": {
+    "en": "Address and ports…",
+    "de": "Adresse und Ports…",
+    "fr": "Adresse et ports…",
+    "zh": "地址和端口…",
+    "ru": "Адрес и порты…"
+  },
+  "Удалить из сохранённых": {
+    "en": "Remove from saved servers",
+    "de": "Aus gespeicherten Servern entfernen",
+    "fr": "Retirer des serveurs enregistrés",
+    "zh": "从保存的服务器中移除",
+    "ru": "Удалить из сохранённых"
+  },
+  "Поиск серверов и обновление устройств завершены": {
+    "en": "Server discovery and device refresh complete",
+    "de": "Serversuche und Geräteaktualisierung abgeschlossen",
+    "fr": "Recherche des serveurs et actualisation terminées",
+    "zh": "服务器发现和设备刷新已完成",
+    "ru": "Поиск серверов и обновление устройств завершены"
+  },
+  "Обновление завершено. Недоступных серверов: {failed}": {
+    "en": "Refresh complete. Unavailable servers: {failed}",
+    "de": "Aktualisierung abgeschlossen. Nicht erreichbare Server: {failed}",
+    "fr": "Actualisation terminée. Serveurs indisponibles : {failed}",
+    "zh": "刷新已完成。不可用的服务器：{failed}",
+    "ru": "Обновление завершено. Недоступных серверов: {failed}"
+  },
+  "Ошибка обновления: {message}": {
+    "en": "Refresh error: {message}",
+    "de": "Aktualisierungsfehler: {message}",
+    "fr": "Erreur d’actualisation : {message}",
+    "zh": "刷新错误：{message}",
+    "ru": "Ошибка обновления: {message}"
+  },
+  "Используется этим клиентом": {
+    "en": "Used by this client",
+    "de": "Von diesem Client verwendet",
+    "fr": "Utilisé par ce client",
+    "zh": "此客户端正在使用",
+    "ru": "Используется этим клиентом"
+  },
+  "Подключено; проверка сети": {
+    "en": "Connected; checking network",
+    "de": "Verbunden; Netzwerkprüfung",
+    "fr": "Connecté ; vérification du réseau",
+    "zh": "已连接；正在检查网络",
+    "ru": "Подключено; проверка сети"
+  },
+  "Ожидание сети": {
+    "en": "Waiting for network",
+    "de": "Warten auf Netzwerk",
+    "fr": "En attente du réseau",
+    "zh": "等待网络",
+    "ru": "Ожидание сети"
+  },
+  "Повторное подключение": {
+    "en": "Reconnecting",
+    "de": "Erneute Verbindung",
+    "fr": "Reconnexion",
+    "zh": "正在重新连接",
+    "ru": "Повторное подключение"
+  },
+  "Ожидание подключения": {
+    "en": "Waiting for connection",
+    "de": "Warten auf Verbindung",
+    "fr": "En attente de connexion",
+    "zh": "等待连接",
+    "ru": "Ожидание подключения"
+  },
+  "Обновление устройств…": {
+    "en": "Refreshing devices…",
+    "de": "Geräte werden aktualisiert…",
+    "fr": "Actualisation des périphériques…",
+    "zh": "正在刷新设备…",
+    "ru": "Обновление устройств…"
+  },
+  "Обновление устройств завершено": {
+    "en": "Device refresh complete",
+    "de": "Geräteaktualisierung abgeschlossen",
+    "fr": "Actualisation des périphériques terminée",
+    "zh": "设备刷新已完成",
+    "ru": "Обновление устройств завершено"
+  },
+  "Сохранение настроек…": {
+    "en": "Saving settings…",
+    "de": "Einstellungen speichern…",
+    "fr": "Enregistrement des paramètres…",
+    "zh": "正在保存设置…",
+    "ru": "Сохранение настроек…"
+  },
+  "Доступно": {
+    "en": "Available",
+    "de": "Verfügbar",
+    "fr": "Disponible",
+    "zh": "可用",
+    "ru": "Доступно"
+  },
+  "Не подключено к USB": {
+    "en": "USB device unplugged",
+    "de": "USB-Gerät nicht angeschlossen",
+    "fr": "Périphérique USB débranché",
+    "zh": "USB 设备已拔出",
+    "ru": "Не подключено к USB"
+  },
+  "Включить / отключить сервер": {
+    "en": "Start / stop server",
+    "de": "Server starten / stoppen",
+    "fr": "Démarrer / arrêter le serveur",
+    "zh": "启动 / 停止服务器",
+    "ru": "Включить / отключить сервер"
+  },
+  "Обновить устройства": {
+    "en": "Refresh devices",
+    "de": "Geräte aktualisieren",
+    "fr": "Actualiser les périphériques",
+    "zh": "刷新设备",
+    "ru": "Обновить устройства"
+  },
+  "Настройки и порты…": {
+    "en": "Settings and ports…",
+    "de": "Einstellungen und Ports…",
+    "fr": "Paramètres et ports…",
+    "zh": "设置和端口…",
+    "ru": "Настройки и порты…"
+  },
+  "Проверка сервера…": {
+    "en": "Checking server…",
+    "de": "Server wird geprüft…",
+    "fr": "Vérification du serveur…",
+    "zh": "正在检查服务器…",
+    "ru": "Проверка сервера…"
+  },
+  "Подождите…": {
+    "en": "Please wait…",
+    "de": "Bitte warten…",
+    "fr": "Veuillez patienter…",
+    "zh": "请稍候…",
+    "ru": "Подождите…"
+  },
+  "Устройства и состояние": {
+    "en": "Devices and status",
+    "de": "Geräte und Status",
+    "fr": "Périphériques et état",
+    "zh": "设备和状态",
+    "ru": "Устройства и состояние"
+  },
+  "Настройки": {
+    "en": "Settings",
+    "de": "Einstellungen",
+    "fr": "Paramètres",
+    "zh": "设置",
+    "ru": "Настройки"
+  },
+  "Включено": {
+    "en": "Enabled",
+    "de": "Aktiviert",
+    "fr": "Activé",
+    "zh": "已启用",
+    "ru": "Включено"
+  },
+  "USB-порт": {
+    "en": "USB port",
+    "de": "USB-Port",
+    "fr": "Port USB",
+    "zh": "USB 端口",
+    "ru": "USB-порт"
+  },
+  "Состояние": {
+    "en": "Status",
+    "de": "Status",
+    "fr": "État",
+    "zh": "状态",
+    "ru": "Состояние"
+  },
+  "Клиент (IP:TCP)": {
+    "en": "Client (IP:TCP)",
+    "de": "Client (IP:TCP)",
+    "fr": "Client (IP:TCP)",
+    "zh": "客户端 (IP:TCP)",
+    "ru": "Клиент (IP:TCP)"
+  },
+  "TCP-порт": {
+    "en": "TCP port",
+    "de": "TCP-Port",
+    "fr": "Port TCP",
+    "zh": "TCP 端口",
+    "ru": "TCP-порт"
+  },
+  "Обновление списка USB…": {
+    "en": "Refreshing USB devices…",
+    "de": "USB-Geräte werden aktualisiert…",
+    "fr": "Actualisation des périphériques USB…",
+    "zh": "正在刷新 USB 设备…",
+    "ru": "Обновление списка USB…"
+  },
+  "Обновить": {
+    "en": "Refresh",
+    "de": "Aktualisieren",
+    "fr": "Actualiser",
+    "zh": "刷新",
+    "ru": "Обновить"
+  },
+  "Опубликовать": {
+    "en": "Share",
+    "de": "Freigeben",
+    "fr": "Partager",
+    "zh": "共享",
+    "ru": "Опубликовать"
+  },
+  "TCP-порт подключения (1–65535)": {
+    "en": "Connection TCP port (1–65535)",
+    "de": "TCP-Verbindungsport (1–65535)",
+    "fr": "Port TCP de connexion (1–65535)",
+    "zh": "连接 TCP 端口 (1–65535)",
+    "ru": "TCP-порт подключения (1–65535)"
+  },
+  "Порт поиска и списка (UDP/TCP, 1–65535)": {
+    "en": "Discovery/list port (UDP/TCP, 1–65535)",
+    "de": "Such-/Listenport (UDP/TCP, 1–65535)",
+    "fr": "Port de découverte/liste (UDP/TCP, 1–65535)",
+    "zh": "发现/列表端口 (UDP/TCP, 1–65535)",
+    "ru": "Порт поиска и списка (UDP/TCP, 1–65535)"
+  },
+  "Применить настройки": {
+    "en": "Apply settings",
+    "de": "Einstellungen übernehmen",
+    "fr": "Appliquer les paramètres",
+    "zh": "应用设置",
+    "ru": "Применить настройки"
+  },
+  "Изменение состояния…": {
+    "en": "Changing status…",
+    "de": "Status wird geändert…",
+    "fr": "Changement d’état…",
+    "zh": "正在更改状态…",
+    "ru": "Изменение состояния…"
+  },
+  "СЕРВЕР РАБОТАЕТ": {
+    "en": "SERVER RUNNING",
+    "de": "SERVER LÄUFT",
+    "fr": "SERVEUR EN MARCHE",
+    "zh": "服务器运行中",
+    "ru": "СЕРВЕР РАБОТАЕТ"
+  },
+  "ОСТАНОВКА СЕРВЕРА…": {
+    "en": "STOPPING SERVER…",
+    "de": "SERVER WIRD GESTOPPT…",
+    "fr": "ARRÊT DU SERVEUR…",
+    "zh": "正在停止服务器…",
+    "ru": "ОСТАНОВКА СЕРВЕРА…"
+  },
+  "СЕРВЕР ВЫКЛЮЧЕН": {
+    "en": "SERVER STOPPED",
+    "de": "SERVER GESTOPPT",
+    "fr": "SERVEUR ARRÊTÉ",
+    "zh": "服务器已停止",
+    "ru": "СЕРВЕР ВЫКЛЮЧЕН"
+  },
+  "СЕРВЕР НЕ РАБОТАЕТ": {
+    "en": "SERVER NOT RUNNING",
+    "de": "SERVER LÄUFT NICHT",
+    "fr": "SERVEUR INACTIF",
+    "zh": "服务器未运行",
+    "ru": "СЕРВЕР НЕ РАБОТАЕТ"
+  },
+  "{}  •  TCP {}  •  Поиск UDP {}  •  USB: {}": {
+    "en": "{}  •  TCP {}  •  Discovery UDP {}  •  USB: {}",
+    "de": "{}  •  TCP {}  •  Suche UDP {}  •  USB: {}",
+    "fr": "{}  •  TCP {}  •  Découverte UDP {}  •  USB : {}",
+    "zh": "{}  •  TCP {}  •  发现 UDP {}  •  USB：{}",
+    "ru": "{}  •  TCP {}  •  Поиск UDP {}  •  USB: {}"
+  },
+  "Включить": {
+    "en": "Start",
+    "de": "Starten",
+    "fr": "Démarrer",
+    "zh": "启动",
+    "ru": "Включить"
+  },
+  "Укажите порты от 1 до 65535": {
+    "en": "Enter ports between 1 and 65535",
+    "de": "Ports zwischen 1 und 65535 angeben",
+    "fr": "Indiquez des ports entre 1 et 65535",
+    "zh": "请输入介于 1 和 65535 之间的端口",
+    "ru": "Укажите порты от 1 до 65535"
+  },
+  "Готово. Список обновляется автоматически.": {
+    "en": "Ready. The list refreshes automatically.",
+    "de": "Bereit. Die Liste wird automatisch aktualisiert.",
+    "fr": "Prêt. La liste s’actualise automatiquement.",
+    "zh": "就绪。列表将自动刷新。",
+    "ru": "Готово. Список обновляется автоматически."
+  },
+  "Снять публикацию": {
+    "en": "Stop sharing",
+    "de": "Freigabe aufheben",
+    "fr": "Arrêter le partage",
+    "zh": "停止共享",
+    "ru": "Снять публикацию"
+  },
+  "Да": {
+    "en": "Yes",
+    "de": "Ja",
+    "fr": "Oui",
+    "zh": "是",
+    "ru": "Да"
+  },
+  "Нет": {
+    "en": "No",
+    "de": "Nein",
+    "fr": "Non",
+    "zh": "否",
+    "ru": "Нет"
+  },
+  "Обновление завершено: {w}": {
+    "en": "Refresh complete: {w}",
+    "de": "Aktualisierung abgeschlossen: {w}",
+    "fr": "Actualisation terminée : {w}",
+    "zh": "刷新已完成：{w}",
+    "ru": "Обновление завершено: {w}"
+  },
+  "Ошибка обновления: {error}": {
+    "en": "Refresh error: {error}",
+    "de": "Aktualisierungsfehler: {error}",
+    "fr": "Erreur d’actualisation : {error}",
+    "zh": "刷新错误：{error}",
+    "ru": "Ошибка обновления: {error}"
+  },
+  "СТАТУС НЕДОСТУПЕН": {
+    "en": "STATUS UNAVAILABLE",
+    "de": "STATUS NICHT VERFÜGBAR",
+    "fr": "ÉTAT INDISPONIBLE",
+    "zh": "状态不可用",
+    "ru": "СТАТУС НЕДОСТУПЕН"
+  },
+  "Настройки сервера сохранены": {
+    "en": "Server settings saved",
+    "de": "Servereinstellungen gespeichert",
+    "fr": "Paramètres du serveur enregistrés",
+    "zh": "服务器设置已保存",
+    "ru": "Настройки сервера сохранены"
+  },
+  "Ошибка: {e}": {
+    "en": "Error: {e}",
+    "de": "Fehler: {e}",
+    "fr": "Erreur : {e}",
+    "zh": "错误：{e}",
+    "ru": "Ошибка: {e}"
+  },
+  "TCP-порт USB и порт поиска/списка устройств должны различаться": {
+    "en": "USB TCP port and discovery/list port must differ",
+    "de": "USB-TCP-Port und Such-/Listenport müssen verschieden sein",
+    "fr": "Le port TCP USB et le port de découverte/liste doivent être différents",
+    "zh": "USB TCP 端口和发现/列表端口必须不同",
+    "ru": "TCP-порт USB и порт поиска/списка устройств должны различаться"
+  },
+  "Настройка локального использования применяется к модулю Native": {
+    "en": "Local use when idle is available with the Native backend",
+    "de": "Lokale Nutzung ohne Client ist mit Native verfügbar",
+    "fr": "L’utilisation locale sans client est disponible avec Native",
+    "zh": "仅 Native 模块支持空闲时本地使用",
+    "ru": "Настройка локального использования применяется к модулю Native"
+  },
+  "Использовать на сервере без клиента": {
+    "en": "Use on server when no client is connected",
+    "de": "Ohne verbundenen Client auf dem Server verwenden",
+    "fr": "Utiliser sur le serveur sans client connecté",
+    "zh": "无客户端连接时在服务器上使用",
+    "ru": "Использовать на сервере без клиента"
+  },
+  "Снять публикацию устройства": {
+    "en": "Stop sharing device",
+    "de": "Gerätefreigabe aufheben",
+    "fr": "Arrêter le partage du périphérique",
+    "zh": "停止共享设备",
+    "ru": "Снять публикацию устройства"
+  },
+  "Опубликовать устройство": {
+    "en": "Share device",
+    "de": "Gerät freigeben",
+    "fr": "Partager le périphérique",
+    "zh": "共享设备",
+    "ru": "Опубликовать устройство"
+  },
+  "Обновить список устройств": {
+    "en": "Refresh device list",
+    "de": "Geräteliste aktualisieren",
+    "fr": "Actualiser la liste des périphériques",
+    "zh": "刷新设备列表",
+    "ru": "Обновить список устройств"
+  },
+  "Сохранение режима устройства…": {
+    "en": "Saving device mode…",
+    "de": "Gerätemodus speichern…",
+    "fr": "Enregistrement du mode du périphérique…",
+    "zh": "正在保存设备模式…",
+    "ru": "Сохранение режима устройства…"
+  },
+  "Режим устройства сохранён": {
+    "en": "Device mode saved",
+    "de": "Gerätemodus gespeichert",
+    "fr": "Mode du périphérique enregistré",
+    "zh": "设备模式已保存",
+    "ru": "Режим устройства сохранён"
+  },
+  "Изменение публикации устройства…": {
+    "en": "Changing device sharing…",
+    "de": "Gerätefreigabe ändern…",
+    "fr": "Modification du partage…",
+    "zh": "正在更改设备共享…",
+    "ru": "Изменение публикации устройства…"
+  },
+  "Публикация устройства изменена": {
+    "en": "Device sharing changed",
+    "de": "Gerätefreigabe geändert",
+    "fr": "Partage du périphérique modifié",
+    "zh": "设备共享已更改",
+    "ru": "Публикация устройства изменена"
+  },
+  "Применение настроек сервера…": {
+    "en": "Applying server settings…",
+    "de": "Servereinstellungen übernehmen…",
+    "fr": "Application des paramètres du serveur…",
+    "zh": "正在应用服务器设置…",
+    "ru": "Применение настроек сервера…"
+  },
+  "Изменение состояния сервера…": {
+    "en": "Changing server status…",
+    "de": "Serverstatus ändern…",
+    "fr": "Changement d’état du serveur…",
+    "zh": "正在更改服务器状态…",
+    "ru": "Изменение состояния сервера…"
+  },
+  "Состояние сервера изменено": {
+    "en": "Server status changed",
+    "de": "Serverstatus geändert",
+    "fr": "État du serveur modifié",
+    "zh": "服务器状态已更改",
+    "ru": "Состояние сервера изменено"
+  },
+  "Не удалось изменить состояние сервера": {
+    "en": "Could not change server status",
+    "de": "Serverstatus konnte nicht geändert werden",
+    "fr": "Impossible de modifier l’état du serveur",
+    "zh": "无法更改服务器状态",
+    "ru": "Не удалось изменить состояние сервера"
+  },
+  "Не удалось применить изменение. Проверьте журнал сервера.": {
+    "en": "Could not apply change. Check the server log.",
+    "de": "Änderung fehlgeschlagen. Serverprotokoll prüfen.",
+    "fr": "Impossible d’appliquer la modification. Consultez le journal du serveur.",
+    "zh": "无法应用更改。请检查服务器日志。",
+    "ru": "Не удалось применить изменение. Проверьте журнал сервера."
+  },
+  "{} — {}\nФоновое подключение ещё не запущено.": {
+    "en": "{} — {}\nBackground connection has not started yet.",
+    "de": "{} — {}\nHintergrundverbindung noch nicht gestartet.",
+    "fr": "{} — {}\nLa connexion en arrière-plan n’a pas encore démarré.",
+    "zh": "{} — {}\n后台连接尚未启动。",
+    "ru": "{} — {}\nФоновое подключение ещё не запущено."
+  },
+  "Сервер работает": {
+    "en": "Server running",
+    "de": "Server läuft",
+    "fr": "Serveur en marche",
+    "zh": "服务器运行中",
+    "ru": "Сервер работает"
+  },
+  "Подключено": {
+    "en": "Connected",
+    "de": "Verbunden",
+    "fr": "Connecté",
+    "zh": "已连接",
+    "ru": "Подключено"
+  },
+  "Устройства не выбраны": {
+    "en": "No devices selected",
+    "de": "Keine Geräte ausgewählt",
+    "fr": "Aucun périphérique sélectionné",
+    "zh": "未选择设备",
+    "ru": "Устройства не выбраны"
+  },
+  "Восстановление сервера": {
+    "en": "Recovering server",
+    "de": "Server wird wiederhergestellt",
+    "fr": "Rétablissement du serveur",
+    "zh": "正在恢复服务器",
+    "ru": "Восстановление сервера"
+  },
+  "Сервер выключен": {
+    "en": "Server stopped",
+    "de": "Server gestoppt",
+    "fr": "Serveur arrêté",
+    "zh": "服务器已停止",
+    "ru": "Сервер выключен"
+  },
+  "\nСохранённых серверов: {}": {
+    "en": "\nSaved servers: {}",
+    "de": "\nGespeicherte Server: {}",
+    "fr": "\nServeurs enregistrés : {}",
+    "zh": "\n已保存的服务器：{}",
+    "ru": "\nСохранённых серверов: {}"
+  },
+  "Открыть клиент": {
+    "en": "Open client",
+    "de": "Client öffnen",
+    "fr": "Ouvrir le client",
+    "zh": "打开客户端",
+    "ru": "Открыть клиент"
+  },
+  "Открыть сервер": {
+    "en": "Open server",
+    "de": "Server öffnen",
+    "fr": "Ouvrir le serveur",
+    "zh": "打开服务器",
+    "ru": "Открыть сервер"
+  },
+  "Состояние подключения": {
+    "en": "Connection status",
+    "de": "Verbindungsstatus",
+    "fr": "État de connexion",
+    "zh": "连接状态",
+    "ru": "Состояние подключения"
+  },
+  "Закрыть интерфейс": {
+    "en": "Close interface",
+    "de": "Oberfläche schließen",
+    "fr": "Fermer l’interface",
+    "zh": "关闭界面",
+    "ru": "Закрыть интерфейс"
+  },
+  "Не опубликовано": {
+    "en": "Not shared",
+    "de": "Nicht freigegeben",
+    "fr": "Non partagé",
+    "zh": "未共享",
+    "ru": "Не опубликовано"
+  },
+  "Используется клиентом": {
+    "en": "Used by a client",
+    "de": "Von einem Client verwendet",
+    "fr": "Utilisé par un client",
+    "zh": "客户端正在使用",
+    "ru": "Используется клиентом"
+  },
+  "Не удалось обновить список USB: {e}": {
+    "en": "Could not refresh USB list: {e}",
+    "de": "USB-Liste konnte nicht aktualisiert werden: {e}",
+    "fr": "Impossible d’actualiser la liste USB : {e}",
+    "zh": "无法刷新 USB 列表：{e}",
+    "ru": "Не удалось обновить список USB: {e}"
+  },
+  "About": {
+    "en": "About",
+    "ru": "О программе",
+    "de": "Über das Programm",
+    "fr": "À propos",
+    "zh": "关于"
+  },
+  "Language": {
+    "en": "Language",
+    "ru": "Язык",
+    "de": "Sprache",
+    "fr": "Langue",
+    "zh": "语言"
+  },
+  "Save settings before changing language.": {
+    "en": "Save settings before changing language.",
+    "ru": "Сохраните настройки перед сменой языка.",
+    "de": "Vor dem Sprachwechsel Einstellungen speichern.",
+    "fr": "Enregistrez les paramètres avant de changer de langue.",
+    "zh": "更改语言前请保存设置。"
+  },
+  "USB to Network Bridge v.0.2.0 — command line control": {
+    "en": "USB to Network Bridge v.0.2.0 — command line control",
+    "ru": "USB to Network Bridge v.0.2.0 — управление из командной строки",
+    "de": "USB to Network Bridge v.0.2.0 — Befehlszeilensteuerung",
+    "fr": "USB to Network Bridge v.0.2.0 — contrôle en ligne de commande",
+    "zh": "USB to Network Bridge v.0.2.0 — 命令行控制"
+  },
+  "Both roles:": {
+    "en": "Both roles:",
+    "ru": "Оба приложения:",
+    "de": "Beide Rollen:",
+    "fr": "Les deux rôles :",
+    "zh": "两种角色："
+  },
+  "Server:": {
+    "en": "Server:",
+    "ru": "Сервер:",
+    "de": "Server:",
+    "fr": "Serveur :",
+    "zh": "服务器："
+  },
+  "Client:": {
+    "en": "Client:",
+    "ru": "Клиент:",
+    "de": "Client:",
+    "fr": "Client :",
+    "zh": "客户端："
+  },
+  "Open the interface": {
+    "en": "Open the interface",
+    "ru": "Открыть интерфейс",
+    "de": "Oberfläche öffnen",
+    "fr": "Ouvrir l’interface",
+    "zh": "打开界面"
+  },
+  "Hide window / close tray interface": {
+    "en": "Hide window / close tray interface",
+    "ru": "Скрыть окно / закрыть интерфейс в трее",
+    "de": "Fenster ausblenden / Tray-Oberfläche schließen",
+    "fr": "Masquer la fenêtre / fermer l’interface de notification",
+    "zh": "隐藏窗口 / 关闭托盘界面"
+  },
+  "Read/save interface language (default en)": {
+    "en": "Read/save interface language (default en)",
+    "ru": "Показать/сохранить язык интерфейса (по умолчанию en)",
+    "de": "Oberflächensprache lesen/speichern (Standard en)",
+    "fr": "Lire/enregistrer la langue (en par défaut)",
+    "zh": "读取/保存界面语言（默认 en）"
+  },
+  "Background recovery and tray at Windows startup": {
+    "en": "Background recovery and tray at Windows startup",
+    "ru": "Фоновое восстановление и трей при старте Windows",
+    "de": "Hintergrundwiederherstellung und Tray beim Windows-Start",
+    "fr": "Rétablissement et notification au démarrage de Windows",
+    "zh": "Windows 启动时运行后台恢复和托盘"
+  },
+  "Print log locations": {
+    "en": "Print log locations",
+    "ru": "Показать пути к журналам",
+    "de": "Protokollpfade anzeigen",
+    "fr": "Afficher les chemins des journaux",
+    "zh": "显示日志位置"
+  },
+  "Print version and repository": {
+    "en": "Print version and repository",
+    "ru": "Показать версию и репозиторий",
+    "de": "Version und Repository anzeigen",
+    "fr": "Afficher la version et le dépôt",
+    "zh": "显示版本和仓库"
+  },
+  "Running state, ports and devices": {
+    "en": "Running state, ports and devices",
+    "ru": "Состояние сервера, порты и устройства",
+    "de": "Betriebsstatus, Ports und Geräte",
+    "fr": "État du serveur, ports et périphériques",
+    "zh": "运行状态、端口和设备"
+  },
+  "Current complete device list": {
+    "en": "Current complete device list",
+    "ru": "Полный текущий список устройств",
+    "de": "Aktuelle vollständige Geräteliste",
+    "fr": "Liste complète des périphériques",
+    "zh": "当前完整设备列表"
+  },
+  "Start/stop the selected backend": {
+    "en": "Start/stop the selected backend",
+    "ru": "Включить/отключить выбранный модуль",
+    "de": "Ausgewähltes Modul starten/stoppen",
+    "fr": "Démarrer/arrêter le module sélectionné",
+    "zh": "启动/停止所选模块"
+  },
+  "Read current settings": {
+    "en": "Read current settings",
+    "ru": "Показать текущие настройки",
+    "de": "Aktuelle Einstellungen anzeigen",
+    "fr": "Afficher les paramètres actuels",
+    "zh": "读取当前设置"
+  },
+  "Share/unshare one identity or USB bus ID": {
+    "en": "Share/unshare one identity or USB bus ID",
+    "ru": "Опубликовать/снять публикацию по идентичности или USB-порту",
+    "de": "Gerät über Identität oder USB-Bus-ID freigeben/sperren",
+    "fr": "Partager/retirer une identité ou un port USB",
+    "zh": "按标识或 USB 总线 ID 共享/取消共享"
+  },
+  "Local use while idle (the Enabled checkbox)": {
+    "en": "Local use while idle (the Enabled checkbox)",
+    "ru": "Локальное использование без клиента (флажок «Включено»)",
+    "de": "Lokale Nutzung ohne Client (Kontrollkästchen Aktiviert)",
+    "fr": "Utilisation locale sans client (case Activé)",
+    "zh": "空闲时本地使用（已启用复选框）"
+  },
+  "Discover servers/list shared devices": {
+    "en": "Discover servers/list shared devices",
+    "ru": "Найти серверы/показать опубликованные устройства",
+    "de": "Server suchen/freigegebene Geräte auflisten",
+    "fr": "Rechercher les serveurs/lister les périphériques partagés",
+    "zh": "发现服务器/列出共享设备"
+  },
+  "All devices, including unshared ones": {
+    "en": "All devices, including unshared ones",
+    "ru": "Все устройства, включая неопубликованные",
+    "de": "Alle Geräte, auch nicht freigegebene",
+    "fr": "Tous les périphériques, même non partagés",
+    "zh": "所有设备，包括未共享设备"
+  },
+  "Recovery report/virtual USB ports": {
+    "en": "Recovery report/virtual USB ports",
+    "ru": "Отчёт восстановления/виртуальные USB-порты",
+    "de": "Wiederherstellungsbericht/virtuelle USB-Ports",
+    "fr": "Rapport de rétablissement/ports USB virtuels",
+    "zh": "恢复报告/虚拟 USB 端口"
+  },
+  "Saved servers and current selection": {
+    "en": "Saved servers and current selection",
+    "ru": "Сохранённые серверы и текущий выбор",
+    "de": "Gespeicherte Server und aktuelle Auswahl",
+    "fr": "Serveurs enregistrés et sélection actuelle",
+    "zh": "已保存的服务器和当前选择"
+  },
+  "Save the selected server": {
+    "en": "Save the selected server",
+    "ru": "Сохранить выбранный сервер",
+    "de": "Ausgewählten Server speichern",
+    "fr": "Enregistrer le serveur sélectionné",
+    "zh": "保存所选服务器"
+  },
+  "Disconnect its devices and forget server": {
+    "en": "Disconnect its devices and forget server",
+    "ru": "Отключить его устройства и удалить сервер",
+    "de": "Geräte trennen und Server entfernen",
+    "fr": "Déconnecter les périphériques et retirer le serveur",
+    "zh": "断开其设备并移除服务器"
+  },
+  "Change a saved server's address/port": {
+    "en": "Change a saved server's address/port",
+    "ru": "Изменить адрес/порт сохранённого сервера",
+    "de": "Adresse/Port eines gespeicherten Servers ändern",
+    "fr": "Modifier l’adresse/le port d’un serveur enregistré",
+    "zh": "更改已保存服务器的地址/端口"
+  },
+  "Connect now, remember and recover": {
+    "en": "Connect now, remember and recover",
+    "ru": "Подключить, запомнить и восстанавливать соединение",
+    "de": "Jetzt verbinden, merken und wiederherstellen",
+    "fr": "Connecter, mémoriser et rétablir",
+    "zh": "立即连接、记住并恢复"
+  },
+  "Re-enable a remembered USB identity": {
+    "en": "Re-enable a remembered USB identity",
+    "ru": "Включить сохранённое USB-устройство",
+    "de": "Gespeichertes USB-Gerät wieder aktivieren",
+    "fr": "Réactiver une identité USB mémorisée",
+    "zh": "重新启用已记住的 USB 标识"
+  },
+  "Disconnect and disable recovery for identity": {
+    "en": "Disconnect and disable recovery for identity",
+    "ru": "Отключить устройство и его автовосстановление",
+    "de": "Gerät trennen und Wiederherstellung deaktivieren",
+    "fr": "Déconnecter et désactiver le rétablissement",
+    "zh": "断开设备并禁用自动恢复"
+  },
+  "Disconnect a virtual USB port": {
+    "en": "Disconnect a virtual USB port",
+    "ru": "Отключить виртуальный USB-порт",
+    "de": "Virtuellen USB-Port trennen",
+    "fr": "Déconnecter un port USB virtuel",
+    "zh": "断开虚拟 USB 端口"
+  },
+  "Discover and show the complete catalog": {
+    "en": "Discover and show the complete catalog",
+    "ru": "Найти серверы и показать полный каталог",
+    "de": "Server suchen und vollständigen Katalog anzeigen",
+    "fr": "Rechercher et afficher le catalogue complet",
+    "zh": "发现并显示完整目录"
+  },
+  "SERVER is a saved UUID, address or unique name. ID accepts a USB identity or bus ID.": {
+    "en": "SERVER is a saved UUID, address or unique name. ID accepts a USB identity or bus ID.",
+    "ru": "SERVER — сохранённый UUID, адрес или уникальное имя. ID — USB-идентичность или USB-порт.",
+    "de": "SERVER ist UUID, Adresse oder eindeutiger Name. ID ist USB-Identität oder Bus-ID.",
+    "fr": "SERVER est un UUID, une adresse ou un nom unique. ID est une identité ou un port USB.",
+    "zh": "SERVER 为已保存的 UUID、地址或唯一名称。ID 接受 USB 标识或总线 ID。"
+  },
+  "Ports: 1..65535; USB data and discovery/list ports must differ.": {
+    "en": "Ports: 1..65535; USB data and discovery/list ports must differ.",
+    "ru": "Порты: 1..65535; порты USB и поиска/списка должны различаться.",
+    "de": "Ports: 1..65535; USB-Daten- und Such-/Listenport müssen verschieden sein.",
+    "fr": "Ports : 1..65535 ; les ports USB et découverte/liste doivent être différents.",
+    "zh": "端口：1..65535；USB 数据端口和发现/列表端口必须不同。"
+  },
+  "--allow replaces the server allowlist. Other settings remain unchanged.": {
+    "en": "--allow replaces the server allowlist. Other settings remain unchanged.",
+    "ru": "--allow заменяет список разрешённых IP. Остальные настройки сохраняются.",
+    "de": "--allow ersetzt die Liste zugelassener IPs. Andere Einstellungen bleiben erhalten.",
+    "fr": "--allow remplace la liste des IP autorisées. Les autres paramètres sont conservés.",
+    "zh": "--allow 替换服务器允许列表。其他设置保持不变。"
+  },
+  "--auth-stdin reads username then password as two UTF-8 lines; credentials are DPAPI protected.": {
+    "en": "--auth-stdin reads username then password as two UTF-8 lines; credentials are DPAPI protected.",
+    "ru": "--auth-stdin читает логин и пароль двумя строками UTF-8; данные защищены DPAPI.",
+    "de": "--auth-stdin liest Benutzername und Passwort als zwei UTF-8-Zeilen; DPAPI schützt die Daten.",
+    "fr": "--auth-stdin lit l’identifiant puis le mot de passe sur deux lignes UTF-8 ; protection DPAPI.",
+    "zh": "--auth-stdin 读取两行 UTF-8 用户名和密码；凭据由 DPAPI 保护。"
+  },
+  "Omitting --auth-stdin removes proxy authentication. No passwords on the command line.": {
+    "en": "Omitting --auth-stdin removes proxy authentication. No passwords on the command line.",
+    "ru": "Без --auth-stdin авторизация прокси выключена. Пароль не передаётся в аргументах.",
+    "de": "Ohne --auth-stdin ist Proxy-Authentifizierung aus. Keine Passwörter als Argumente.",
+    "fr": "Sans --auth-stdin, l’authentification du proxy est désactivée. Aucun mot de passe en argument.",
+    "zh": "省略 --auth-stdin 将关闭代理验证。密码不通过命令行参数传递。"
+  },
+  "Read commands never change USB ownership. Settings/backend/port changes restart the server;": {
+    "en": "Read commands never change USB ownership. Settings/backend/port changes restart the server;",
+    "ru": "Команды чтения не меняют захват USB. Изменение настроек/модуля/портов перезапускает сервер;",
+    "de": "Lesebefehle ändern keinen USB-Zugriff. Einstellungen/Modul/Ports starten den Server neu;",
+    "fr": "Les commandes de lecture ne changent pas la capture USB. Paramètres/module/ports redémarrent le serveur ;",
+    "zh": "读取命令不会更改 USB 所有权。更改设置/模块/端口会重启服务器；"
+  },
+  "publication, local-use preference and interface language changes do not restart it.": {
+    "en": "publication, local-use preference and interface language changes do not restart it.",
+    "ru": "публикация, локальное использование и смена языка не перезапускают его.",
+    "de": "Freigabe, lokale Nutzung und Oberflächensprache starten ihn nicht neu.",
+    "fr": "le partage, l’utilisation locale et la langue ne le redémarrent pas.",
+    "zh": "更改共享、本地使用选项和界面语言不会重启服务器。"
+  },
+  "Output is JSON except help and delegated transport commands. Errors return a nonzero exit code.": {
+    "en": "Output is JSON except help and delegated transport commands. Errors return a nonzero exit code.",
+    "ru": "Вывод — JSON, кроме справки и команд передачи. Ошибки возвращают ненулевой код выхода.",
+    "de": "Ausgabe als JSON, außer Hilfe und Transportbefehlen. Fehler liefern einen Exitcode ungleich null.",
+    "fr": "Sortie JSON, sauf aide et commandes de transport. Les erreurs renvoient un code non nul.",
+    "zh": "除帮助和委托的传输命令外，输出为 JSON。错误返回非零退出码。"
+  },
+  "Camera test": {
+    "en": "Camera Test",
+    "ru": "Проверка камеры",
+    "de": "Kameratest",
+    "fr": "Test de caméra",
+    "zh": "摄像头测试"
+  },
+  "Camera test…": {
+    "en": "Camera Test",
+    "ru": "Проверка камеры",
+    "de": "Kameratest",
+    "fr": "Test de caméra",
+    "zh": "摄像头测试"
+  },
+  "Camera": {
+    "en": "Camera",
+    "ru": "Камера",
+    "de": "Kamera",
+    "fr": "Caméra",
+    "zh": "摄像头"
+  },
+  "Video mode": {
+    "en": "Video mode",
+    "ru": "Режим видео",
+    "de": "Videomodus",
+    "fr": "Mode vidéo",
+    "zh": "视频模式"
+  },
+  "Refresh cameras": {
+    "en": "Refresh cameras",
+    "ru": "Обновить камеры",
+    "de": "Aktualisieren",
+    "fr": "Actualiser",
+    "zh": "刷新摄像头"
+  },
+  "Camera permissions": {
+    "en": "Camera permissions",
+    "ru": "Доступ к камере",
+    "de": "Kameraberechtigungen",
+    "fr": "Autorisations caméra",
+    "zh": "摄像头权限"
+  },
+  "Please wait…": {
+    "en": "Please wait…",
+    "ru": "Подождите…",
+    "de": "Bitte warten…",
+    "fr": "Veuillez patienter…",
+    "zh": "请稍候…"
+  },
+  "Start preview": {
+    "en": "Start preview",
+    "ru": "Старт просмотра",
+    "de": "Starten",
+    "fr": "Démarrer",
+    "zh": "开始预览"
+  },
+  "Stop preview": {
+    "en": "Stop preview",
+    "ru": "Стоп просмотра",
+    "de": "Stoppen",
+    "fr": "Arrêter",
+    "zh": "停止预览"
+  },
+  "Finding cameras…": {
+    "en": "Finding cameras…",
+    "ru": "Поиск камер…",
+    "de": "Kameras suchen…",
+    "fr": "Recherche des caméras…",
+    "zh": "正在查找摄像头…"
+  },
+  "Reading video modes…": {
+    "en": "Reading video modes…",
+    "ru": "Чтение видеорежимов…",
+    "de": "Videomodi lesen…",
+    "fr": "Lecture des modes vidéo…",
+    "zh": "正在读取视频模式…"
+  },
+  "Opening camera…": {
+    "en": "Opening camera…",
+    "ru": "Открытие камеры…",
+    "de": "Kamera wird geöffnet…",
+    "fr": "Ouverture de la caméra…",
+    "zh": "正在打开摄像头…"
+  },
+  "Stopping preview…": {
+    "en": "Stopping preview…",
+    "ru": "Остановка просмотра…",
+    "de": "Vorschau wird gestoppt…",
+    "fr": "Arrêt de l’aperçu…",
+    "zh": "正在停止预览…"
+  },
+  "Camera could not be opened. It may be busy, disconnected, or blocked by Windows camera permissions.": {
+    "en": "Camera could not be opened. It may be busy, disconnected, or blocked by Windows camera permissions.",
+    "ru": "Не удалось открыть камеру. Возможно, она занята, отключена или доступ запрещён в настройках Windows.",
+    "de": "Kamera konnte nicht geöffnet werden. Sie ist möglicherweise belegt, getrennt oder durch Windows-Kameraberechtigungen gesperrt.",
+    "fr": "Impossible d’ouvrir la caméra. Elle est peut-être occupée, déconnectée ou bloquée par les autorisations Windows.",
+    "zh": "无法打开摄像头。摄像头可能正忙、已断开或被 Windows 权限阻止。"
+  },
+  "No camera is available in Windows. On the server, stop sharing the camera before a local test. On the client, connect it first.": {
+    "en": "No camera is available in Windows. On the server, stop sharing the camera before a local test. On the client, connect it first.",
+    "ru": "В Windows нет доступной камеры. Для локальной проверки на сервере сначала снимите её с публикации. На клиенте сначала подключите камеру.",
+    "de": "Keine Kamera in Windows verfügbar. Für einen lokalen Test am Server zuerst die Freigabe aufheben. Am Client die Kamera zuerst verbinden.",
+    "fr": "Aucune caméra disponible dans Windows. Sur le serveur, arrêtez le partage avant un test local. Sur le client, connectez-la d’abord.",
+    "zh": "Windows 中没有可用摄像头。在服务器上本地测试前请先停止共享；在客户端上请先连接摄像头。"
+  },
+  "The selected USB camera is not available here. Connect it, or explicitly choose another camera.": {
+    "en": "The selected USB camera is not available here. Connect it, or explicitly choose another camera.",
+    "ru": "Выбранная USB-камера недоступна на этом ПК. Подключите её или явно выберите другую камеру.",
+    "de": "Die gewählte USB-Kamera ist hier nicht verfügbar. Verbinden Sie sie oder wählen Sie ausdrücklich eine andere Kamera.",
+    "fr": "La caméra USB sélectionnée n’est pas disponible ici. Connectez-la ou choisissez explicitement une autre caméra.",
+    "zh": "所选 USB 摄像头在此电脑上不可用。请连接它，或明确选择另一台摄像头。"
+  },
+  "Ready. Choose a mode and press Start preview.": {
+    "en": "Ready. Choose a mode and press Start preview.",
+    "ru": "Готово. Выберите режим и нажмите «Старт просмотра».",
+    "de": "Bereit. Modus wählen und Starten drücken.",
+    "fr": "Prêt. Choisissez un mode et cliquez sur Démarrer.",
+    "zh": "就绪。请选择模式并点击“开始预览”。"
+  },
+  "The camera did not report a supported video mode.": {
+    "en": "The camera did not report a supported video mode.",
+    "ru": "Камера не сообщила о поддерживаемых видеорежимах.",
+    "de": "Die Kamera hat keinen unterstützten Videomodus gemeldet.",
+    "fr": "La caméra n’a signalé aucun mode vidéo pris en charge.",
+    "zh": "摄像头未报告受支持的视频模式。"
+  },
+  "Preview running. FPS counts received camera frames, not window repaints.": {
+    "en": "Preview running. FPS counts received camera frames, not window repaints.",
+    "ru": "Просмотр работает. FPS считается по полученным кадрам камеры, а не по перерисовке окна.",
+    "de": "Vorschau läuft. FPS zählt empfangene Kamerabilder, keine Fensterneuzeichnungen.",
+    "fr": "Aperçu en cours. Les FPS comptent les images reçues de la caméra, pas les rafraîchissements de la fenêtre.",
+    "zh": "预览运行中。FPS 按摄像头实际接收帧数统计，而非窗口重绘次数。"
+  },
+  "Preview stopped. The USB connection remains available.": {
+    "en": "Preview stopped. The USB connection remains available.",
+    "ru": "Просмотр остановлен. USB-подключение остаётся доступным.",
+    "de": "Vorschau gestoppt. Die USB-Verbindung bleibt verfügbar.",
+    "fr": "Aperçu arrêté. La connexion USB reste disponible.",
+    "zh": "预览已停止。USB 连接仍然可用。"
+  },
+  "No new frames. Check the camera or connection; you can stop and retry the preview.": {
+    "en": "No new frames. Check the camera or connection; you can stop and retry the preview.",
+    "ru": "Новых кадров нет. Проверьте камеру и соединение; можно остановить просмотр и запустить его снова.",
+    "de": "Keine neuen Bilder. Kamera und Verbindung prüfen; Sie können die Vorschau stoppen und erneut starten.",
+    "fr": "Aucune nouvelle image. Vérifiez la caméra ou la connexion ; vous pouvez arrêter et relancer l’aperçu.",
+    "zh": "没有新帧。请检查摄像头或连接；可停止预览后重试。"
+  },
+  "Received: {fps} FPS  ·  Decoded: {decoded} FPS": {
+    "en": "Received: {fps} FPS  ·  Decoded: {decoded} FPS",
+    "ru": "Получено: {fps} FPS  ·  Декодировано: {decoded} FPS",
+    "de": "Empfangen: {fps} FPS  ·  Dekodiert: {decoded} FPS",
+    "fr": "Reçues : {fps} FPS  ·  Décodées : {decoded} FPS",
+    "zh": "接收：{fps} FPS  ·  解码：{decoded} FPS"
+  },
+  "{width} × {height}  ·  Frames: {frames}  ·  Average: {average} FPS  ·  Video: {speed} MiB/s": {
+    "en": "{width} × {height}  ·  Frames: {frames}  ·  Average: {average} FPS  ·  Video: {speed} MiB/s",
+    "ru": "{width} × {height}  ·  Кадров: {frames}  ·  Средний: {average} FPS  ·  Видео: {speed} MiB/s",
+    "de": "{width} × {height}  ·  Bilder: {frames}  ·  Mittel: {average} FPS  ·  Video: {speed} MiB/s",
+    "fr": "{width} × {height}  ·  Images : {frames}  ·  Moyenne : {average} FPS  ·  Vidéo : {speed} MiB/s",
+    "zh": "{width} × {height}  ·  帧数：{frames}  ·  平均：{average} FPS  ·  视频：{speed} MiB/s"
+  },
+  "Choose a camera and press Start preview": {
+    "en": "Choose a camera and press Start preview",
+    "ru": "Выберите камеру и нажмите «Старт просмотра»",
+    "de": "Kamera wählen und Starten drücken",
+    "fr": "Choisissez une caméra et cliquez sur Démarrer",
+    "zh": "请选择摄像头并点击“开始预览”"
+  },
+  "List cameras available in local Windows": {
+    "en": "List cameras available in local Windows",
+    "ru": "Показать камеры, доступные локально в Windows",
+    "de": "Lokal in Windows verfügbare Kameras anzeigen",
+    "fr": "Lister les caméras disponibles localement dans Windows",
+    "zh": "列出本地 Windows 中可用的摄像头"
+  },
+  "List video modes for an exact camera path/identity": {
+    "en": "List video modes for an exact camera path/identity",
+    "ru": "Показать режимы по точному пути/идентичности камеры",
+    "de": "Videomodi über genauen Kamerapfad/Identität anzeigen",
+    "fr": "Lister les modes selon le chemin/l’identité exacte",
+    "zh": "按精确摄像头路径/标识列出视频模式"
+  },
+  "Open camera preview with live FPS": {
+    "en": "Open camera preview with live FPS",
+    "ru": "Открыть просмотр камеры с текущим FPS",
+    "de": "Kameravorschau mit aktuellen FPS öffnen",
+    "fr": "Ouvrir l’aperçu avec FPS en direct",
+    "zh": "打开摄像头预览并显示实时 FPS"
+  },
+  "Count real camera frames without saving images": {
+    "en": "Count real camera frames without saving images",
+    "ru": "Считать реальные кадры камеры без сохранения изображений",
+    "de": "Echte Kamerabilder zählen, ohne Bilder zu speichern",
+    "fr": "Compter les images réelles sans les enregistrer",
+    "zh": "统计真实摄像头帧数，不保存图像"
+  },
+  "Stop the current preview to select the requested camera.": {
+    "en": "Stop the current preview to select the requested camera.",
+    "ru": "Остановите текущий просмотр, чтобы выбрать запрошенную камеру.",
+    "de": "Stoppen Sie die Vorschau, um die angeforderte Kamera auszuwählen.",
+    "fr": "Arrêtez l’aperçu actuel pour sélectionner la caméra demandée.",
+    "zh": "请先停止当前预览，再选择所请求的摄像头。"
+  },
+  "No frames received. Retrying this camera once…": {
+    "en": "No frames received. Retrying this camera once…",
+    "ru": "Кадры не поступили. Однократный повтор запуска этой камеры…",
+    "de": "Keine Bilder empfangen. Diese Kamera wird einmal neu gestartet…",
+    "fr": "Aucune image reçue. Une nouvelle tentative avec cette caméra…",
+    "zh": "未收到画面。正在重新启动此摄像头一次…"
+  },
+  "Connecting this server…": {
+    "en": "Connecting this server…",
+    "ru": "Подключение к серверу…",
+    "de": "Verbindung zum Server wird hergestellt…",
+    "fr": "Connexion au serveur…",
+    "zh": "正在连接此服务器…"
+  },
+  "Disconnecting this server…": {
+    "en": "Disconnecting this server…",
+    "ru": "Отключение от сервера…",
+    "de": "Verbindung zum Server wird getrennt…",
+    "fr": "Déconnexion du serveur…",
+    "zh": "正在断开此服务器…"
+  },
+  "Server connection resumed.": {
+    "en": "Server connection resumed.",
+    "ru": "Подключение к серверу возобновлено.",
+    "de": "Die Serververbindung wurde fortgesetzt.",
+    "fr": "La connexion au serveur a repris.",
+    "zh": "已恢复服务器连接。"
+  },
+  "Server disconnected on this client. Device choices are preserved.": {
+    "en": "Server disconnected on this client. Device choices are preserved.",
+    "ru": "Сервер отключён на этом клиенте. Выбор устройств сохранён.",
+    "de": "Server auf diesem Client getrennt. Die Geräteauswahl bleibt gespeichert.",
+    "fr": "Serveur déconnecté sur ce client. La sélection des appareils est conservée.",
+    "zh": "此客户端已断开服务器连接。已保留设备选择。"
+  },
+  "Connect server": {
+    "en": "Connect server",
+    "ru": "Подключиться к серверу",
+    "de": "Mit Server verbinden",
+    "fr": "Connecter le serveur",
+    "zh": "连接服务器"
+  },
+  "Disconnect server": {
+    "en": "Disconnect server",
+    "ru": "Отключиться от сервера",
+    "de": "Serververbindung trennen",
+    "fr": "Déconnecter le serveur",
+    "zh": "断开服务器"
+  },
+  "Server connection paused": {
+    "en": "Server connection paused",
+    "ru": "Подключение к серверу приостановлено",
+    "de": "Serververbindung pausiert",
+    "fr": "Connexion au serveur en pause",
+    "zh": "服务器连接已暂停"
+  },
+  " — paused": {
+    "en": " — paused",
+    "ru": " — приостановлен",
+    "de": " — pausiert",
+    "fr": " — en pause",
+    "zh": " — 已暂停"
+  },
+  "Disconnect/reconnect this server; preserve device choices": {
+    "en": "Disconnect/reconnect this server; preserve device choices",
+    "ru": "Отключить/подключить сервер, сохранив выбор устройств",
+    "de": "Server trennen/verbinden; Geräteauswahl beibehalten",
+    "fr": "Déconnecter/reconnecter ce serveur en conservant les appareils choisis",
+    "zh": "断开或恢复此服务器，保留设备选择"
+  },
+  "Low-light compensation (may reduce FPS; saved per camera)": {
+    "en": "Low-light compensation (may reduce FPS; saved per camera)",
+    "ru": "Компенсация слабого освещения (может снижать FPS; сохраняется для камеры)",
+    "de": "Ausgleich bei wenig Licht (kann FPS reduzieren; je Kamera gespeichert)",
+    "fr": "Compensation de faible éclairage (peut réduire les FPS ; mémorisée par caméra)",
+    "zh": "低光补偿（可能降低帧率；按相机保存）"
+  },
+  "Camera setting saved": {
+    "en": "Camera setting saved",
+    "ru": "Настройка камеры сохранена",
+    "de": "Kameraeinstellung gespeichert",
+    "fr": "Réglage de la caméra enregistré",
+    "zh": "相机设置已保存"
+  },
+  "Camera setting applied and saved": {
+    "en": "Camera setting applied and saved",
+    "ru": "Настройка камеры применена и сохранена",
+    "de": "Kameraeinstellung übernommen und gespeichert",
+    "fr": "Réglage de la caméra appliqué et enregistré",
+    "zh": "相机设置已应用并保存"
+  },
+  "Camera setting could not be saved": {
+    "en": "Camera setting could not be saved",
+    "ru": "Не удалось сохранить настройку камеры",
+    "de": "Kameraeinstellung konnte nicht gespeichert werden",
+    "fr": "Impossible d’enregistrer le réglage de la caméra",
+    "zh": "无法保存相机设置"
+  }
+}

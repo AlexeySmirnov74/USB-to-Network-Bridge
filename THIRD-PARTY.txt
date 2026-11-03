@@ -1,0 +1,57 @@
+USBBridge applications and USB/IP implementation are new Rust code, MIT.
+The default binary package contains applications, scripts and dependency
+licenses. It does not redistribute or modify third-party kernel binaries.
+
+PRODUCTION DRIVER DEPENDENCIES (separate upstream downloads)
+
+usbipd-win 5.3.0, GPL-3.0-only
+  https://github.com/dorssel/usbipd-win/releases/tag/v5.3.0
+  https://github.com/dorssel/usbipd-win/tree/v5.3.0
+  Installs VirtualBox 7.2.2 VBoxUSB/VBoxUSBMon production drivers.
+  Upstream driver licensing and source notices:
+  https://github.com/dorssel/usbipd-win/tree/v5.3.0/Drivers
+  VirtualBox source releases: https://download.virtualbox.org/virtualbox/
+
+USBIP-WIN2 0.9.8.1, BSD-2-Clause
+  https://github.com/vadimgrn/usbip-win2/releases/tag/v.0.9.8.1
+  https://github.com/vadimgrn/usbip-win2/blob/v.0.9.8.1/LICENSE.txt
+  Provides the virtual host controller and its companion filter driver.
+  These are used unchanged. The Rust client calls their public control ABI;
+  the driver's WSK transport handles USB payloads in the Windows kernel.
+
+The public ioctl constants and structure layouts implemented by src/vbox.rs
+follow the VirtualBox usblib-win.h ABI. No usbipd-win C# implementation is
+compiled into or distributed with the Rust applications.
+
+RUST DEPENDENCIES (Cargo.lock)
+
+socket2 0.6.5: MIT OR Apache-2.0
+base64 0.22.1 and native-tls 0.2.18: MIT OR Apache-2.0
+schannel 0.1.30: MIT
+windows-sys 0.61.2: MIT OR Apache-2.0
+windows-link 0.2.1: MIT OR Apache-2.0
+serde/serde_core/serde_derive 1.0.229: MIT OR Apache-2.0
+serde_json 1.0.154: MIT OR Apache-2.0
+uuid 1.29.0 and getrandom 0.4.3: MIT OR Apache-2.0
+cfg-if 1.0.5 and itoa 1.0.18: MIT OR Apache-2.0
+memchr 2.8.3: Unlicense OR MIT
+zmij 1.0.23: MIT
+proc-macro2 1.0.107, quote 1.0.47, syn 3.0.9: MIT OR Apache-2.0
+unicode-ident 1.0.27: (MIT OR Apache-2.0) AND Unicode-3.0
+Their license files are copied from Cargo metadata paths into each binary
+package. Cargo.lock records exact versions and registry checksums.
+
+Original USBBridge SVG, PNG and ICO artwork is covered by the project's MIT
+licence. Generate-Icon.ps1 recreates the Windows multi-resolution icon using
+Windows GDI+; build.rs embeds it in the application executables.
+
+OPTIONAL RESEARCH BACKEND
+
+src/usbdk.rs implements an optional UsbDk C API adapter. The default
+production setup does not download, install or bundle UsbDk.
+Upstream: https://github.com/daynix/UsbDk (Apache-2.0).
+
+Local vendor snapshots and earlier test-signed driver experiments remain
+outside the Git index and source/release packages. If distributing those
+separately, preserve their upstream licence and copyright notices and
+provide the corresponding source and modifications as applicable.

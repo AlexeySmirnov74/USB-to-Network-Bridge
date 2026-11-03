@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "application_signing": "unsigned",
+  "upstream_driver_signatures_required": true,
+  "minimum_soak_hours": 48,
+  "minimum_camera_fps": 27,
+  "required_checks": [
+    "fresh-install",
+    "repair",
+    "upgrade",
+    "rollback-injected-failure",
+    "downgrade-refused",
+    "uninstall",
+    "server-first-run",
+    "client-first-run",
+    "usb-replug-different-port",
+    "short-network-outage",
+    "sleep-resume",
+    "camera-controls-and-identity"
+  ],
+  "publication": "Only after the required qualification evidence passes; preserve Git history and publish source plus tested installer/portable assets.",
+  "max_log_file_mib": 32,
+  "retained_log_files": 5,
+  "short_observation": {
+    "minimum_seconds": 1200,
+    "operator_stop_allowed": true,
+    "required_checks": [
+      "fresh-install",
+      "repair",
+      "upgrade",
+      "rollback-injected-failure",
+      "downgrade-refused",
+      "uninstall"
+    ],
+    "remaining_checks": "Report as not performed; never label a short observation as full qualification."
+  }
+}

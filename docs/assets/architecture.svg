@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="690" viewBox="0 0 1280 690" role="img" aria-labelledby="title desc">
+  <title id="title">USB to Network Bridge — Windows USB over a trusted network</title>
+  <desc id="desc">Physical USB equipment connects to a Windows server with a switchable Rust Native or usbipd-win backend. Windows clients import selected devices through the signed USBIP-WIN2 controller. Each device has one remote owner at a time.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0c1526"/><stop offset="1" stop-color="#14283a"/></linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#48d6e4"/></marker>
+    <style>text{font-family:Segoe UI,Arial,sans-serif;fill:#e8f1fa}.muted{fill:#a9bed1;font-size:16px}.card{fill:#182d42;stroke:#34516b;stroke-width:1.5}.small{font-size:15px}.accent{fill:#62e3c2}.line{stroke:#48d6e4;stroke-width:3;fill:none;marker-end:url(#arrow)}</style>
+  </defs>
+  <rect width="1280" height="690" rx="24" fill="url(#bg)"/>
+  <text x="44" y="58" font-size="30" font-weight="700">USB to Network Bridge</text>
+  <text x="44" y="88" class="muted">Real USB devices. Windows server and clients. LAN or VPN.</text>
+  <rect x="38" y="136" width="225" height="380" rx="16" class="card"/>
+  <text x="60" y="171" font-size="21" font-weight="600">USB equipment</text>
+  <g font-size="19"><text x="60" y="222">Webcams + audio</text><text x="60" y="274">Mouse / keyboard</text><text x="60" y="326">Disk / flash storage</text><text x="60" y="378">Bluetooth adapters</text><text x="60" y="430">Printers + other USB</text></g>
+  <text x="60" y="480" class="muted">Physical USB cable</text>
+  <path d="M266 320H304" class="line"/>
+  <rect x="313" y="136" width="330" height="380" rx="16" class="card"/>
+  <text x="335" y="171" font-size="22" font-weight="600">Windows server</text>
+  <text x="335" y="201" class="muted">Select devices to share</text>
+  <rect x="335" y="225" width="286" height="52" rx="9" fill="#224760"/>
+  <text x="351" y="258" font-size="18" class="accent">Rust Native transport</text>
+  <text x="335" y="301" class="small">or switch to usbipd-win</text>
+  <path d="M335 321H621" stroke="#34516b"/>
+  <text x="335" y="355" font-size="18">Signed VBoxUSB capture driver</text>
+  <text x="335" y="390" class="muted">GUI / tray / CLI / recovery</text>
+  <text x="335" y="419" class="muted">Per-device sharing + idle local use</text>
+  <text x="335" y="480" class="small accent">Secure Boot can stay enabled</text>
+  <path d="M646 320H696" class="line"/>
+  <rect x="706" y="222" width="215" height="213" rx="16" fill="#163b48" stroke="#48d6e4"/>
+  <text x="726" y="256" font-size="20" font-weight="600">Trusted LAN / VPN</text>
+  <text x="726" y="296" font-size="17">TCP 3240 · USB data</text>
+  <text x="726" y="330" class="small">TCP 3241 · catalog</text>
+  <text x="726" y="360" class="small">UDP 3241 · discovery</text>
+  <text x="726" y="402" class="small accent">Configurable ports</text>
+  <path d="M924 287H965V222H994" class="line"/>
+  <path d="M965 287V424H994" class="line"/>
+  <rect x="1005" y="136" width="236" height="174" rx="16" class="card"/>
+  <text x="1025" y="173" font-size="21" font-weight="600">Windows client A</text>
+  <text x="1025" y="207" class="muted">Rust GUI / tray / CLI</text>
+  <text x="1025" y="240" class="small">Signed USBIP-WIN2 driver</text>
+  <text x="1025" y="279" class="small accent">Use devices in normal apps</text>
+  <rect x="1005" y="342" width="236" height="174" rx="16" class="card"/>
+  <text x="1025" y="379" font-size="21" font-weight="600">Windows client B</text>
+  <text x="1025" y="413" class="muted">Independent device choices</text>
+  <text x="1025" y="446" class="small">Automatic reconnect</text>
+  <text x="1025" y="485" class="small accent">More clients / servers possible</text>
+  <rect x="38" y="546" width="1203" height="108" rx="14" fill="#101f30" stroke="#34516b"/>
+  <text x="60" y="580" font-size="18">One remote owner per device · No activation or trial timer · No license-based device limit</text>
+  <text x="60" y="611" class="muted">Direct USB/IP requires a trusted network or VPN. Optional HTTP(S) / SOCKS5 proxy for TCP connections.</text>
+  <text x="60" y="637" class="small muted">v0.2.0 preview · Compatibility and performance depend on USB hardware, Windows drivers, and network.</text>
+</svg>

@@ -1,0 +1,40 @@
+name: Build and test
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Rust components
+        run: rustup component add rustfmt clippy
+      - name: Check and build
+        shell: powershell
+        run: ./Build.ps1
+      - name: Test qualification and archive verification
+        shell: powershell
+        run: |
+          python -m unittest discover -s tests -p 'test_*.py'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package applications and sources
+        shell: powershell
+        run: |
+          ./Package.ps1
+          python ./Package-Source.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./Build-Installer.ps1
+      - name: Qualify isolated installer lifecycle
+        shell: powershell
+        run: ./Test-Installer.ps1 -Elevate
+      - uses: actions/upload-artifact@v4
+        with:
+          name: usbbridge-windows-x64
+          path: |
+            dist/USB-to-Network-Bridge-*-windows-x64.zip
+            dist/USB-to-Network-Bridge-*-windows-x64.msi
+            dist/USB-to-Network-Bridge-*-source.zip
+          if-no-files-found: error
