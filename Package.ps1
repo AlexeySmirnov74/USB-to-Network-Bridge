@@ -18,7 +18,7 @@ try {
     $stage = Join-Path $dist ($name + '-' + [guid]::NewGuid().ToString('N'))
     $licenses = Join-Path $stage 'licenses'
     New-Item -ItemType Directory -Path $licenses -Force | Out-Null
-    foreach ($binary in @('usbbridge.exe', 'usbbridge-client.exe', 'usbbridge-server.exe', 'usbbridge-agent.exe')) {
+    foreach ($binary in @('usbbridge.exe', 'usbbridge-client.exe', 'usbbridge-server.exe', 'usbbridge-agent.exe', 'USB-to-Network-Bridge-Server.exe', 'USB-to-Network-Bridge-Client.exe')) {
         Copy-Item -LiteralPath (Join-Path $metadata.target_directory ('release\' + $binary)) -Destination $stage
     }
     foreach ($file in @(

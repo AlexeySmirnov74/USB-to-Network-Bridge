@@ -1,4 +1,4 @@
-﻿"""Verify release archives against reviewed Git blobs and tested application bytes."""
+"""Verify release archives against reviewed Git blobs and tested application bytes."""
 from __future__ import annotations
 import argparse
 import hashlib
@@ -9,7 +9,8 @@ import shutil
 import subprocess
 import zipfile
 
-BINARIES = ("usbbridge.exe", "usbbridge-client.exe", "usbbridge-server.exe", "usbbridge-agent.exe")
+BINARIES = ("usbbridge.exe", "usbbridge-client.exe", "usbbridge-server.exe", "usbbridge-agent.exe",
+            "USB-to-Network-Bridge-Server.exe", "USB-to-Network-Bridge-Client.exe")
 
 def safe_names(archive):
     entries = {}

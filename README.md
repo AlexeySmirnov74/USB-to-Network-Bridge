@@ -73,6 +73,8 @@ For portable deployment, extract the application ZIP into a writable directory s
 
 ### 2. Set up the server
 
+After setup, double-click **`USB-to-Network-Bridge-Server.exe`** on the server or **`USB-to-Network-Bridge-Client.exe`** on the client. Both open the correct GUI without a console window and reuse saved settings. Keep them with the complete application folder. The MSI Start menu shortcuts use these launchers too; `usbbridge.exe` remains the command-line tool.
+
 In **Windows PowerShell as Administrator**, on the computer with the physical devices:
 
 ```powershell
@@ -89,7 +91,7 @@ Set `AllowedPeers` to the actual client IP address(es). Keep `Export = @()` for 
 .\Switch-Backend.ps1 -Backend Native -RuntimeDirectory C:\USBBridge
 .\Set-Autostart.ps1 -Role Server -RuntimeDirectory C:\USBBridge `
     -Config C:\USBBridge\host.local.json -Profile C:\USBBridge\server.local.psd1
-.\usbbridge.exe --config C:\USBBridge\host.local.json server gui
+.\USB-to-Network-Bridge-Server.exe
 ```
 
 The tray icon and GUI show server status. Right-click a device → **Share**, or double-click an unshared device row. To use the stock transport, switch the server module in Settings or run `Switch-Backend.ps1 -Backend Usbipd`; changing the transport reconnects active devices.
@@ -105,7 +107,7 @@ Copy-Item .\client.example.json .\client.local.json
 # Restart manually first if the driver installer requests it.
 .\Set-Autostart.ps1 -Role Client -RuntimeDirectory C:\USBBridge `
     -Config C:\USBBridge\client.local.json
-.\usbbridge.exe --config C:\USBBridge\client.local.json client gui
+.\USB-to-Network-Bridge-Client.exe
 ```
 
 Use **Find servers**, select a server, select a shared device, then **Connect**. If discovery cannot cross the network, use **Add server** with its LAN/VPN address. Saved device choices reconnect automatically; **Disconnect** cancels the corresponding choice. Selecting a server node allows pausing/resuming all its remembered devices without affecting other servers.
@@ -141,7 +143,7 @@ Set-Location USB-to-Network-Bridge
 .\Package.ps1
 ```
 
-`Build.ps1` checks formatting, runs Clippy and tests, and builds four release executables. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.0-windows-x64.zip` with runtime helpers, examples, docs, and dependency licenses. Drivers are downloaded from upstream, verified against pinned SHA-256 and Authenticode in `driver-installers.json`, and are not bundled. CI builds/packages without installing USB drivers; hardware tests remain separate.
+`Build.ps1` checks formatting, runs Clippy and tests, and builds six release executables. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.0-windows-x64.zip` with runtime helpers, examples, docs, and dependency licenses. Drivers are downloaded from upstream, verified against pinned SHA-256 and Authenticode in `driver-installers.json`, and are not bundled. CI builds/packages without installing USB drivers; hardware tests remain separate.
 
 ## Installation and runtime
 

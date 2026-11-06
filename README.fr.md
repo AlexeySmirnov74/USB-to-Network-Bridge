@@ -66,6 +66,8 @@ Prérequis : deux PC Windows 11 x64, droits administrateur pour les pilotes et l
 
 Téléchargez l’artefact `usbbridge-windows-x64` d’une exécution réussie de [GitHub Actions](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/actions/workflows/ci.yml) (connexion GitHub éventuellement nécessaire), ou compilez ci-dessous. Extrayez le ZIP de l’application dans `C:\USBBridge` sur les deux PC. Conservez les `.ps1` avec les EXE.
 
+Après la configuration, double-cliquez sur **`USB-to-Network-Bridge-Server.exe`** côté serveur ou **`USB-to-Network-Bridge-Client.exe`** côté client. Ils ouvrent la bonne interface sans console et réutilisent les paramètres enregistrés. Conservez-les dans le dossier complet de l’application. Les raccourcis du MSI utilisent aussi ces lanceurs ; `usbbridge.exe` reste l’outil en ligne de commande.
+
 Sur le **serveur**, dans Windows PowerShell **en administrateur** :
 
 ```powershell
@@ -81,7 +83,7 @@ Remplacez l’adresse d’exemple par l’IP réelle du client, dans la commande
 .\Switch-Backend.ps1 -Backend Native -RuntimeDirectory C:\USBBridge
 .\Set-Autostart.ps1 -Role Server -RuntimeDirectory C:\USBBridge `
     -Config C:\USBBridge\host.local.json -Profile C:\USBBridge\server.local.psd1
-.\usbbridge.exe --config C:\USBBridge\host.local.json server gui
+.\USB-to-Network-Bridge-Server.exe
 ```
 
 Clic droit sur un appareil → **Share**, ou double-clic sur une ligne non partagée. Pour le service standard, sélectionnez-le dans les paramètres ou utilisez `Switch-Backend.ps1 -Backend Usbipd`. Le changement de module reconnecte les appareils actifs.
@@ -95,7 +97,7 @@ Copy-Item .\client.example.json .\client.local.json
 # Redémarrez manuellement d’abord si l’installateur le demande.
 .\Set-Autostart.ps1 -Role Client -RuntimeDirectory C:\USBBridge `
     -Config C:\USBBridge\client.local.json
-.\usbbridge.exe --config C:\USBBridge\client.local.json client gui
+.\USB-to-Network-Bridge-Client.exe
 ```
 
 Cliquez sur **Find servers**, choisissez un serveur puis un appareil partagé et **Connect**. Utilisez **Add server** avec son adresse LAN/VPN si nécessaire. Les choix sont mémorisés ; **Disconnect** annule la reconnexion correspondante. Sur le nœud serveur, vous pouvez suspendre tous ses appareils sans affecter les autres serveurs.

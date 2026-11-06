@@ -24,7 +24,14 @@ function Msi([string]$Name,[string]$Arguments,[int]$Expected=0){
  $checks.Add([ordered]@{test=$Name;exit_code=$p.ExitCode;passed=$true})
 }
 function Assert-Application{
- foreach($file in @('usbbridge.exe','usbbridge-server.exe','usbbridge-client.exe','usbbridge-agent.exe')){
+ $shell=New-Object -ComObject WScript.Shell
+ $menu=Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'USB Bridge Installer Qualification'
+ foreach($role in @('Server','Client')){
+  $link=$shell.CreateShortcut((Join-Path $menu ('USB to Network Bridge '+$role+'.lnk')))
+  $target=Join-Path $installed ('USB-to-Network-Bridge-'+$role+'.exe')
+  if($link.TargetPath-ne $target-or $link.Arguments){throw ('Invalid desktop launcher shortcut: '+$role)}
+ }
+ foreach($file in @('usbbridge.exe','usbbridge-server.exe','usbbridge-client.exe','usbbridge-agent.exe', 'USB-to-Network-Bridge-Server.exe', 'USB-to-Network-Bridge-Client.exe')){
   if((Get-FileHash -LiteralPath (Join-Path $installed $file)).Hash-ne (Get-FileHash -LiteralPath (Join-Path $root ('target\release\'+$file))).Hash){throw ('Installed binary differs from candidate: '+$file)}
  }
  foreach($file in @('Open-Installation.ps1','Configure-Installation.ps1','Maintain-Installation.ps1')){
@@ -48,7 +55,9 @@ try{
  Msi 'downgrade-refused' ('/i "'+(Join-Path $root 'dist\installer-smoke-v020.msi')+'"') 1603
  Assert-Application
  Msi 'uninstall' ('/x '+$meta1.product_code)
- if(Test-Path -LiteralPath (Join-Path $installed 'usbbridge-agent.exe')){throw 'Application executable remained after uninstall.'}
+ foreach($file in @('usbbridge-agent.exe','USB-to-Network-Bridge-Server.exe','USB-to-Network-Bridge-Client.exe')){
+  if(Test-Path -LiteralPath (Join-Path $installed $file)){throw ('Application executable remained after uninstall: '+$file)}
+ }
  if((Get-FileHash $saved).Hash-ne $savedHash){throw 'User data was modified.'}
  if($beforeSessions-and [IO.File]::ReadAllText((Join-Path $root 'production\native-sessions.local.json'))-ne $beforeSessions){throw 'The unrelated development USB session changed.'}
  [ordered]@{schema=1;passed=$true;checks=$checks;configuration_preserved=$true;unrelated_usb_session_preserved=$true;role_activation_tested=$false;application_signing='unsigned';finished_utc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json -Depth 6|Set-Content (Join-Path $logs 'result.local.json') -Encoding utf8

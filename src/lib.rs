@@ -22,6 +22,8 @@ pub mod i18n;
 #[cfg(windows)]
 pub mod instance;
 pub mod inventory;
+#[cfg(windows)]
+pub mod launcher;
 pub mod management;
 #[cfg(windows)]
 mod native_capture;

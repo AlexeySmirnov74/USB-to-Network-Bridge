@@ -136,8 +136,8 @@ foreach($role in @('Server','Client')){
  Insert Component @($component,(Guid-For $component),'INSTALLDIR',260,$null,($role+'Registry'))
  Insert FeatureComponents @($role,$component)
  Insert Registry @(($role+'Registry'),2,$(if($TestFixture){'Software\USBtoNetworkBridgeInstallerQualification'}else{'Software\USBtoNetworkBridge'}),($role+'Installed'),'[ProductVersion]',$component)
- $arguments='-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "[INSTALLDIR]Open-Installation.ps1" -Role '+$role
- Insert Shortcut @(($role+'Shortcut'),'AppMenu',('USB to Network Bridge '+$role),$component,'[System64Folder]WindowsPowerShell\v1.0\powershell.exe',$arguments,('Configure or open the '+$role.ToLowerInvariant()),$null,'AppIcon',0,1,'INSTALLDIR')
+ Insert Registry @(($role+'Directory'),2,$(if($TestFixture){'Software\USBtoNetworkBridgeInstallerQualification'}else{'Software\USBtoNetworkBridge'}),($role+'Directory'),'[INSTALLDIR]',$component)
+ Insert Shortcut @(($role+'Shortcut'),'AppMenu',('USB to Network Bridge '+$role),$component,('[INSTALLDIR]USB-to-Network-Bridge-'+$role+'.exe'),$null,('Configure or open the '+$role.ToLowerInvariant()),$null,'AppIcon',0,1,'INSTALLDIR')
  Insert RemoveFile @(($role+'MenuFolder'),$component,$null,'AppMenu',2)
 }
 Insert Media @(1,$number,$null,'#payload.cab',$null,$null)

@@ -66,6 +66,8 @@ Benötigt werden zwei Windows-11-x64-PCs, Administratorrechte für Treiber/Einri
 
 Laden Sie das Artefakt `usbbridge-windows-x64` eines erfolgreichen [GitHub-Actions-Laufs](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/actions/workflows/ci.yml) herunter (GitHub-Anmeldung eventuell erforderlich) oder bauen Sie das Projekt wie unten beschrieben. Entpacken Sie das Anwendungs-ZIP auf beiden PCs nach `C:\USBBridge`. Die `.ps1`-Dateien müssen neben den EXE-Dateien bleiben.
 
+Nach der Einrichtung starten Sie den Server per Doppelklick auf **`USB-to-Network-Bridge-Server.exe`** und den Client über **`USB-to-Network-Bridge-Client.exe`**. Die passende Oberfläche öffnet sich ohne Konsolenfenster mit den gespeicherten Einstellungen. Belassen Sie die EXE-Dateien im vollständigen Anwendungsordner. Auch die MSI-Startmenüeinträge verwenden diese Starter; `usbbridge.exe` bleibt das Kommandozeilenwerkzeug.
+
 Auf dem **Server**, in Windows PowerShell **als Administrator**:
 
 ```powershell
@@ -81,7 +83,7 @@ Ersetzen Sie die Beispieladresse durch die echte Client-IP, sowohl im Befehl als
 .\Switch-Backend.ps1 -Backend Native -RuntimeDirectory C:\USBBridge
 .\Set-Autostart.ps1 -Role Server -RuntimeDirectory C:\USBBridge `
     -Config C:\USBBridge\host.local.json -Profile C:\USBBridge\server.local.psd1
-.\usbbridge.exe --config C:\USBBridge\host.local.json server gui
+.\USB-to-Network-Bridge-Server.exe
 ```
 
 Rechtsklick auf ein Gerät → **Share**, alternativ Doppelklick auf eine noch nicht freigegebene Zeile. Das Standardmodul kann in den Einstellungen oder mit `Switch-Backend.ps1 -Backend Usbipd` gewählt werden. Ein Modulwechsel verbindet aktive Geräte neu.
@@ -95,7 +97,7 @@ Copy-Item .\client.example.json .\client.local.json
 # Falls angefordert, zunächst Windows manuell neu starten.
 .\Set-Autostart.ps1 -Role Client -RuntimeDirectory C:\USBBridge `
     -Config C:\USBBridge\client.local.json
-.\usbbridge.exe --config C:\USBBridge\client.local.json client gui
+.\USB-to-Network-Bridge-Client.exe
 ```
 
 **Find servers** wählen, Server und freigegebenes Gerät markieren, dann **Connect**. Bei Bedarf über **Add server** die LAN/VPN-Adresse eintragen. Die Auswahl wird gespeichert; **Disconnect** beendet die entsprechende automatische Wiederverbindung. Über den Serverknoten lassen sich alle seine Geräte pausieren, ohne andere Server zu beeinflussen.

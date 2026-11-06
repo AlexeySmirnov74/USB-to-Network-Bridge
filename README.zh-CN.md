@@ -66,6 +66,8 @@ Native 让我们能够直接优化 USB/网络路径。例如，在捕获前初�
 
 从成功的 [GitHub Actions 工作流](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/actions/workflows/ci.yml)下载 `usbbridge-windows-x64` 构件（可能需要登录 GitHub），或按下文从源码构建。在两台计算机上将应用 ZIP 解压至 `C:\USBBridge`。请将 `.ps1` 与 EXE 保存在同一目录。
 
+完成配置后，在服务器上双击 **`USB-to-Network-Bridge-Server.exe`**，在客户端上双击 **`USB-to-Network-Bridge-Client.exe`**。它们会使用已保存的设置打开相应 GUI，不显示控制台窗口。请将这些 EXE 保留在完整的应用目录中。MSI 的开始菜单快捷方式也使用这两个启动器；`usbbridge.exe` 仍用于命令行管理。
+
 在连接物理设备的**服务器**上，以**管理员身份运行 Windows PowerShell**：
 
 ```powershell
@@ -81,7 +83,7 @@ notepad .\server.local.psd1
 .\Switch-Backend.ps1 -Backend Native -RuntimeDirectory C:\USBBridge
 .\Set-Autostart.ps1 -Role Server -RuntimeDirectory C:\USBBridge `
     -Config C:\USBBridge\host.local.json -Profile C:\USBBridge\server.local.psd1
-.\usbbridge.exe --config C:\USBBridge\host.local.json server gui
+.\USB-to-Network-Bridge-Server.exe
 ```
 
 右键设备选择 **Share**，或双击尚未共享的设备行。可在设置中切换到标准模块，或运行 `Switch-Backend.ps1 -Backend Usbipd`。切换模块会使活动设备重新连接。
@@ -95,7 +97,7 @@ Copy-Item .\client.example.json .\client.local.json
 # 若安装程序要求重启，请先手动重启 Windows。
 .\Set-Autostart.ps1 -Role Client -RuntimeDirectory C:\USBBridge `
     -Config C:\USBBridge\client.local.json
-.\usbbridge.exe --config C:\USBBridge\client.local.json client gui
+.\USB-to-Network-Bridge-Client.exe
 ```
 
 点击 **Find servers**，选择服务器和已共享设备，然后点击 **Connect**。若无法自动发现，请使用 **Add server** 输入 LAN/VPN 地址。设备选择会被保存；**Disconnect** 取消对应的自动重连。在服务器节点上可暂停该服务器的全部设备，而不影响其他服务器。

@@ -66,6 +66,8 @@ Native позволяет непосредственно настраивать 
 
 Получите артефакт `usbbridge-windows-x64` из успешного запуска [GitHub Actions](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/actions/workflows/ci.yml) (может потребоваться вход в GitHub) или соберите проект ниже. Распакуйте ZIP приложения в `C:\USBBridge` на обоих ПК. Сохраните `.ps1` рядом с EXE.
 
+После настройки запускайте сервер двойным щелчком по **`USB-to-Network-Bridge-Server.exe`**, а клиент — по **`USB-to-Network-Bridge-Client.exe`**. Открывается нужный GUI без консольного окна, с сохранёнными настройками. Оставляйте EXE в полной папке приложения. Эти же файлы используются ярлыками MSI в меню «Пуск»; `usbbridge.exe` остаётся инструментом командной строки.
+
 На **сервере**, в Windows PowerShell от администратора:
 
 ```powershell
@@ -81,7 +83,7 @@ notepad .\server.local.psd1
 .\Switch-Backend.ps1 -Backend Native -RuntimeDirectory C:\USBBridge
 .\Set-Autostart.ps1 -Role Server -RuntimeDirectory C:\USBBridge `
     -Config C:\USBBridge\host.local.json -Profile C:\USBBridge\server.local.psd1
-.\usbbridge.exe --config C:\USBBridge\host.local.json server gui
+.\USB-to-Network-Bridge-Server.exe
 ```
 
 В таблице нажмите правой кнопкой → **Share** или дважды щёлкните неопубликованное устройство. Для штатного модуля выберите его в настройках либо выполните `Switch-Backend.ps1 -Backend Usbipd`; смена модуля переподключает активные устройства.
@@ -95,7 +97,7 @@ Copy-Item .\client.example.json .\client.local.json
 # При необходимости сначала перезагрузите Windows вручную.
 .\Set-Autostart.ps1 -Role Client -RuntimeDirectory C:\USBBridge `
     -Config C:\USBBridge\client.local.json
-.\usbbridge.exe --config C:\USBBridge\client.local.json client gui
+.\USB-to-Network-Bridge-Client.exe
 ```
 
 Нажмите **Find servers**, выберите сервер, опубликованное устройство и **Connect**. Для другой подсети используйте **Add server** с LAN/VPN-адресом. Выбор запоминается; **Disconnect** отменяет автоподключение. На узле сервера можно приостановить все его устройства независимо от остальных серверов.

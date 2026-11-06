@@ -28,6 +28,8 @@ The product code is listed in the MSI's build metadata and Windows Installer reg
 
 ## Portable ZIP
 
+After portable setup, double-click `USB-to-Network-Bridge-Server.exe` or `USB-to-Network-Bridge-Client.exe` to open the corresponding GUI without a console window. Saved role settings are reused, and an existing interface is activated instead of starting a second instance. The launchers must stay with the complete application directory; an optional `--config FILE` selects an existing custom configuration.
+
 Extract the application ZIP to a writable directory and follow the role-specific commands in the [English README](../README.md#quick-start) or its translated version. Keep the PowerShell helpers beside the EXEs. Driver setup and startup changes require administrator rights.
 
 ## Developer qualification

@@ -35,3 +35,11 @@ path = "src/bin/client.rs"
 [[bin]]
 name = "usbbridge-agent"
 path = "src/bin/agent.rs"
+
+[[bin]]
+name = "USB-to-Network-Bridge-Server"
+path = "src/bin/server_gui.rs"
+
+[[bin]]
+name = "USB-to-Network-Bridge-Client"
+path = "src/bin/client_gui.rs"
