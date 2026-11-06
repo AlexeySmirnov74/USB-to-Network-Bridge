@@ -68,6 +68,8 @@ Native позволяет непосредственно настраивать 
 
 После настройки запускайте сервер двойным щелчком по **`USB-to-Network-Bridge-Server.exe`**, а клиент — по **`USB-to-Network-Bridge-Client.exe`**. Открывается нужный GUI без консольного окна, с сохранёнными настройками. Оставляйте EXE в полной папке приложения. Эти же файлы используются ярлыками MSI в меню «Пуск»; `usbbridge.exe` остаётся инструментом командной строки.
 
+[Скачать EXE сервера](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Server.exe) · [Скачать EXE клиента](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Client.exe). Скачанные отдельно EXE поместите в полную папку приложения, описанную выше.
+
 На **сервере**, в Windows PowerShell от администратора:
 
 ```powershell

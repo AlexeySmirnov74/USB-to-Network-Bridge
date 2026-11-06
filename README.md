@@ -75,6 +75,8 @@ For portable deployment, extract the application ZIP into a writable directory s
 
 After setup, double-click **`USB-to-Network-Bridge-Server.exe`** on the server or **`USB-to-Network-Bridge-Client.exe`** on the client. Both open the correct GUI without a console window and reuse saved settings. Keep them with the complete application folder. The MSI Start menu shortcuts use these launchers too; `usbbridge.exe` remains the command-line tool.
 
+[Download Server EXE](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Server.exe) · [Download Client EXE](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Client.exe). Place individual EXE downloads in the complete application folder described above.
+
 In **Windows PowerShell as Administrator**, on the computer with the physical devices:
 
 ```powershell

@@ -37,4 +37,6 @@ jobs:
             dist/USB-to-Network-Bridge-*-windows-x64.zip
             dist/USB-to-Network-Bridge-*-windows-x64.msi
             dist/USB-to-Network-Bridge-*-source.zip
+            dist/USB-to-Network-Bridge-Server.exe
+            dist/USB-to-Network-Bridge-Client.exe
           if-no-files-found: error

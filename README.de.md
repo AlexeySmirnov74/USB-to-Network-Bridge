@@ -68,6 +68,8 @@ Laden Sie das Artefakt `usbbridge-windows-x64` eines erfolgreichen [GitHub-Actio
 
 Nach der Einrichtung starten Sie den Server per Doppelklick auf **`USB-to-Network-Bridge-Server.exe`** und den Client über **`USB-to-Network-Bridge-Client.exe`**. Die passende Oberfläche öffnet sich ohne Konsolenfenster mit den gespeicherten Einstellungen. Belassen Sie die EXE-Dateien im vollständigen Anwendungsordner. Auch die MSI-Startmenüeinträge verwenden diese Starter; `usbbridge.exe` bleibt das Kommandozeilenwerkzeug.
 
+[Server-EXE herunterladen](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Server.exe) · [Client-EXE herunterladen](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Client.exe). Legen Sie einzeln heruntergeladene EXE-Dateien im oben beschriebenen vollständigen Anwendungsordner ab.
+
 Auf dem **Server**, in Windows PowerShell **als Administrator**:
 
 ```powershell

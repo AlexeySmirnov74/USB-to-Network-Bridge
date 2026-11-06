@@ -48,5 +48,8 @@ try {
     $hashes | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $stage 'SHA256.json') -Encoding UTF8
     $archive = Join-Path $dist ($name + '.zip')
     Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -Force
+    foreach ($launcher in @('USB-to-Network-Bridge-Server.exe', 'USB-to-Network-Bridge-Client.exe')) {
+        Copy-Item -LiteralPath (Join-Path $stage $launcher) -Destination (Join-Path $dist $launcher) -Force
+    }
     Get-Item -LiteralPath $archive | Select-Object FullName, Length
 } finally { Pop-Location }

@@ -45,6 +45,11 @@ $source=@($files|Where-Object Name -like '*-source.zip')[0].FullName
 $msi=@($files|Where-Object Extension -eq '.msi')[0].FullName
 & (Join-Path $root 'Verify-ReleaseArtifacts.ps1') -Portable $portable -Source $source -Msi $msi -Commit $commit
 if(-not $?){throw 'Candidate artifact verification failed.'}
+foreach($launcher in @('USB-to-Network-Bridge-Server.exe','USB-to-Network-Bridge-Client.exe')){
+ $artifact=Get-Item -LiteralPath (Join-Path $CandidateDirectory $launcher)
+ if((Get-FileHash -LiteralPath $artifact.FullName).Hash-ne (Get-FileHash -LiteralPath (Join-Path $root ('target\release\'+$launcher))).Hash){throw ('Launcher differs from the built candidate: '+$launcher)}
+ $files+=@($artifact)
+}
 $review=[ordered]@{schema=1;source_commit=$commit;application_signing='unsigned';validation_profile=$ValidationProfile;observation_passed=$true;full_qualification_passed=($ValidationProfile-eq 'Full');full_soak_hours_required=$policy.minimum_soak_hours;not_performed_checks=$pending;observations=$observations;created_utc=[DateTime]::UtcNow.ToString('o');artifacts=@($files|ForEach-Object {[ordered]@{file=$_.Name;bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}})}
 New-Item -ItemType Directory -Path (Join-Path $root 'logs') -Force|Out-Null
 $review|ConvertTo-Json -Depth 8|Set-Content -LiteralPath (Join-Path $root 'logs\release-review.local.json') -Encoding utf8

@@ -68,6 +68,8 @@ Native 让我们能够直接优化 USB/网络路径。例如，在捕获前初�
 
 完成配置后，在服务器上双击 **`USB-to-Network-Bridge-Server.exe`**，在客户端上双击 **`USB-to-Network-Bridge-Client.exe`**。它们会使用已保存的设置打开相应 GUI，不显示控制台窗口。请将这些 EXE 保留在完整的应用目录中。MSI 的开始菜单快捷方式也使用这两个启动器；`usbbridge.exe` 仍用于命令行管理。
 
+[下载服务器 EXE](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Server.exe) · [下载客户端 EXE](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Client.exe)。单独下载的 EXE 应放在上述完整的应用目录中。
+
 在连接物理设备的**服务器**上，以**管理员身份运行 Windows PowerShell**：
 
 ```powershell
