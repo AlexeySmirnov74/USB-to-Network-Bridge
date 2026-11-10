@@ -218,8 +218,11 @@ pub fn check(config: &Path, role: Role) -> io::Result<()> {
         .as_u64()
         .is_some_and(|updated| health::fresh(updated, now))
         && snapshot["supervisor"]["running"].as_bool() == Some(true);
-    if snapshot["healthy"].as_bool() == Some(true) && supervisor_fresh {
-        crate::diagnostics::event("health.check", json!({"role":name,"healthy":true}));
+    if snapshot["supervisor_running"].as_bool() == Some(true) && supervisor_fresh {
+        crate::diagnostics::event(
+            "health.check",
+            json!({"role":name,"healthy":snapshot["healthy"],"action":"supervisor_responsible_for_child"}),
+        );
         return Ok(());
     }
     crate::diagnostics::event(
