@@ -20,6 +20,7 @@
 - Saving video settings while the selected source is absent preserves its identity instead of replacing it with the test pattern.
 - Portable packaging accepts dependency license timestamps older than ZIP's supported date range.
 - Video status expires stale connection claims, and setup waits for a newly written ready report rather than accepting an earlier process's file.
+- Video mode changes and installer maintenance release the owned virtual USB port before terminating the receiver, avoiding a device enumeration race.
 - Installer maintenance stops, resumes and removes the owned video tasks and firewall rules alongside the existing USB components.
 
 ## 0.2.1 — 2026-11-10

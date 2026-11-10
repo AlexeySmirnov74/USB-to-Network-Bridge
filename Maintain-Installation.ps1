@@ -63,11 +63,12 @@ if($Operation-eq 'Stop'-and -not(Test-Path -LiteralPath $journalPath)){
  }
  Save-Journal $journal
 }
-foreach($task in $tasks){$task|Disable-ScheduledTask|Out-Null;$task|Stop-ScheduledTask -ErrorAction SilentlyContinue}
+foreach($task in $tasks){$task|Disable-ScheduledTask|Out-Null}
 foreach($task in @($tasks|Where-Object {$_.Actions.Execute-eq $camera-and $_.Actions.Arguments-match '^receive --config "(.+)"$'})){
  $videoConfig=[regex]::Match($task.Actions.Arguments,'^receive --config "(.+)"$').Groups[1].Value
  if(Test-Path -LiteralPath $videoConfig){$video=Get-Content -LiteralPath $videoConfig -Raw -Encoding UTF8|ConvertFrom-Json;& $camera detach-local ('127.0.0.1:'+$video.usb_port)|Out-Null;if($LASTEXITCODE-ne 0){throw "Could not release this installation's virtual USB camera."}}
 }
+foreach($task in $tasks){$task|Stop-ScheduledTask -ErrorAction SilentlyContinue}
 foreach($item in @(Get-CimInstance Win32_Process -Filter "Name='usbbridge-agent.exe' OR Name='usbbridge-camera.exe'"|Where-Object {$_.ExecutablePath-in $ownedPrograms})){
  $p=Get-Process -Id $item.ProcessId -ErrorAction SilentlyContinue;if($p){Stop-Process -Id $p.Id -Force;$p.WaitForExit()}
 }

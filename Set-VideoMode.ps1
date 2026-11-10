@@ -43,8 +43,9 @@ try {
  $rule=Get-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue
  if($rule){$app=$rule|Get-NetFirewallApplicationFilter;if($app.Program-ne $exe){throw 'The video firewall rule belongs to another application.'};$port=$rule|Get-NetFirewallPortFilter;$address=$rule|Get-NetFirewallAddressFilter;$oldRule=[ordered]@{port=$port.LocalPort;remote=$address.RemoteAddress}}
  if($healthTask){$healthTask|Disable-ScheduledTask|Out-Null;$healthTask|Stop-ScheduledTask -ErrorAction SilentlyContinue}
- if($oldTask){$oldTask|Disable-ScheduledTask|Out-Null;$oldTask|Stop-ScheduledTask -ErrorAction SilentlyContinue}
+ if($oldTask){$oldTask|Disable-ScheduledTask|Out-Null}
  if($Role-eq 'Receive'-and $oldConfig){& $exe detach-local ('127.0.0.1:'+$oldConfig.usb_port)|Out-Null;if($LASTEXITCODE-ne 0){throw 'Could not release the owned virtual USB camera.'}}
+ if($oldTask){$oldTask|Stop-ScheduledTask -ErrorAction SilentlyContinue}
  Stop-OwnedVideo
  $changed=$true
  [IO.File]::WriteAllText($Config,($request|ConvertTo-Json -Depth 10),[Text.UTF8Encoding]::new($false))
