@@ -6,6 +6,7 @@
 
 - A client interface could remain open after its background recovery agent had stopped. Reopening the client now starts supervision for saved device selections.
 - Old status files could keep showing a device as connected after the agent stopped. GUI and command-line status now expire stale reports.
+- Recovery now waits for a terminated supervisor to release its process lock before starting a replacement.
 - Startup recovery could remain stopped after exhausting scheduled restart attempts. Server and client startup tasks now run supervised controllers and have a recurring one-minute trigger.
 
 ### Added
