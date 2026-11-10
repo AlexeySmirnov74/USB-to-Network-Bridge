@@ -1,4 +1,4 @@
-# Apply desktop settings through UAC. Never changes boot security or driver signing.
+﻿# Apply desktop settings through UAC. Never changes boot security or driver signing.
 param([Parameter(Mandatory=$true)][string]$Config,[Parameter(Mandatory=$true)][string]$RequestFile,[switch]$Elevate)
 $ErrorActionPreference='Stop'
 $Config=[IO.Path]::GetFullPath($Config)
@@ -70,7 +70,7 @@ try{
     $agent=Join-Path $runtime 'usbbridge-agent.exe'
     $task=Get-ScheduledTask -TaskPath '\USBBridge\' -TaskName 'USBBridge.Server' -ErrorAction SilentlyContinue
     if($task-and @($task.Actions|Where-Object {$_.Execute-ne $agent-or $_.Arguments-notlike ('*"'+$Config+'"*')}).Count){throw 'Server task belongs to another installation.'}
-    if($task){$task|Stop-ScheduledTask}
+    if($task){$task|Disable-ScheduledTask|Out-Null;$task|Stop-ScheduledTask}
     foreach($process in @(Get-CimInstance Win32_Process -Filter "Name='usbbridge-agent.exe'"|Where-Object {$_.ExecutablePath-eq $agent-and $_.CommandLine-match '(?:^|\s)--host(?:\s|$)'-and $_.CommandLine.Contains($Config)})){Stop-Process -Id $process.ProcessId -Force}
     $oldBackend=(Get-Content -LiteralPath (Join-Path $runtime 'backend-state.json') -Raw|ConvertFrom-Json).DesiredBackend
     $configurationChanged=$true

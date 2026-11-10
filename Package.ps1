@@ -22,7 +22,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $metadata.target_directory ('release\' + $binary)) -Destination $stage
     }
     foreach ($file in @(
-        'Open-Installation.ps1', 'Configure-Installation.ps1', 'Maintain-Installation.ps1', 'README.md', 'README.ru.md', 'README.fr.md', 'README.de.md', 'README.zh-CN.md',
+        'Open-Installation.ps1', 'Configure-Installation.ps1', 'Maintain-Installation.ps1', 'Restart-AgentSupervisor.ps1', 'CHANGELOG.md', 'README.md', 'README.ru.md', 'README.fr.md', 'README.de.md', 'README.zh-CN.md',
         'THIRD-PARTY.txt', 'LICENSE', 'Switch-Backend.ps1', 'Restart-UsbPort.ps1',
         'Inspect-Host.ps1', 'Download-Drivers.ps1', 'Install-ProductionDrivers.ps1',
         'driver-installers.json', 'server.example.psd1', 'client.example.json', 'Test-Transport.ps1',

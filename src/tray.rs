@@ -366,6 +366,20 @@ unsafe extern "system" fn procedure(
     }
 }
 pub fn run(config: &Path, role: Role, show: bool) -> io::Result<()> {
+    if role == Role::Client
+        && let Ok(settings) = settings::read::<settings::ClientSettings>(config)
+        && settings.validate().is_ok()
+        && settings
+            .connections()
+            .iter()
+            .any(|s| !s.paused && s.devices.iter().any(|d| d.enabled))
+        && let Err(error) = agent::start_client(config)
+    {
+        agent::log(
+            config,
+            format!("Could not start client supervision: {error}"),
+        );
+    }
     let role_name = if role == Role::Server {
         "Server"
     } else {

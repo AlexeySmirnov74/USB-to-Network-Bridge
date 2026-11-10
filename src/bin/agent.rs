@@ -9,7 +9,28 @@ fn main() {
             .map(|a| std::path::PathBuf::from(&a[1]))
             .unwrap_or_else(usbbridge::settings::default_client_path);
         let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let result = if args.iter().any(|a| a == "--host") {
+        let _parent = match usbbridge::supervisor::ParentWatch::start(&args, stop.clone()) {
+            Ok(watch) => watch,
+            Err(error) => {
+                usbbridge::agent::log(&config, error.to_string());
+                std::process::exit(1);
+            }
+        };
+        let result = if args.iter().any(|a| a == "--check-supervisor") {
+            let role = if args.iter().any(|a| a == "--host") {
+                usbbridge::desktop::Role::Server
+            } else {
+                usbbridge::desktop::Role::Client
+            };
+            usbbridge::supervisor::check(&config, role)
+        } else if args.iter().any(|a| a == "--supervise") {
+            let role = if args.iter().any(|a| a == "--host") {
+                usbbridge::desktop::Role::Server
+            } else {
+                usbbridge::desktop::Role::Client
+            };
+            usbbridge::supervisor::run(&config, role, stop)
+        } else if args.iter().any(|a| a == "--host") {
             usbbridge::agent::watch_host(&config, stop)
         } else if args.iter().any(|a| a == "--client") {
             usbbridge::agent::watch_client(&config, stop)
@@ -50,6 +71,10 @@ fn main() {
             usbbridge::tray::run(&config, role, !args.iter().any(|a| a == "--tray"))
         };
         if let Err(error) = result {
+            usbbridge::diagnostics::event(
+                "process.exit",
+                serde_json::json!({"exit_code":1,"error":error.to_string()}),
+            );
             usbbridge::agent::log(&config, error.to_string());
             std::process::exit(1);
         }

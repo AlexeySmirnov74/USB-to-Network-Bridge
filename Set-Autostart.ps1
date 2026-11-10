@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory=$true)][ValidateSet('Server','Client')][string]$Role,
     [string]$RuntimeDirectory, [string]$Config, [string]$Profile,
     [switch]$Disable, [switch]$Elevate, [switch]$NoTray
@@ -26,6 +26,7 @@ if(-not(Test-Path -LiteralPath $agent)){throw 'Copy the release application file
 $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
 $taskPath='\USBBridge\'
 $taskName='USBBridge.'+$Role
+$healthName='USBBridge.Health.'+$Role
 $trayName='USBBridge.Tray.'+$Role+'.'+$identity.User.Value
 $shortcut=Join-Path ([Environment]::GetFolderPath('Programs')) ('USB to Network Bridge '+$Role+'.lnk')
 $legacyShortcut=Join-Path ([Environment]::GetFolderPath('Programs')) ('USBBridge '+$Role+'.lnk')
@@ -45,8 +46,9 @@ function Stop-OwnedAgent($Mode){
 try {
     $existing=Assert-OwnedTask $taskName
     $existingTray=Assert-OwnedTask $trayName
+    $existingHealth=Assert-OwnedTask $healthName
     if($Disable){
-        foreach($name in @($taskName,$trayName)){
+        foreach($name in @($healthName,$taskName,$trayName)){
             if(Get-ScheduledTask -TaskPath $taskPath -TaskName $name -ErrorAction SilentlyContinue){Stop-ScheduledTask -TaskPath $taskPath -TaskName $name -ErrorAction SilentlyContinue;Unregister-ScheduledTask -TaskPath $taskPath -TaskName $name -Confirm:$false}
         }
         foreach($linkPath in @($shortcut,$legacyShortcut)){
@@ -101,12 +103,17 @@ try {
         $mode='--client'
     }
     $settings=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 255 -RestartInterval (New-TimeSpan -Minutes 1)
-    $action=New-ScheduledTaskAction -Execute $agent -Argument ($mode+' --config "'+$Config+'"') -WorkingDirectory $runtime
+    $action=New-ScheduledTaskAction -Execute $agent -Argument ('--supervise '+$mode+' --config "'+$Config+'"') -WorkingDirectory $runtime
     $principal=New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-    if($existing){Stop-ScheduledTask -TaskPath $taskPath -TaskName $taskName -ErrorAction SilentlyContinue}
+    if($existingHealth){$existingHealth|Disable-ScheduledTask|Out-Null;$existingHealth|Stop-ScheduledTask -ErrorAction SilentlyContinue}
+    if($existing){$existing|Disable-ScheduledTask|Out-Null;Stop-ScheduledTask -TaskPath $taskPath -TaskName $taskName -ErrorAction SilentlyContinue}
     Stop-OwnedAgent $mode
-    Register-ScheduledTask -TaskName $taskName -TaskPath $taskPath -Action $action -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $settings -Principal $principal -Description 'USBBridge recovery after Windows startup; no execution time limit.' -Force|Out-Null
+    Register-ScheduledTask -TaskName $taskName -TaskPath $taskPath -Action $action -Trigger @((New-ScheduledTaskTrigger -AtStartup),(New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1))) -Settings $settings -Principal $principal -Description 'USBBridge recovery after Windows startup; no execution time limit.' -Force|Out-Null
     Start-ScheduledTask -TaskName $taskName -TaskPath $taskPath
+    $healthAction=New-ScheduledTaskAction -Execute $agent -Argument ('--check-supervisor '+$mode+' --config "'+$Config+'"') -WorkingDirectory $runtime
+    $healthSettings=New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 1)
+    $healthTrigger=New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)
+    Register-ScheduledTask -TaskName $healthName -TaskPath $taskPath -Action $healthAction -Trigger $healthTrigger -Settings $healthSettings -Principal $principal -Description 'Check role supervisor and controller heartbeat every minute; respect disabled tasks.' -Force|Out-Null
     if(-not $NoTray){
         $trayAction=New-ScheduledTaskAction -Execute $agent -Argument ('--tray --role '+$Role.ToLowerInvariant()+' --config "'+$Config+'"') -WorkingDirectory $runtime
         $trayPrincipal=New-ScheduledTaskPrincipal -UserId $identity.Name -LogonType Interactive -RunLevel Limited

@@ -14,7 +14,10 @@ use std::{
     process::{Command, Stdio},
 };
 
-pub const HELP: &str = r#"USB to Network Bridge v.0.2.0 — command line control
+pub const HELP: &str = concat!(
+    "USB to Network Bridge v.",
+    env!("CARGO_PKG_VERSION"),
+    r#" — command line control
 usbbridge [--config FILE] [--language en|ru|de|fr|zh] server|client COMMAND
 
 Both roles:
@@ -22,6 +25,7 @@ Both roles:
   hide | close-ui                      Hide window / close tray interface
   language [en|ru|de|fr|zh]              Read/save interface language (default en)
   autostart status|on|off                Background recovery and tray at Windows startup
+  health                                Check supervisor and controller heartbeats
   logs                                  Print log locations
   about                                 Print version and repository
   cameras                               List cameras available in local Windows
@@ -69,7 +73,8 @@ Omitting --auth-stdin removes proxy authentication. No passwords on the command 
 Read commands never change USB ownership. Backend/port changes restart the server;
 publication, forgetting unplugged devices, cleanup policy and interface language do not.
 Output is JSON except help and delegated transport commands. Errors return a nonzero exit code.
-"#;
+"#
+);
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, message.into())
 }
@@ -108,6 +113,14 @@ fn help_language(args: &[String]) -> io::Result<i18n::Language> {
 fn help(language: i18n::Language) -> String {
     HELP.lines()
         .map(|line| {
+            if line.starts_with("USB to Network Bridge v.") {
+                return format!(
+                    "{} v.{} — {}",
+                    crate::APP_NAME,
+                    crate::APP_VERSION,
+                    i18n::text_in(language, "command line control")
+                );
+            }
             if line.starts_with("  ")
                 && let Some((_, description)) = line.trim_start().split_once("  ")
             {
@@ -381,6 +394,7 @@ pub fn run(mut args: Vec<String>) -> io::Result<()> {
             }
             print(&json!({"language":i18n::preferred(&config).code()}))
         }
+        "health" if args.is_empty() => print(&crate::supervisor::status(&config, role)?),
         "logs" if args.is_empty() => print(
             &json!({"directory":config.parent().unwrap_or(Path::new(".")).join("logs"),"controller":config.with_extension("agent.log")}),
         ),

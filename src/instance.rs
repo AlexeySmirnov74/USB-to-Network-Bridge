@@ -34,6 +34,22 @@ fn acquire_name(name: &str) -> io::Result<Option<Instance>> {
 pub fn acquire(role: &str, component: &str) -> io::Result<Option<Instance>> {
     acquire_name(&format!("Global\\USBtoNetworkBridge.{role}.{component}.1"))
 }
+pub fn running(role: &str, component: &str) -> io::Result<bool> {
+    let name: Vec<u16> = format!("Global\\USBtoNetworkBridge.{role}.{component}.1")
+        .encode_utf16()
+        .chain(Some(0))
+        .collect();
+    let handle = unsafe { OpenMutexW(0x00100000, 0, name.as_ptr()) };
+    if !handle.is_null() {
+        unsafe { CloseHandle(handle) };
+        return Ok(true);
+    }
+    match unsafe { GetLastError() } {
+        2 => Ok(false),
+        5 => Ok(true),
+        error => Err(io::Error::from_raw_os_error(error as i32)),
+    }
+}
 pub fn stock_server_running() -> io::Result<bool> {
     let name: Vec<u16> = "Global\\usbipd-{A8256F62-728F-49B0-82BB-E5E48F83D28F}"
         .encode_utf16()

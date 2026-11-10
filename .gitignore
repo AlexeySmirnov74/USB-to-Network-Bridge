@@ -21,6 +21,7 @@
 *.agent.lock
 *.edit.lock
 *.tray.lock
+*.supervisor.lock
 *.operation-*.lock
 *.tmp
 /runtime/

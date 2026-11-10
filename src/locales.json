@@ -1210,13 +1210,6 @@
     "fr": "Enregistrez les paramètres avant de changer de langue.",
     "zh": "更改语言前请保存设置。"
   },
-  "USB to Network Bridge v.0.2.0 — command line control": {
-    "en": "USB to Network Bridge v.0.2.0 — command line control",
-    "ru": "USB to Network Bridge v.0.2.0 — управление из командной строки",
-    "de": "USB to Network Bridge v.0.2.0 — Befehlszeilensteuerung",
-    "fr": "USB to Network Bridge v.0.2.0 — contrôle en ligne de commande",
-    "zh": "USB to Network Bridge v.0.2.0 — 命令行控制"
-  },
   "Both roles:": {
     "en": "Both roles:",
     "ru": "Оба приложения:",
@@ -1762,5 +1755,26 @@
     "de": "Kameraeinstellung konnte nicht gespeichert werden",
     "fr": "Impossible d’enregistrer le réglage de la caméra",
     "zh": "无法保存相机设置"
+  },
+  "Фоновый агент недоступен": {
+    "en": "Background agent unavailable",
+    "ru": "Фоновый агент недоступен",
+    "de": "Hintergrundagent nicht verfügbar",
+    "fr": "Agent en arrière-plan indisponible",
+    "zh": "后台代理不可用"
+  },
+  "Check supervisor and controller heartbeats": {
+    "en": "Check supervisor and controller heartbeats",
+    "ru": "Проверить супервизор и heartbeat контроллера",
+    "de": "Supervisor und Controller-Heartbeat prüfen",
+    "fr": "Vérifier le superviseur et les signaux de vie du contrôleur",
+    "zh": "检查监控程序与控制器心跳"
+  },
+  "command line control": {
+    "en": "command line control",
+    "ru": "управление из командной строки",
+    "de": "Befehlszeilensteuerung",
+    "fr": "contrôle en ligne de commande",
+    "zh": "命令行控制"
   }
 }

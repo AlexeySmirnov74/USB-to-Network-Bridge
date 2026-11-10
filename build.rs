@@ -157,12 +157,13 @@ fn main() {
     resource(&mut output, 14, 101, &group);
     let manifest = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
-<assemblyIdentity version="0.2.0.0" processorArchitecture="amd64" name="USBtoNetworkBridge" type="win32"/>
+<assemblyIdentity version="APP_VERSION.0" processorArchitecture="amd64" name="USBtoNetworkBridge" type="win32"/>
 <description>USB to Network Bridge</description>
 <dependency><dependentAssembly><assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"/></dependentAssembly></dependency>
 <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3"><security><requestedPrivileges><requestedExecutionLevel level="asInvoker" uiAccess="false"/></requestedPrivileges></security></trustInfo>
 <application xmlns="urn:schemas-microsoft-com:asm.v3"><windowsSettings><dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware></windowsSettings></application>
 </assembly>"#;
+    let manifest = manifest.replace("APP_VERSION", &env::var("CARGO_PKG_VERSION").unwrap());
     resource(&mut output, 24, 1, manifest.as_bytes());
     resource(&mut output, 16, 1, &version_info());
     let destination = PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("usbbridge.res");

@@ -17,6 +17,7 @@ pub(crate) mod device_icons;
 pub mod device_kind;
 pub mod diagnostics;
 pub mod discovery;
+pub mod health;
 pub mod host_status;
 pub mod i18n;
 #[cfg(windows)]
@@ -38,6 +39,8 @@ pub mod publication;
 pub mod recovery;
 pub mod server;
 pub mod settings;
+#[cfg(windows)]
+pub mod supervisor;
 #[cfg(windows)]
 pub mod usb_snapshot;
 pub const APP_NAME: &str = "USB to Network Bridge";

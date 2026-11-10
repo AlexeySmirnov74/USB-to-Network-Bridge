@@ -47,7 +47,28 @@ pub struct ClientReport {
     #[serde(default)]
     pub servers: Vec<ConnectionStatus>,
 }
+impl ClientReport {
+    pub fn invalidate_stale(&mut self, now: u64) {
+        self.selected.invalidate_stale(now);
+        for connection in &mut self.servers {
+            connection.status.invalidate_stale(now);
+        }
+    }
+}
 impl ClientStatus {
+    fn invalidate_stale(&mut self, now: u64) {
+        if !crate::health::fresh(self.updated_unix_ms, now) {
+            self.phase = "agent_unavailable".into();
+            self.error = Some("Recovery agent status is stale; waiting for current state".into());
+            for device in &mut self.devices {
+                device.port = None;
+                device.phase = "agent_unavailable".into();
+                device.error = self.error.clone();
+                device.retry_in_seconds = 0;
+            }
+        }
+    }
+
     pub fn error(server: &str, error: impl ToString) -> Self {
         Self {
             updated_unix_ms: timestamp(),

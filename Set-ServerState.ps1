@@ -1,4 +1,4 @@
-# Start/stop the selected transport while preserving device selection and autostart.
+﻿# Start/stop the selected transport while preserving device selection and autostart.
 param([Parameter(Mandatory=$true)][string]$Config,[Parameter(Mandatory=$true)][string]$RequestFile,[switch]$Elevate)
 $ErrorActionPreference='Stop'
 $Config=[IO.Path]::GetFullPath($Config)
@@ -30,6 +30,7 @@ try{
     $backend=$state.DesiredBackend
     if($backend-notin @('Native','Usbipd')){throw 'Unknown capture module.'}
     if($hostData.PSObject.Properties.Name-contains 'enabled'){$oldEnabled=[bool]$hostData.enabled}
+    $task|Disable-ScheduledTask|Out-Null
     $task|Stop-ScheduledTask
     $stoppedController=$true
     foreach($process in @(Get-CimInstance Win32_Process -Filter "Name='usbbridge-agent.exe'"|Where-Object {$_.ExecutablePath-eq $agent-and $_.CommandLine-match '(?:^|\s)--host(?:\s|$)'-and $_.CommandLine.Contains($Config)})){
@@ -42,6 +43,7 @@ try{
     Write-Atomic $Config $hostData
     $status=[ordered]@{updated_unix_ms=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds();server=$hostData.name;server_id=$hostData.server_id;phase=$(if($request.enabled){'recovering'}else{'stopped'});enabled=[bool]$request.enabled;backend=$backend;error=$null}
     Write-Atomic ([IO.Path]::ChangeExtension($Config,'status.json')) $status
+    $task|Enable-ScheduledTask|Out-Null
     $task|Start-ScheduledTask
     $stoppedController=$false
     Write-Atomic $resultFile ([ordered]@{Success=$true;Enabled=[bool]$request.enabled})
@@ -52,7 +54,8 @@ try{
             if(-not $oldEnabled){& (Join-Path $runtime 'Switch-Backend.ps1') -Backend $backend -RuntimeDirectory $runtime -Profile $hostData.profile -Stop}
             $hostData|Add-Member -NotePropertyName enabled -NotePropertyValue $oldEnabled -Force
             Write-Atomic $Config $hostData
-            $task|Start-ScheduledTask
+            $task|Enable-ScheduledTask|Out-Null
+    $task|Start-ScheduledTask
         }catch{$failure+='; recovery: '+$_.Exception.Message}
     }
     Write-Atomic $resultFile ([ordered]@{Success=$false;Error=$failure});exit 1

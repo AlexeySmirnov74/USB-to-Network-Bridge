@@ -30,3 +30,7 @@ For documentation/media changes, validate links, all five README variants and im
 ## Code Review Rules
 
 Flag changes that restart unrelated devices during publication, release driver buffers before completion, expose local credentials in diagnostics/packages, or describe Native as an independent kernel driver. Preserve normal cooperative shutdown and device ownership.
+
+## Versioned updates
+
+The user requires a new version for each published update. Bump Cargo.toml/Cargo.lock, keep GUI/EXE/MSI metadata consistent, describe actual changes in CHANGELOG.md, and publish a new matching GitHub tag and release with tested EXEs, MSI, portable ZIP, source ZIP and hashes. Preserve older tags and releases; do not replace assets in a published previous version.

@@ -29,7 +29,10 @@ if($Operation-eq 'Resume'){
   $task=Get-ScheduledTask -TaskPath $entry.path -TaskName $entry.name -ErrorAction SilentlyContinue
   if(-not $task){Register-ScheduledTask -TaskPath $entry.path -TaskName $entry.name -Xml $entry.xml|Out-Null}
   elseif(@($task.Actions|Where-Object Execute -ne $agent).Count){throw 'A different installation now owns a startup task.'}
-  if($entry.running){Start-ScheduledTask -TaskPath $entry.path -TaskName $entry.name}
+  $xml=[xml]$entry.xml
+  $wasEnabled=([string]$xml.Task.Settings.Enabled)-ne 'false'
+  if($wasEnabled){Enable-ScheduledTask -TaskPath $entry.path -TaskName $entry.name|Out-Null}else{Disable-ScheduledTask -TaskPath $entry.path -TaskName $entry.name|Out-Null}
+  if($entry.running-and $wasEnabled){Start-ScheduledTask -TaskPath $entry.path -TaskName $entry.name}
  }
  foreach($entry in @($journal.firewall)){
   if(-not(Get-NetFirewallRule -Name $entry.name -ErrorAction SilentlyContinue)){New-NetFirewallRule -Name $entry.name -DisplayName $entry.display -Direction Inbound -Action Allow -Program $entry.program -Protocol $entry.protocol -LocalPort $entry.port -RemoteAddress $entry.remote -Profile Any|Out-Null}
@@ -58,7 +61,7 @@ if($Operation-eq 'Stop'-and -not(Test-Path -LiteralPath $journalPath)){
  }
  Save-Journal $journal
 }
-foreach($task in $tasks){$task|Stop-ScheduledTask -ErrorAction SilentlyContinue}
+foreach($task in $tasks){$task|Disable-ScheduledTask|Out-Null;$task|Stop-ScheduledTask -ErrorAction SilentlyContinue}
 foreach($item in @(Get-CimInstance Win32_Process -Filter "Name='usbbridge-agent.exe'"|Where-Object ExecutablePath -eq $agent)){
  $p=Get-Process -Id $item.ProcessId -ErrorAction SilentlyContinue;if($p){Stop-Process -Id $p.Id -Force;$p.WaitForExit()}
 }

@@ -1479,7 +1479,12 @@ impl ClientUi {
                     })
                     .collect();
                 let servers = workers.into_iter().filter_map(|w| w.join().ok()).collect();
-                let report = settings::read(&agent::status_path(&path)).ok();
+                let report = settings::read::<recovery::ClientReport>(&agent::status_path(&path))
+                    .ok()
+                    .map(|mut report| {
+                        report.invalidate_stale(recovery::timestamp());
+                        report
+                    });
                 Ok(Snapshot {
                     ticket,
                     servers,
@@ -2581,6 +2586,7 @@ fn phase_text(phase: &str) -> &str {
         "waiting_device" => crate::i18n::t("Ожидание возвращения USB"),
         "waiting_network" => crate::i18n::t("Ожидание сети"),
         "retrying" => crate::i18n::t("Повторное подключение"),
+        "agent_unavailable" => crate::i18n::t("Фоновый агент недоступен"),
         _ => crate::i18n::t("Ожидание подключения"),
     }
 }

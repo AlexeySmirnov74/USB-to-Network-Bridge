@@ -37,9 +37,13 @@ pub fn log(config: &Path, message: impl AsRef<str>) {
     }
 }
 pub fn start_client(config: &Path) -> io::Result<()> {
+    if crate::instance::running("Client", "Supervisor")? {
+        return Ok(());
+    }
+
     let executable = std::env::current_exe()?.with_file_name("usbbridge-agent.exe");
     Command::new(executable)
-        .arg("--client")
+        .args(["--supervise", "--client"])
         .arg("--config")
         .arg(config)
         .creation_flags(0x08000000)
@@ -348,16 +352,27 @@ pub fn watch_client(path: &Path, stop: Arc<AtomicBool>) -> io::Result<()> {
         Err(error) if error.raw_os_error() == Some(32) => return Ok(()),
         Err(error) => return Err(error),
     };
+    let mut health = crate::health::Lease::new(path, "client", false)?;
     crate::proxy_relay::cleanup(path)?;
     let shared = Arc::new(Mutex::new(ClientSettings::default()));
     let reports = Arc::new(Mutex::new(std::collections::HashMap::<
         String,
         recovery::ConnectionStatus,
     >::new()));
-    let mut workers =
-        std::collections::HashMap::<String, (Arc<AtomicBool>, thread::JoinHandle<()>)>::new();
+    let mut workers = std::collections::HashMap::<
+        String,
+        (Arc<AtomicBool>, thread::JoinHandle<()>, Instant),
+    >::new();
     log(path, "multi-server client recovery started");
+    let mut last_tick = Instant::now();
     while !stop.load(Ordering::Acquire) {
+        health.beat()?;
+        if last_tick.elapsed() > Duration::from_secs(20) {
+            for (_, _, grace) in workers.values_mut() {
+                *grace = Instant::now();
+            }
+        }
+        last_tick = Instant::now();
         let loaded = settings::read::<ClientSettings>(path).and_then(|c| {
             c.validate()?;
             Ok(c)
@@ -372,7 +387,7 @@ pub fn watch_client(path: &Path, stop: Arc<AtomicBool>) -> io::Result<()> {
                     .cloned()
                     .collect();
                 for key in obsolete {
-                    if let Some((stop, worker)) = workers.remove(&key) {
+                    if let Some((stop, worker, _)) = workers.remove(&key) {
                         stop.store(true, Ordering::Release);
                         let _ = worker.join();
                         reports.lock().unwrap().remove(&key);
@@ -395,10 +410,25 @@ pub fn watch_client(path: &Path, stop: Arc<AtomicBool>) -> io::Result<()> {
                                 worker_stop,
                             )
                         });
-                        (finished, worker)
+                        (finished, worker, Instant::now())
                     });
                 }
                 let snapshots = reports.lock().unwrap();
+                for (key, (_, worker, grace)) in &workers {
+                    let stale = grace.elapsed() >= crate::health::TIMEOUT
+                        && snapshots.get(key).is_none_or(|s| {
+                            !crate::health::fresh(s.status.updated_unix_ms, recovery::timestamp())
+                        });
+                    if worker.is_finished() || stale {
+                        crate::diagnostics::event(
+                            "controller.worker.failed",
+                            serde_json::json!({"server_key":key,"finished":worker.is_finished(),"stale":stale}),
+                        );
+                        return Err(io::Error::other(
+                            "Client reconciliation worker stopped or stalled",
+                        ));
+                    }
+                }
                 let selected = connections
                     .first()
                     .and_then(|c| snapshots.get(&c.key()))
@@ -424,10 +454,10 @@ pub fn watch_client(path: &Path, stop: Arc<AtomicBool>) -> io::Result<()> {
         }
         pause(&stop, Duration::from_secs(1));
     }
-    for (finished, _) in workers.values() {
+    for (finished, _, _) in workers.values() {
         finished.store(true, Ordering::Release);
     }
-    for (_, (_, worker)) in workers {
+    for (_, (_, worker, _)) in workers {
         let _ = worker.join();
     }
     log(
@@ -696,6 +726,7 @@ pub fn watch_host(path: &Path, stop: Arc<AtomicBool>) -> io::Result<()> {
         Err(error) if error.raw_os_error() == Some(32) => return Ok(()),
         Err(error) => return Err(error),
     };
+    let mut health = crate::health::Lease::new(path, "server", false)?;
     let config: HostSettings = settings::read(path)?;
     config.validate()?;
     if let Ok(devices) = crate::inventory::load(&config.runtime.join("devices.inventory")) {
@@ -869,6 +900,7 @@ pub fn watch_host(path: &Path, stop: Arc<AtomicBool>) -> io::Result<()> {
         }
         let status = serde_json::json!({"updated_unix_ms":recovery::timestamp(),"server":config.name,"server_id":config.server_id,"phase":phase,"backend":backend,"enabled":enabled,"error":error});
         let _ = settings::save(&status_path(path), &status);
+        health.beat()?;
         pause(&stop, Duration::from_secs(5));
     }
     Ok(())

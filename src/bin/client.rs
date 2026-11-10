@@ -255,8 +255,9 @@ fn run() -> io::Result<()> {
             }
         }
         Some("status") if args.len() == 1 => {
-            let status: serde_json::Value =
+            let mut status: usbbridge::recovery::ClientReport =
                 usbbridge::settings::read(&config_path.with_extension("status.json"))?;
+            status.invalidate_stale(usbbridge::recovery::timestamp());
             println!(
                 "{}",
                 serde_json::to_string_pretty(&status).map_err(io::Error::other)?

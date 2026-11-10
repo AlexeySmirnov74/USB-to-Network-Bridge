@@ -21,7 +21,7 @@ CI builds the application, runs automated and installer lifecycle tests, and upl
 ## Files needed at runtime
 
 - Runtime: Publish-Device.ps1, Configure-Server.ps1, Set-ServerState.ps1, Switch-Backend.ps1, Ensure-Exports.ps1, Native-Capture.ps1, Restart-UsbPort.ps1, New-BackendMutex.ps1 and Write-DebugEvent.ps1.
-- Setup and maintenance: Open-Installation.ps1, Configure-Installation.ps1, Maintain-Installation.ps1, Set-Autostart.ps1, Download-Drivers.ps1, Install-ProductionDrivers.ps1 and Inspect-Host.ps1.
+- Setup and maintenance: Open-Installation.ps1, Configure-Installation.ps1, Maintain-Installation.ps1, Restart-AgentSupervisor.ps1, Set-Autostart.ps1, Download-Drivers.ps1, Install-ProductionDrivers.ps1 and Inspect-Host.ps1.
 - Build and qualification scripts are development tools. Removing runtime helpers from an installed copy breaks operation.
 
 ## Development verification
@@ -34,7 +34,7 @@ Maintain private hardware reports for cable replug/port changes, network interru
 
 Review and commit public sources before packaging. Package-Source.py archives reviewed Git blobs. Prepare-Release.ps1 verifies the selected validation profile and executable hashes, then compares every portable/MSI payload file and source ZIP entry. Detailed verification records stay in ignored local logs.
 
-The public release assets are the MSI, portable ZIP, source ZIP, release-manifest.json and SHA256SUMS.txt. The manifest records the source commit and artifact hashes. Publication preserves Git history and uses a versioned GitHub Release.
+The public release assets are the two desktop launcher EXEs, MSI, portable ZIP, source ZIP, release-manifest.json and SHA256SUMS.txt. Each published update gets a new version and matching tag/release; CHANGELOG.md describes the actual changes. Preserve previous release assets and tags. The manifest records the source commit and artifact hashes. Publication preserves Git history and uses a versioned GitHub Release.
 
 ## Installation and migration
 
