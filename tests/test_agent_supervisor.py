@@ -34,8 +34,16 @@ function Get-Content {
 }
 function Get-CimInstance {
  [CmdletBinding()]param($ClassName,$Filter)
- $arguments=if($Filter-eq 'ProcessId=111'){'--supervise --client'}else{'--client'}
- [pscustomobject]@{ExecutablePath=$agent;CommandLine=('"'+$agent+'" '+$arguments+' --config "'+$config+'"')}
+ $arguments=if($Filter-eq 'ProcessId=111'){'--supervise --client'}else{'--client --supervised-by 111'}
+ [pscustomobject]@{ProcessId=222;ExecutablePath=$agent;CommandLine=('"'+$agent+'" '+$arguments+' --config "'+$config+'"')}
+}
+function Get-Process {
+ [CmdletBinding()]param($Id)
+ [pscustomobject]@{Id=$Id}
+}
+function Stop-Process {
+ [CmdletBinding()]param($InputObject,[switch]$Force)
+ Write-Output '__CHILD_STOP__'
 }
 function Stop-ScheduledTask {
  [CmdletBinding()]param([Parameter(ValueFromPipeline=$true)]$InputObject)

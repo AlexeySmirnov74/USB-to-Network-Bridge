@@ -17,7 +17,7 @@ foreach($entry in @(@('supervisor.local.json','--supervise'),@('health.local.jso
   $process=Get-CimInstance Win32_Process -Filter ('ProcessId='+[uint32]$beat.process_id) -ErrorAction SilentlyContinue
   if($entry[0]-eq 'supervisor.local.json'){$supervisorPid=[uint32]$beat.process_id}
   if($entry[0]-eq 'health.local.json'){$controller=$process}
-  if($entry[0]-eq 'health.local.json'-and $process-and $process.CommandLine.Contains('--supervise')){$healthy=$false}
+  if($entry[0]-eq 'health.local.json'-and $process-and $process.CommandLine-match '(?:^|\s)--supervise(?:\s|$)'){$healthy=$false}
   if(-not $beat.running-or $beat.role-ne $Role.ToLowerInvariant()-or $age-lt -5000-or $age-gt 120000-or -not $process-or $process.ExecutablePath-ne $agent-or -not $process.CommandLine.Contains($entry[1])-or -not $process.CommandLine.Contains($Config)){$healthy=$false}
  }catch{$healthy=$false}
 }
