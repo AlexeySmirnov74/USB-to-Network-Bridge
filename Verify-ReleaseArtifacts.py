@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import zipfile
 
-BINARIES = ("usbbridge.exe", "usbbridge-client.exe", "usbbridge-server.exe", "usbbridge-agent.exe",
+BINARIES = ("usbbridge.exe", "usbbridge-client.exe", "usbbridge-server.exe", "usbbridge-agent.exe", "usbbridge-camera.exe",
             "USB-to-Network-Bridge-Server.exe", "USB-to-Network-Bridge-Client.exe")
 
 def safe_names(archive):

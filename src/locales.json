@@ -1478,7 +1478,7 @@
   },
   "Video mode": {
     "en": "Video mode",
-    "ru": "Режим видео",
+    "ru": "Видеорежим",
     "de": "Videomodus",
     "fr": "Mode vidéo",
     "zh": "视频模式"
@@ -1776,5 +1776,124 @@
     "de": "Befehlszeilensteuerung",
     "fr": "contrôle en ligne de commande",
     "zh": "命令行控制"
+  },
+  "USB camera - receive video": {
+    "en": "USB camera — receive video",
+    "ru": "USB-камера — приём видео",
+    "de": "USB-Kamera — Video empfangen",
+    "fr": "Caméra USB — réception vidéo",
+    "zh": "USB 摄像头 — 接收视频"
+  },
+  "Send video": {
+    "en": "Send video",
+    "ru": "Передача видео",
+    "de": "Video senden",
+    "fr": "Envoyer la vidéo",
+    "zh": "发送视频"
+  },
+  "Enable and start with Windows": {
+    "en": "Enable and start with Windows",
+    "ru": "Включить и запускать с Windows",
+    "de": "Aktivieren und mit Windows starten",
+    "fr": "Activer et démarrer avec Windows",
+    "zh": "启用并随 Windows 启动"
+  },
+  "Disabled": {
+    "en": "Disabled",
+    "ru": "Выключено",
+    "de": "Deaktiviert",
+    "fr": "Désactivé",
+    "zh": "已禁用"
+  },
+  "Enabled": {
+    "en": "Enabled",
+    "ru": "Включено",
+    "de": "Aktiviert",
+    "fr": "Activé",
+    "zh": "已启用"
+  },
+  "Camera name": {
+    "en": "Camera name",
+    "ru": "Имя камеры",
+    "de": "Kameraname",
+    "fr": "Nom de la caméra",
+    "zh": "摄像头名称"
+  },
+  "Video TCP port": {
+    "en": "Video TCP port",
+    "ru": "TCP-порт видео",
+    "de": "TCP-Videoport",
+    "fr": "Port TCP vidéo",
+    "zh": "视频 TCP 端口"
+  },
+  "Test pattern": {
+    "en": "Test pattern",
+    "ru": "Тестовая картинка",
+    "de": "Testbild",
+    "fr": "Mire de test",
+    "zh": "测试图案"
+  },
+  "Video source": {
+    "en": "Video source",
+    "ru": "Источник видео",
+    "de": "Videoquelle",
+    "fr": "Source vidéo",
+    "zh": "视频源"
+  },
+  "Video server address": {
+    "en": "Video server address",
+    "ru": "Адрес видеосервера",
+    "de": "Adresse des Videoservers",
+    "fr": "Adresse du serveur vidéo",
+    "zh": "视频服务器地址"
+  },
+  "JPEG quality (1-100)": {
+    "en": "JPEG quality (1–100)",
+    "ru": "Качество JPEG (1–100)",
+    "de": "JPEG-Qualität (1–100)",
+    "fr": "Qualité JPEG (1–100)",
+    "zh": "JPEG 质量（1–100）"
+  },
+  "Connection key (16-128 characters; blank keeps current)": {
+    "en": "Connection key (16–128 characters; blank keeps current)",
+    "ru": "Ключ подключения (16–128 символов; пусто — сохранить)",
+    "de": "Verbindungsschlüssel (16–128 Zeichen; leer = beibehalten)",
+    "fr": "Clé de connexion (16–128 caractères ; vide = conserver)",
+    "zh": "连接密钥（16–128 个字符；留空保留当前值）"
+  },
+  "Connection key must contain 16-128 characters": {
+    "en": "Connection key must contain 16–128 characters",
+    "ru": "Ключ подключения должен содержать 16–128 символов",
+    "de": "Der Verbindungsschlüssel muss 16–128 Zeichen enthalten",
+    "fr": "La clé de connexion doit contenir 16–128 caractères",
+    "zh": "连接密钥必须包含 16–128 个字符"
+  },
+  "Enter the same connection key on both computers": {
+    "en": "Enter the same connection key on both computers",
+    "ru": "Введите одинаковый ключ подключения на обоих ПК",
+    "de": "Geben Sie auf beiden PCs denselben Verbindungsschlüssel ein",
+    "fr": "Saisissez la même clé de connexion sur les deux ordinateurs",
+    "zh": "请在两台计算机上输入相同的连接密钥"
+  },
+  "Video settings applied. The selected mode starts with Windows.": {
+    "en": "Video settings applied. The selected mode starts with Windows.",
+    "ru": "Настройки видео применены. Выбранный режим запускается с Windows.",
+    "de": "Videoeinstellungen übernommen. Der gewählte Modus startet mit Windows.",
+    "fr": "Paramètres vidéo appliqués. Le mode choisi démarre avec Windows.",
+    "zh": "视频设置已应用。所选模式将随 Windows 启动。"
+  },
+  "Video configuration failed; check the video log": {
+    "en": "Video configuration failed; check the video log",
+    "ru": "Не удалось настроить видео; проверьте журнал видео",
+    "de": "Videokonfiguration fehlgeschlagen; Videoprotokoll prüfen",
+    "fr": "Échec de configuration vidéo ; consultez le journal vidéo",
+    "zh": "视频配置失败；请检查视频日志"
+  },
+  "Source unavailable": {
+    "en": "Source unavailable",
+    "ru": "Источник недоступен",
+    "de": "Quelle nicht verfügbar",
+    "fr": "Source indisponible",
+    "zh": "视频源不可用"
   }
 }

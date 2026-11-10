@@ -3,6 +3,8 @@ param([Parameter(Mandatory=$true)][ValidateSet('Stop','Resume','Remove')][string
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 $runtime=[IO.Path]::GetFullPath($RuntimeDirectory).TrimEnd('\')
 $agent=Join-Path $runtime 'usbbridge-agent.exe'
+$camera=Join-Path $runtime 'usbbridge-camera.exe'
+$ownedPrograms=@($agent,$camera)
 if(-not (Test-Path -LiteralPath (Join-Path $runtime 'Maintain-Installation.ps1'))){exit 0}
 if((Get-Item -LiteralPath $runtime).Attributes-band [IO.FileAttributes]::ReparsePoint){throw 'Refusing a reparse-point installation.'}
 $data=Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'USB to Network Bridge'
@@ -40,7 +42,7 @@ if($Operation-eq 'Resume'){
  Remove-Item -LiteralPath $journalPath -Force
  exit 0
 }
-$tasks=@(Get-ScheduledTask -ErrorAction Stop|Where-Object {@($_.Actions|Where-Object Execute -eq $agent).Count})
+$tasks=@(Get-ScheduledTask -ErrorAction Stop|Where-Object {@($_.Actions|Where-Object {$_.Execute-in $ownedPrograms}).Count})
 if($Operation-eq 'Stop'-and (Test-Path -LiteralPath $journalPath)){
  $previous=Get-Content -LiteralPath $journalPath -Raw|ConvertFrom-Json
  if($previous.runtime-ne $runtime){throw 'Maintenance journal belongs to another installation.'}
@@ -51,7 +53,7 @@ if($Operation-eq 'Stop'-and -not(Test-Path -LiteralPath $journalPath)){
  foreach($task in $tasks){if(@($task.Actions).Count-ne 1){throw 'Unexpected multi-action startup task.'};$journal.tasks+=@([ordered]@{path=$task.TaskPath;name=$task.TaskName;running=($task.State-eq 'Running');xml=(Export-ScheduledTask -TaskPath $task.TaskPath -TaskName $task.TaskName)})}
  foreach($rule in @(Get-NetFirewallRule -Name 'USBBridge-*' -ErrorAction SilentlyContinue)){
   $app=$rule|Get-NetFirewallApplicationFilter
-  if($app.Program-in @($agent,(Join-Path $runtime 'usbbridge-server.exe'))){$port=$rule|Get-NetFirewallPortFilter;$address=$rule|Get-NetFirewallAddressFilter;$journal.firewall+=@([ordered]@{name=$rule.Name;display=$rule.DisplayName;program=$app.Program;protocol=$port.Protocol;port=$port.LocalPort;remote=$address.RemoteAddress})}
+  if($app.Program-in @($agent,$camera,(Join-Path $runtime 'usbbridge-server.exe'))){$port=$rule|Get-NetFirewallPortFilter;$address=$rule|Get-NetFirewallAddressFilter;$journal.firewall+=@([ordered]@{name=$rule.Name;display=$rule.DisplayName;program=$app.Program;protocol=$port.Protocol;port=$port.LocalPort;remote=$address.RemoteAddress})}
  }
  foreach($role in @('Server','Client')){
   if(@($tasks|Where-Object TaskName -eq ('USBBridge.'+$role)).Count){
@@ -62,7 +64,11 @@ if($Operation-eq 'Stop'-and -not(Test-Path -LiteralPath $journalPath)){
  Save-Journal $journal
 }
 foreach($task in $tasks){$task|Disable-ScheduledTask|Out-Null;$task|Stop-ScheduledTask -ErrorAction SilentlyContinue}
-foreach($item in @(Get-CimInstance Win32_Process -Filter "Name='usbbridge-agent.exe'"|Where-Object ExecutablePath -eq $agent)){
+foreach($task in @($tasks|Where-Object {$_.Actions.Execute-eq $camera-and $_.Actions.Arguments-match '^receive --config "(.+)"$'})){
+ $videoConfig=[regex]::Match($task.Actions.Arguments,'^receive --config "(.+)"$').Groups[1].Value
+ if(Test-Path -LiteralPath $videoConfig){$video=Get-Content -LiteralPath $videoConfig -Raw -Encoding UTF8|ConvertFrom-Json;& $camera detach-local ('127.0.0.1:'+$video.usb_port)|Out-Null;if($LASTEXITCODE-ne 0){throw "Could not release this installation's virtual USB camera."}}
+}
+foreach($item in @(Get-CimInstance Win32_Process -Filter "Name='usbbridge-agent.exe' OR Name='usbbridge-camera.exe'"|Where-Object {$_.ExecutablePath-in $ownedPrograms})){
  $p=Get-Process -Id $item.ProcessId -ErrorAction SilentlyContinue;if($p){Stop-Process -Id $p.Id -Force;$p.WaitForExit()}
 }
 # Pause this installation's remembered imports while preserving its original choices.
@@ -99,6 +105,6 @@ if($Operation-eq 'Remove'){
   }
  }
  foreach($rule in @(Get-NetFirewallRule -Name 'USBBridge-*' -ErrorAction SilentlyContinue)){
-  if(($rule|Get-NetFirewallApplicationFilter).Program-in @($agent,(Join-Path $runtime 'usbbridge-server.exe'))){$rule|Remove-NetFirewallRule}
+  if(($rule|Get-NetFirewallApplicationFilter).Program-in @($agent,$camera,(Join-Path $runtime 'usbbridge-server.exe'))){$rule|Remove-NetFirewallRule}
  }
 }

@@ -137,6 +137,7 @@ pub fn device_rows(
             });
         }
     }
+    rows.retain(|row| !crate::uvc::is_emulated_identity(&row.identity));
     rows.sort_by(|a, b| a.name.cmp(&b.name).then(a.identity.cmp(&b.identity)));
     rows
 }
@@ -240,6 +241,7 @@ pub fn collect(path: &std::path::Path) -> std::io::Result<Dashboard> {
     // A failed history read is an error, not permission to resurrect removed devices.
     let history = crate::device_history::load(path)?;
     rows.retain(|r| history.visible(r));
+    rows.retain(|row| !crate::uvc::is_emulated_identity(&row.identity));
     rows.sort_by(|a, b| a.name.cmp(&b.name).then(a.identity.cmp(&b.identity)));
     let local: Vec<String> = state["LocalWhenIdle"]
         .as_array()
@@ -360,5 +362,21 @@ mod tests {
         let rows = device_rows(&[camera()], &[], &HashSet::new(), None, true, true, 3240);
         assert_eq!(rows[0].state, "Не опубликовано");
         assert_eq!(rows[0].tcp_port, "—");
+    }
+    #[test]
+    fn own_uvc_camera_cannot_be_offered_for_physical_usb_capture() {
+        let mut emulated = camera();
+        emulated.instance_id = "USB\\VID_1209&PID_F002\\UBC-FIXTURE".into();
+        let rows = device_rows(
+            &[camera(), emulated],
+            &[],
+            &HashSet::new(),
+            None,
+            true,
+            true,
+            3240,
+        );
+        assert_eq!(rows.len(), 1);
+        assert!(!crate::uvc::is_emulated_identity(&rows[0].identity));
     }
 }

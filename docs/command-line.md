@@ -128,3 +128,7 @@ values are processed separately, so USB names, addresses and error details are n
 translated accidentally. Driver/system error details and developer diagnostics retain
 their original language. Automated checks verify catalog completeness and matching
 format parameters in all five languages.
+
+## Video to a USB/UVC camera
+
+Both roles accept `video settings`, `video status`, `video on`, `video off`, and `video configure FILE`. Server commands manage reception into the local USB/UVC camera; client commands manage a source sending to that receiver. Configuration uses the same elevated helper and protected-key handling as the GUI. See [video settings and examples](virtual-camera.md).

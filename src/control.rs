@@ -27,6 +27,8 @@ Both roles:
   autostart status|on|off                Background recovery and tray at Windows startup
   health                                Check supervisor and controller heartbeats
   logs                                  Print log locations
+  video settings|status|on|off           Manage USB camera receiver/server or video sender/client
+  video configure FILE                  Apply video settings JSON (key_file contains no inline secret)
   about                                 Print version and repository
   cameras                               List cameras available in local Windows
   camera-modes CAMERA                   List video modes for an exact camera path/identity
@@ -335,6 +337,41 @@ pub fn run(mut args: Vec<String>) -> io::Result<()> {
         json!({"role":if role==Role::Server {"server"}else{"client"},"command":command,"arguments":args}),
     );
     match command.as_str() {
+        "video" if !args.is_empty() => {
+            let receive = role == Role::Server;
+            let file = if receive {
+                crate::video::receiver_path(&config)
+            } else {
+                crate::video::sender_path(&config)
+            };
+            match args[0].as_str() {
+                "settings" if args.len() == 1 => print(&settings::read::<Value>(&file)?),
+                "status" if args.len() == 1 => print(&crate::video::status(&file)),
+                "configure" if args.len() == 2 => {
+                    let value: Value = settings::read(Path::new(&args[1]))?;
+                    if receive {
+                        serde_json::from_value::<crate::video::ReceiverSettings>(value.clone())
+                            .map_err(io::Error::other)?
+                            .validate()?;
+                    } else {
+                        serde_json::from_value::<crate::video::SenderSettings>(value.clone())
+                            .map_err(io::Error::other)?
+                            .validate()?;
+                    }
+                    crate::desktop::video_apply(&config, role, value)?;
+                    print(&json!({"success":true}))
+                }
+                "on" | "off" if args.len() == 1 => {
+                    let mut value: Value = settings::read(&file)?;
+                    value["enabled"] = json!(args[0] == "on");
+                    crate::desktop::video_apply(&config, role, value)?;
+                    print(&json!({"success":true}))
+                }
+                _ => Err(invalid(
+                    "video requires settings|status|on|off|configure FILE",
+                )),
+            }
+        }
         "cameras" if args.is_empty() => print(&crate::camera::list()?),
         "preview" if args.len() <= 1 => {
             crate::camera::launch(

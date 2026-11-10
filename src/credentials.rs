@@ -59,11 +59,8 @@ pub fn save(auth: &Credentials) -> io::Result<PathBuf> {
     save_at(&root, auth)
 }
 #[cfg(windows)]
-pub fn save_at(root: &Path, auth: &Credentials) -> io::Result<PathBuf> {
-    use std::{
-        io::Write,
-        os::windows::{ffi::OsStrExt, io::FromRawHandle},
-    };
+fn create_private_file(path: &Path) -> io::Result<std::fs::File> {
+    use std::os::windows::{ffi::OsStrExt, io::FromRawHandle};
     use windows_sys::Win32::{
         Foundation::{INVALID_HANDLE_VALUE, LocalFree},
         Security::{
@@ -72,11 +69,6 @@ pub fn save_at(root: &Path, auth: &Credentials) -> io::Result<PathBuf> {
         },
         Storage::FileSystem::{CREATE_NEW, CreateFileW, FILE_ATTRIBUTE_NORMAL},
     };
-    if auth.username.len() > 4096 || auth.password.len() > 4096 {
-        return Err(io::Error::other("Proxy credentials exceed 4096 bytes"));
-    }
-    std::fs::create_dir_all(root)?;
-    let path = root.join(format!("{}.credential", uuid::Uuid::new_v4()));
     let name: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
     let sddl: Vec<u16> = "D:P(A;;FA;;;SY)(A;;FA;;;BA)(A;;FA;;;OW)"
         .encode_utf16()
@@ -110,17 +102,54 @@ pub fn save_at(root: &Path, auth: &Credentials) -> io::Result<PathBuf> {
             std::ptr::null_mut(),
         )
     };
+    let error = if handle == INVALID_HANDLE_VALUE {
+        Some(io::Error::last_os_error())
+    } else {
+        None
+    };
     unsafe {
         LocalFree(descriptor);
     }
-    if handle == INVALID_HANDLE_VALUE {
-        return Err(io::Error::last_os_error());
+    if let Some(error) = error {
+        return Err(error);
     }
-    let mut file = unsafe { std::fs::File::from_raw_handle(handle) };
+    Ok(unsafe { std::fs::File::from_raw_handle(handle) })
+}
+#[cfg(windows)]
+pub fn save_at(root: &Path, auth: &Credentials) -> io::Result<PathBuf> {
+    use std::io::Write;
+    if auth.username.len() > 4096 || auth.password.len() > 4096 {
+        return Err(io::Error::other("Proxy credentials exceed 4096 bytes"));
+    }
+    std::fs::create_dir_all(root)?;
+    let path = root.join(format!("{}.credential", uuid::Uuid::new_v4()));
     let encrypted = crypt(&serde_json::to_vec(auth).map_err(io::Error::other)?, true)?;
+    let mut file = create_private_file(&path)?;
     file.write_all(&encrypted)?;
     file.sync_all()?;
     Ok(path)
+}
+/// An explicit export file for a shared video key, private from its creation.
+pub fn save_key(path: &Path, secret: &str) -> io::Result<()> {
+    use std::io::Write;
+    #[cfg(windows)]
+    let mut file = create_private_file(path)?;
+    #[cfg(unix)]
+    let mut file = {
+        use std::os::unix::fs::OpenOptionsExt;
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(path)?
+    };
+    #[cfg(not(any(windows, unix)))]
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    file.write_all(secret.as_bytes())?;
+    file.sync_all()
 }
 #[cfg(windows)]
 pub fn load(path: &Path) -> io::Result<Credentials> {

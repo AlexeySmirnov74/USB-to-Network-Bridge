@@ -31,10 +31,10 @@ function Assert-Application{
   $target=Join-Path $installed ('USB-to-Network-Bridge-'+$role+'.exe')
   if($link.TargetPath-ne $target-or $link.Arguments){throw ('Invalid desktop launcher shortcut: '+$role)}
  }
- foreach($file in @('usbbridge.exe','usbbridge-server.exe','usbbridge-client.exe','usbbridge-agent.exe', 'USB-to-Network-Bridge-Server.exe', 'USB-to-Network-Bridge-Client.exe')){
+ foreach($file in @('usbbridge.exe','usbbridge-server.exe','usbbridge-client.exe','usbbridge-agent.exe', 'usbbridge-camera.exe', 'USB-to-Network-Bridge-Server.exe', 'USB-to-Network-Bridge-Client.exe')){
   if((Get-FileHash -LiteralPath (Join-Path $installed $file)).Hash-ne (Get-FileHash -LiteralPath (Join-Path $root ('target\release\'+$file))).Hash){throw ('Installed binary differs from candidate: '+$file)}
  }
- foreach($file in @('Open-Installation.ps1','Configure-Installation.ps1','Maintain-Installation.ps1')){
+ foreach($file in @('Open-Installation.ps1','Configure-Installation.ps1','Maintain-Installation.ps1','Set-VideoMode.ps1','Restart-VideoEndpoint.ps1')){
   if((Get-FileHash -LiteralPath (Join-Path $installed $file)).Hash-ne (Get-FileHash -LiteralPath (Join-Path $root $file)).Hash){throw ('Installed setup helper differs from candidate: '+$file)}
  }
 }

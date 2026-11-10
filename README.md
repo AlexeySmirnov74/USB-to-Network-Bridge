@@ -11,11 +11,17 @@
 
 An open-source USB over IP (USB/IP) redirector for Windows 11 x64. Share real USB devices between Windows computers over a LAN or VPN, including webcams and Android phone ADB/storage. A Rust server exports selected devices; a Windows client imports them through a virtual USB controller. No activation, trial timer or license-based device limit.
 
-**v0.2.1 — Windows 11 x64.** A Rust USB server and client with a desktop GUI, command-line control, automatic discovery and reconnect, plus an MSI installer and portable ZIP. [Download the latest release](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+**v0.2.2 — Windows 11 x64.** A Rust USB server and client with a desktop GUI, command-line control, automatic discovery and reconnect, plus an MSI installer and portable ZIP. [Download the latest release](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
 
 **Agent health in v0.2.1:** server and client controllers run under separate supervisors. Exited controllers restart automatically; stopped heartbeat progress is detected after two minutes. Independent one-minute scheduled checks also recover a missing or stalled supervisor. Stale reports no longer claim a connected device. Use `usbbridge --config FILE server health` or `client health` to inspect current health. See [changes](CHANGELOG.md).
 
 ![USB devices connected to a Windows server, transported over a trusted network, and used by Windows clients](docs/assets/architecture.svg)
+
+## USB camera from a remote video source
+
+**New in v0.2.2:** send video from a Windows client into a USB/UVC camera on the Windows server. Choose **Server → USB camera — receive video**, set its name (for example `4k web camera`), then configure **Device → Send video** on the client with the source, server address and the same connection key. The server uses the signed USBIP-WIN2 controller and Windows `usbvideo.sys`; the camera has no mandatory Media Foundation name suffix. Installed OBS/Unity Capture sources are selected through DirectShow. See the [video camera quick start](docs/virtual-camera.md).
+
+The video path uses authenticated TCP/MJPEG and retains the USB camera while a lost source reconnects, showing black instead of switching to another camera. Each endpoint has startup recovery and an independent heartbeat check. The name is configurable independently of resolution; 1280×720 at approximately 30 FPS was measured with a real camera source. Use a trusted LAN or VPN: frame authentication does not encrypt the images. The virtual USB controller remains visible in the Windows device tree.
 
 ## What you can do
 
@@ -147,7 +153,7 @@ Set-Location USB-to-Network-Bridge
 .\Package.ps1
 ```
 
-`Build.ps1` checks formatting, runs Clippy and tests, and builds six release executables. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.1-windows-x64.zip` with runtime helpers, examples, docs, and dependency licenses. Drivers are downloaded from upstream, verified against pinned SHA-256 and Authenticode in `driver-installers.json`, and are not bundled. CI builds/packages without installing USB drivers; hardware tests remain separate.
+`Build.ps1` checks formatting, runs Clippy and tests, and builds six release executables. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.2-windows-x64.zip` with runtime helpers, examples, docs, and dependency licenses. Drivers are downloaded from upstream, verified against pinned SHA-256 and Authenticode in `driver-installers.json`, and are not bundled. CI builds/packages without installing USB drivers; hardware tests remain separate.
 
 ## Installation and runtime
 

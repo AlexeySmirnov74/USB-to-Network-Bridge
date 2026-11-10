@@ -1,4 +1,4 @@
-# Change only the selected USB identity; leave the transport and its other sessions intact.
+﻿# Change only the selected USB identity; leave the transport and its other sessions intact.
 param([Parameter(Mandatory=$true)][string]$Config,[Parameter(Mandatory=$true)][string]$RequestFile,[switch]$Elevate)
 $ErrorActionPreference='Stop'
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
@@ -18,6 +18,7 @@ try{
     . (Join-Path $PSScriptRoot 'Write-DebugEvent.ps1')
     $request=Get-Content -LiteralPath $RequestFile -Raw|ConvertFrom-Json
     if($request.publish-isnot [bool]-or $request.identity-notlike 'USB\*'){throw 'Select an explicit USB identity and publication state.'}
+    if($request.publish-and $request.identity-like 'USB\VID_1209&PID_F002*'){throw 'Generated USB cameras are managed in Receive Video settings and cannot be captured as physical USB exports.'}
     $forget=$request.PSObject.Properties.Name-contains 'forget'-and $request.forget-eq $true
     if($forget-and $request.publish){throw 'Cannot forget a published device without releasing its publication.'}
     $hasPolicy=$request.PSObject.Properties.Name-contains 'local_when_idle'

@@ -11,11 +11,17 @@
 
 Un redirecteur USB over IP (USB/IP) open source pour Windows 11 x64. Partagez de vrais périphériques USB sur un LAN ou un VPN, dont webcams et interfaces ADB/stockage de téléphones Android. Le serveur Rust exporte les appareils sélectionnés ; le client Windows les importe via un contrôleur USB virtuel. Sans activation, expiration d'essai ni quota de périphériques lié à une licence.
 
-**v0.2.1 — Windows 11 x64.** Serveur et client USB en Rust avec interface graphique, ligne de commande, découverte et reconnexion automatiques, installateur MSI et ZIP portable. [Télécharger la dernière version](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+**v0.2.2 — Windows 11 x64.** Serveur et client USB en Rust avec interface graphique, ligne de commande, découverte et reconnexion automatiques, installateur MSI et ZIP portable. [Télécharger la dernière version](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
 
 **État des agents dans la v0.2.1 :** les contrôleurs serveur et client ont des superviseurs distincts. Un contrôleur arrêté redémarre automatiquement ; un signal de vie figé est détecté après deux minutes. Des tâches indépendantes vérifient aussi les superviseurs chaque minute. Les anciens rapports ne déclarent plus un périphérique connecté. Diagnostic : `usbbridge --config FILE server health` ou `client health`. [Modifications](CHANGELOG.md).
 
 ![Périphériques USB, serveur Windows, réseau de confiance et clients Windows ; schéma en anglais](docs/assets/architecture.svg)
+
+## Caméra USB alimentée par une source vidéo distante
+
+**Nouveau dans v0.2.2 :** envoyer la vidéo du client Windows vers une caméra USB/UVC sur le serveur Windows. Dans **Serveur → Caméra USB — réception vidéo**, choisir son nom, par exemple `4k web camera`. Sur le client, ouvrir **Périphérique → Envoyer la vidéo**, puis sélectionner la source, l’adresse du serveur et la même clé de connexion. La caméra utilise le contrôleur signé USBIP-WIN2 et `usbvideo.sys` de Windows, sans suffixe Media Foundation obligatoire. Les sources OBS/Unity Capture installées sont sélectionnées via DirectShow. [Démarrage rapide vidéo](docs/virtual-camera.md).
+
+Le transport TCP/MJPEG authentifié conserve la caméra USB lors d’une perte de source et affiche du noir jusqu’à la reconnexion automatique. Les deux modules ont un démarrage automatique et un contrôle indépendant du heartbeat. Le nom ne fixe pas la résolution : environ 30 FPS à 1280×720 ont été mesurés avec une vraie caméra. Utiliser un LAN de confiance ou un VPN : l’authentification ne chiffre pas les images. Le contrôleur USB virtuel reste identifiable dans l’arbre des périphériques Windows.
 
 ## Fonctionnalités
 

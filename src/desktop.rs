@@ -353,11 +353,13 @@ enum FormRules {
     #[default]
     Independent,
     Proxy,
+    Video,
 }
 impl FormRules {
     fn enabled(self, index: usize, choices: &[isize]) -> bool {
         match self {
             Self::Independent => true,
+            Self::Video => index == 0 || choices.first() == Some(&1),
             Self::Proxy => match index {
                 0 => true,
                 1 | 2 => choices.first().is_some_and(|mode| *mode > 0),
@@ -872,6 +874,276 @@ fn parse_port(value: &str) -> io::Result<u16> {
         "Порт должен быть от 1 до 65535",
     )))
 }
+fn video_source_options(
+    cameras: &[crate::camera::Camera],
+    saved: &str,
+) -> (Vec<String>, Vec<String>, usize) {
+    let mut labels = vec![crate::i18n::t("Test pattern").into()];
+    let mut identities = vec!["test-pattern".to_owned()];
+    labels.extend(cameras.iter().map(|c| c.name.clone()));
+    identities.extend(cameras.iter().map(|c| c.stable_identity()));
+    let selected = if saved == "test-pattern" {
+        0
+    } else if let Some(index) = cameras.iter().position(|c| c.matches(saved)) {
+        index + 1
+    } else {
+        // Applying another setting while a camera is absent must retain its source.
+        labels.push(format!("{}: {saved}", crate::i18n::t("Source unavailable")));
+        identities.push(saved.to_owned());
+        identities.len() - 1
+    };
+    (labels, identities, selected)
+}
+pub fn video_settings(owner: HWND, path: &Path, role: Role) {
+    let result = (|| -> io::Result<()> {
+        let receive = role == Role::Server;
+        let file = if receive {
+            crate::video::receiver_path(path)
+        } else {
+            crate::video::sender_path(path)
+        };
+        let old = if file.exists() {
+            Some(settings::read::<serde_json::Value>(&file)?)
+        } else {
+            None
+        };
+        let enabled = old
+            .as_ref()
+            .is_some_and(|v| v["enabled"].as_bool() == Some(true));
+        let mut camera_sources = Vec::new();
+        let title = crate::i18n::t(if receive {
+            "USB camera - receive video"
+        } else {
+            "Send video"
+        });
+        let mode_list = [(640u16, 480u16), (1280, 720), (1920, 1080), (3840, 2160)];
+        let mut fields = vec![Field {
+            label: crate::i18n::t("Enable and start with Windows").into(),
+            value: usize::from(enabled).to_string(),
+            kind: FieldKind::Choice(vec![
+                crate::i18n::t("Disabled").into(),
+                crate::i18n::t("Enabled").into(),
+            ]),
+        }];
+        if receive {
+            let saved = old.as_ref();
+            fields.push(Field::text(
+                crate::i18n::t("Camera name"),
+                saved
+                    .and_then(|v| v["camera"]["name"].as_str())
+                    .unwrap_or("4k web camera"),
+            ));
+            let width = saved
+                .and_then(|v| v["camera"]["width"].as_u64())
+                .unwrap_or(1280) as u16;
+            let height = saved
+                .and_then(|v| v["camera"]["height"].as_u64())
+                .unwrap_or(720) as u16;
+            fields.push(Field {
+                label: crate::i18n::t("Video mode").into(),
+                value: mode_list
+                    .iter()
+                    .position(|m| *m == (width, height))
+                    .unwrap_or(1)
+                    .to_string(),
+                kind: FieldKind::Choice(
+                    mode_list
+                        .iter()
+                        .map(|(w, h)| format!("{w} x {h} - 30 FPS"))
+                        .collect(),
+                ),
+            });
+            fields.push(Field::number(
+                crate::i18n::t("Video TCP port"),
+                saved
+                    .and_then(|v| v["video_port"].as_u64())
+                    .unwrap_or(13251) as u16,
+            ));
+        } else {
+            let cameras = crate::camera::list()?;
+            let saved = old.as_ref();
+            let source = saved
+                .and_then(|v| v["camera"].as_str())
+                .unwrap_or("test-pattern");
+            let (choices, sources, selected) = video_source_options(&cameras, source);
+            camera_sources = sources;
+            fields.push(Field {
+                label: crate::i18n::t("Video source").into(),
+                value: selected.to_string(),
+                kind: FieldKind::Choice(choices),
+            });
+            let config: ClientSettings = settings::read(path)?;
+            let default = config
+                .server
+                .rsplit_once(':')
+                .map(|(host, _)| format!("{host}:13251"))
+                .unwrap_or_else(|| "127.0.0.1:13251".into());
+            fields.push(Field::text(
+                crate::i18n::t("Video server address"),
+                saved.and_then(|v| v["server"].as_str()).unwrap_or(&default),
+            ));
+            fields.push(Field {
+                label: crate::i18n::t("JPEG quality (1-100)").into(),
+                value: saved
+                    .and_then(|v| v["quality"].as_u64())
+                    .unwrap_or(85)
+                    .to_string(),
+                kind: FieldKind::Text,
+            });
+        }
+        fields.push(Field {
+            label: crate::i18n::t("Connection key (16-128 characters; blank keeps current)").into(),
+            value: String::new(),
+            kind: FieldKind::Password,
+        });
+        let Some(values) = form_with_rules(
+            owner,
+            &format!("{title} v.{}", crate::APP_VERSION),
+            fields,
+            false,
+            FormRules::Video,
+        ) else {
+            return Ok(());
+        };
+        let enabled = values[0] == "1";
+        let key_file = if values[4].is_empty() {
+            old.as_ref()
+                .and_then(|v| v["key_file"].as_str())
+                .map(PathBuf::from)
+        } else {
+            if !(16..=128).contains(&values[4].len()) || values[4].chars().any(char::is_control) {
+                return Err(io::Error::other(crate::i18n::t(
+                    "Connection key must contain 16-128 characters",
+                )));
+            }
+            Some(crate::credentials::save_at(
+                &file
+                    .parent()
+                    .unwrap_or(Path::new("."))
+                    .join("video-credentials"),
+                &crate::proxy::Credentials {
+                    username: "USBBridgeVideo".into(),
+                    password: values[4].clone(),
+                },
+            )?)
+        };
+        if enabled && key_file.is_none() {
+            return Err(io::Error::other(crate::i18n::t(
+                "Enter the same connection key on both computers",
+            )));
+        }
+        let key_file = key_file.unwrap_or_else(|| file.with_extension("unused.key"));
+        let request = if receive {
+            let host: HostSettings = settings::read(path)?;
+            let selected = values[2]
+                .parse::<usize>()
+                .ok()
+                .and_then(|n| mode_list.get(n))
+                .ok_or_else(|| io::Error::other("invalid camera mode"))?;
+            let camera = crate::uvc::Config {
+                name: values[1].trim().into(),
+                serial: old
+                    .as_ref()
+                    .and_then(|v| v["camera"]["serial"].as_str())
+                    .map(str::to_owned)
+                    .unwrap_or_else(|| format!("UBC-{}", uuid::Uuid::new_v4().simple())),
+                width: selected.0,
+                height: selected.1,
+                fps: 30,
+                test_pattern: false,
+            };
+            let value = crate::video::ReceiverSettings {
+                enabled,
+                camera,
+                usb_port: old
+                    .as_ref()
+                    .and_then(|v| v["usb_port"].as_u64())
+                    .unwrap_or(13250) as u16,
+                video_port: parse_port(&values[3])?,
+                allowed_ips: host.allowed_ips,
+                key_file,
+            };
+            value.validate()?;
+            serde_json::to_value(value).map_err(io::Error::other)?
+        } else {
+            let source = values[1].parse::<usize>().map_err(io::Error::other)?;
+            let camera = camera_sources
+                .get(source)
+                .ok_or_else(|| io::Error::other("invalid video source selection"))?
+                .clone();
+            let value = crate::video::SenderSettings {
+                enabled,
+                server: settings::normalize_endpoint(values[2].trim(), 13251)?,
+                camera,
+                quality: values[3].parse().map_err(io::Error::other)?,
+                key_file,
+            };
+            value.validate()?;
+            serde_json::to_value(value).map_err(io::Error::other)?
+        };
+        let path = path.to_path_buf();
+        std::thread::spawn(move || {
+            let result = video_apply(&path, role, request);
+            match result {
+                Ok(()) => information(
+                    null_mut(),
+                    crate::i18n::t(
+                        "Video settings applied. The selected mode starts with Windows.",
+                    ),
+                ),
+                Err(error) => information(null_mut(), &error.to_string()),
+            }
+        });
+        Ok(())
+    })();
+    if let Err(error) = result {
+        information(owner, &error.to_string());
+    }
+}
+pub fn video_apply(path: &Path, role: Role, value: serde_json::Value) -> io::Result<()> {
+    use std::os::windows::process::CommandExt;
+    let config = if role == Role::Server {
+        crate::video::receiver_path(path)
+    } else {
+        crate::video::sender_path(path)
+    };
+    let request = config.with_extension(format!("{}.local.request.json", uuid::Uuid::new_v4()));
+    settings::save(&request, &value)?;
+    let runtime = std::env::current_exe()?
+        .parent()
+        .ok_or_else(|| io::Error::other("runtime missing"))?
+        .to_path_buf();
+    let user = format!(
+        "{}\\{}",
+        std::env::var("USERDOMAIN").unwrap_or_default(),
+        std::env::var("USERNAME").unwrap_or_default()
+    );
+    let result = std::process::Command::new("powershell.exe")
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
+        .arg(runtime.join("Set-VideoMode.ps1"))
+        .arg("-Role")
+        .arg(if role == Role::Server {
+            "Receive"
+        } else {
+            "Send"
+        })
+        .arg("-Config")
+        .arg(&config)
+        .arg("-RequestFile")
+        .arg(&request)
+        .arg("-InteractiveUser")
+        .arg(user)
+        .arg("-Elevate")
+        .creation_flags(0x08000000)
+        .status();
+    let _ = std::fs::remove_file(&request);
+    if !result?.success() {
+        return Err(io::Error::other(crate::i18n::t(
+            "Video configuration failed; check the video log",
+        )));
+    }
+    Ok(())
+}
 pub fn server_settings(owner: HWND, path: &Path) {
     let result = (|| -> io::Result<()> {
         let host: HostSettings = settings::read(path)?;
@@ -952,6 +1224,7 @@ pub fn server_settings(owner: HWND, path: &Path) {
         information(owner, &error.to_string());
     }
 }
+const VIDEO_SETTINGS: usize = 130;
 const REFRESH: u32 = WM_APP + 40;
 const CONNECT: usize = 101;
 const DISCONNECT: usize = 102;
@@ -1189,6 +1462,7 @@ impl ClientWindow {
             for (id, text) in [
                 (CONNECT, crate::i18n::t("Подключить устройство")),
                 (DISCONNECT, crate::i18n::t("Отключить устройство")),
+                (VIDEO_SETTINGS, crate::i18n::t("Send video")),
             ] {
                 AppendMenuW(device, MF_STRING, id, wide(text).as_ptr());
             }
@@ -2015,6 +2289,7 @@ impl ClientUi {
         );
         let owner = self.window.get();
         match id {
+            VIDEO_SETTINGS => video_settings(owner, &self.path, Role::Client),
             CAMERA_PREVIEW | DEVICE_CAMERA_PREVIEW => {
                 let identity = (id == DEVICE_CAMERA_PREVIEW)
                     .then(|| self.selected().and_then(|(_, _, identity)| identity))
@@ -2688,6 +2963,24 @@ unsafe extern "system" fn client_procedure(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn video_settings_keep_an_absent_source_and_distinguish_equal_names() {
+        let make = |id: &str| crate::camera::Camera {
+            path: format!("path-{id}"),
+            name: "Camera".into(),
+            identities: vec![format!("USB\\VID_1234&PID_5678\\{id}")],
+        };
+        let cameras = [make("first"), make("second")];
+        let saved = cameras[1].stable_identity();
+        let (_, values, selected) = super::video_source_options(&cameras, &saved);
+        assert_eq!(values[selected], saved);
+        assert_eq!(selected, 2);
+        let (_, values, selected) = super::video_source_options(&cameras[..1], &saved);
+        assert_eq!(values[selected], saved);
+        assert_ne!(values[selected], "test-pattern");
+        let (_, values, selected) = super::video_source_options(&[], "test-pattern");
+        assert_eq!(values[selected], "test-pattern");
+    }
     #[test]
     fn port_fields_accept_only_the_full_valid_tcp_udp_range() {
         for value in ["1", "65535", " 3240 "] {

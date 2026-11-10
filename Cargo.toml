@@ -1,6 +1,6 @@
 [package]
 name = "usbbridge"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 license = "MIT"
 
@@ -10,6 +10,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4"] }
 base64 = "0.22"
+jpeg-encoder = { version = "0.7", features = ["simd"] }
+hmac = "0.12"
+sha2 = "0.10"
 
 [target.'cfg(windows)'.dependencies]
 native-tls = "0.2"
@@ -43,3 +46,7 @@ path = "src/bin/server_gui.rs"
 [[bin]]
 name = "USB-to-Network-Bridge-Client"
 path = "src/bin/client_gui.rs"
+
+[[bin]]
+name = "usbbridge-camera"
+path = "src/bin/camera.rs"

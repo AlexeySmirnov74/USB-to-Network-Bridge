@@ -1,4 +1,4 @@
-﻿# Packages only the applications and setup scripts. Drivers remain upstream downloads.
+# Packages only the applications and setup scripts. Drivers remain upstream downloads.
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $localCargo = Join-Path $root 'tools\cargo\bin\cargo.exe'
@@ -18,11 +18,11 @@ try {
     $stage = Join-Path $dist ($name + '-' + [guid]::NewGuid().ToString('N'))
     $licenses = Join-Path $stage 'licenses'
     New-Item -ItemType Directory -Path $licenses -Force | Out-Null
-    foreach ($binary in @('usbbridge.exe', 'usbbridge-client.exe', 'usbbridge-server.exe', 'usbbridge-agent.exe', 'USB-to-Network-Bridge-Server.exe', 'USB-to-Network-Bridge-Client.exe')) {
+    foreach ($binary in @('usbbridge.exe', 'usbbridge-client.exe', 'usbbridge-server.exe', 'usbbridge-agent.exe', 'usbbridge-camera.exe', 'USB-to-Network-Bridge-Server.exe', 'USB-to-Network-Bridge-Client.exe')) {
         Copy-Item -LiteralPath (Join-Path $metadata.target_directory ('release\' + $binary)) -Destination $stage
     }
     foreach ($file in @(
-        'Open-Installation.ps1', 'Configure-Installation.ps1', 'Maintain-Installation.ps1', 'Restart-AgentSupervisor.ps1', 'CHANGELOG.md', 'README.md', 'README.ru.md', 'README.fr.md', 'README.de.md', 'README.zh-CN.md',
+        'Open-Installation.ps1', 'Configure-Installation.ps1', 'Maintain-Installation.ps1', 'Restart-AgentSupervisor.ps1', 'Set-VideoMode.ps1', 'Restart-VideoEndpoint.ps1', 'CHANGELOG.md', 'README.md', 'README.ru.md', 'README.fr.md', 'README.de.md', 'README.zh-CN.md',
         'THIRD-PARTY.txt', 'LICENSE', 'Switch-Backend.ps1', 'Restart-UsbPort.ps1',
         'Inspect-Host.ps1', 'Download-Drivers.ps1', 'Install-ProductionDrivers.ps1',
         'driver-installers.json', 'server.example.psd1', 'client.example.json', 'Test-Transport.ps1',
@@ -46,6 +46,12 @@ try {
         }
     })
     $hashes | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $stage 'SHA256.json') -Encoding UTF8
+    # Some upstream crate archives use pre-1980 mtimes, outside ZIP's DOS range.
+    foreach ($file in @(Get-ChildItem -LiteralPath $stage -Recurse -File)) {
+        if ($file.LastWriteTime.Year -lt 1980 -or $file.LastWriteTime.Year -gt 2107) {
+            $file.LastWriteTime = [DateTime]::new(1980, 1, 1, 0, 0, 0)
+        }
+    }
     $archive = Join-Path $dist ($name + '.zip')
     Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -Force
     foreach ($launcher in @('USB-to-Network-Bridge-Server.exe', 'USB-to-Network-Bridge-Client.exe')) {

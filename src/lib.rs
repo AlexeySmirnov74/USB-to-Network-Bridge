@@ -50,10 +50,12 @@ pub const REPOSITORY: &str = "https://github.com/AlexeySmirnov74/USB-to-Network-
 pub mod tray;
 #[cfg(windows)]
 pub mod usbdk;
+pub mod uvc;
 #[cfg(windows)]
 pub mod vbox;
 #[cfg(windows)]
 pub mod vhci;
+pub mod video;
 pub mod wire;
 
 use std::{io, net::TcpStream, time::Duration};

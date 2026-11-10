@@ -14,6 +14,7 @@ const LOCAL_IDLE: usize = 308;
 const CAMERA_PREVIEW: usize = 309;
 const DEVICE_CAMERA_PREVIEW: usize = 310;
 const FORGET: usize = 311;
+const VIDEO_SETTINGS: usize = 312;
 enum Event {
     Snapshot(u64, Result<Dashboard, String>),
     Finished(Result<(), String>, String, bool),
@@ -124,6 +125,12 @@ impl ServerWindow {
                 MF_STRING,
                 CAMERA_PREVIEW,
                 wide(crate::i18n::t("Camera test…")).as_ptr(),
+            );
+            AppendMenuW(
+                server,
+                MF_STRING,
+                VIDEO_SETTINGS,
+                wide(crate::i18n::t("USB camera - receive video")).as_ptr(),
             );
             AppendMenuW(
                 help,
@@ -1025,6 +1032,7 @@ impl ServerUi {
             serde_json::json!({"id":id,"action":match id{TOGGLE=>"toggle",APPLY=>"apply_settings",RELOAD=>"refresh",SETTINGS=>"settings_tab",SERVER_ABOUT=>"about",SERVER_HIDE=>"hide",PUBLISH=>"publish_device",FORGET=>"forget_device",CAMERA_PREVIEW=>"camera_preview",DEVICE_CAMERA_PREVIEW=>"camera_test_device",_=>"other"},"device":self.selected_row()}),
         );
         match id {
+            VIDEO_SETTINGS => video_settings(self.window.get(), &self.path, Role::Server),
             FORGET => {
                 if let Some(row) = self.selected_row().filter(|r| !r.present)
                     && self

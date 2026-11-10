@@ -27,7 +27,7 @@ pub struct Camera {
 }
 impl Camera {
     /// Use the complete physical USB identity, never the shared model name/VID/PID.
-    fn preference_key(&self) -> String {
+    pub fn stable_identity(&self) -> String {
         self.identities
             .iter()
             .find(|id| {
@@ -35,8 +35,12 @@ impl Camera {
                 id.starts_with("USB\\VID_") && !id.contains("&MI_")
             })
             .unwrap_or(&self.path)
-            .to_ascii_lowercase()
+            .clone()
     }
+    fn preference_key(&self) -> String {
+        self.stable_identity().to_ascii_lowercase()
+    }
+
     pub fn matches(&self, identity: &str) -> bool {
         self.path.eq_ignore_ascii_case(identity)
             || self
@@ -177,6 +181,7 @@ pub fn rates(before: &Stats, after: &Stats) -> Rates {
     }
 }
 pub struct Frame {
+    /// BGRA in bottom-up DIB order, independent of the producer's orientation.
     pub pixels: Vec<u8>,
     pub width: i32,
     pub height: i32,
@@ -212,6 +217,7 @@ unsafe extern "C" {
     fn ub_camera_thread_uninitialize();
     fn ub_camera_list(output: *mut *mut u16) -> i32;
     fn ub_camera_modes(path: *const u16, output: *mut *mut u16) -> i32;
+    fn ub_camera_set_name(path: *const u16, name: *const u16) -> i32;
     fn ub_camera_string_free(value: *mut u16);
     fn ub_camera_open(
         path: *const u16,
@@ -268,6 +274,11 @@ fn json_result<T: serde::de::DeserializeOwned>(
 }
 pub fn list() -> io::Result<Vec<Camera>> {
     json_result(|out| unsafe { ub_camera_list(out) })
+}
+pub(crate) fn set_emulated_name(path: &str, name: &str) -> io::Result<()> {
+    let path = crate::desktop::wide(path);
+    let name = crate::desktop::wide(name);
+    checked(unsafe { ub_camera_set_name(path.as_ptr(), name.as_ptr()) })
 }
 pub fn modes(path: &str) -> io::Result<Vec<Mode>> {
     let path = crate::desktop::wide(path);

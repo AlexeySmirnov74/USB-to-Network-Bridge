@@ -63,6 +63,13 @@ std::wstring property(IPropertyBag* bag,const wchar_t* key) {
     if(SUCCEEDED(bag->Read(key,&value,nullptr))&&value.vt==VT_BSTR&&value.bstrVal)return value.bstrVal;
     return {};
 }
+// Pure DirectShow sources (OBS/Unity Capture) need not have a PnP DevicePath.
+std::wstring camera_path(IMoniker* moniker,IPropertyBag* bag) {
+    auto path=property(bag,L"DevicePath");if(!path.empty())return path;
+    LPOLESTR display=nullptr;
+    if(SUCCEEDED(moniker->GetDisplayName(nullptr,nullptr,&display))&&display){path=display;CoTaskMemFree(display);}
+    return path;
+}
 std::wstring identities(const std::wstring& path) {
     std::wstring output=L"[";bool first=true;
     DeviceInfoSet owned;HDEVINFO devices=owned.value;
@@ -94,7 +101,7 @@ ComPtr<IBaseFilter> camera(const wchar_t* path) {
     auto list=monikers();if(!list)throw Failure{HRESULT_FROM_WIN32(ERROR_NOT_FOUND)};
     for(ComPtr<IMoniker> moniker;list->Next(1,&moniker,nullptr)==S_OK;moniker.Reset()){
         ComPtr<IPropertyBag> bag;if(FAILED(moniker->BindToStorage(nullptr,nullptr,IID_PPV_ARGS(&bag))))continue;
-        if(_wcsicmp(property(bag.Get(),L"DevicePath").c_str(),path)==0){
+        if(_wcsicmp(camera_path(moniker.Get(),bag.Get()).c_str(),path)==0){
             ComPtr<IBaseFilter> filter;
             if(_wcsnicmp(path,L"\\\\?\\usb#",8)==0){
                 // Use the Windows WDM proxy for USB capture. The per-device MF bridge
@@ -121,7 +128,7 @@ struct CaptureSource {
         check(builder->FindInterface(&PIN_CATEGORY_CAPTURE,&MEDIATYPE_Video,device.Get(),IID_IAMStreamConfig,reinterpret_cast<void**>(config.GetAddressOf())));
     }
 };
-struct VideoType { LONG width=0,height=0;REFERENCE_TIME interval=0; };
+struct VideoType { LONG width=0,height=0;REFERENCE_TIME interval=0;bool top_down=false; };
 VideoType video_type(const AM_MEDIA_TYPE& type) {
     VideoType out;
     if(type.formattype==FORMAT_VideoInfo&&type.pbFormat&&type.cbFormat>=sizeof(VIDEOINFOHEADER)){
@@ -130,6 +137,7 @@ VideoType video_type(const AM_MEDIA_TYPE& type) {
     if(type.formattype==FORMAT_VideoInfo2&&type.pbFormat&&type.cbFormat>=sizeof(VIDEOINFOHEADER2)){
         const auto* info=reinterpret_cast<const VIDEOINFOHEADER2*>(type.pbFormat);out={info->bmiHeader.biWidth,info->bmiHeader.biHeight,info->AvgTimePerFrame};
     }
+    if(out.height<0&&out.height>=-8192){out.top_down=true;out.height=-out.height;}
     return out;
 }
 bool bounded(const VideoType& video) {
@@ -165,7 +173,7 @@ const GUID null_class={0xC1F400A4,0x3F08,0x11D3,{0x9F,0x0B,0x00,0x60,0x08,0x03,0
 struct Shared {
     std::atomic<uint64_t> input_frames{0},input_bytes{0},decoded_frames{0};
     std::mutex mutex;std::vector<uint8_t> frame;uint64_t sequence=0;
-    size_t frame_bytes=0;LONG width=0,height=0;
+    size_t frame_bytes=0;LONG width=0,height=0;bool top_down=false;
 };
 class Samples final:public ISampleGrabberCB {
     std::atomic<ULONG> references{1};std::shared_ptr<Shared> state;bool decoded;
@@ -184,7 +192,10 @@ public:
         try{
             std::lock_guard lock(state->mutex);
             if(!state->frame_bytes||static_cast<size_t>(length)<state->frame_bytes)return S_OK;
-            state->frame.assign(bytes,bytes+state->frame_bytes);++state->sequence;++state->decoded_frames;
+            if(state->top_down){state->frame.resize(state->frame_bytes);const auto stride=static_cast<size_t>(state->width)*4;
+                for(LONG y=0;y<state->height;++y)memcpy(state->frame.data()+static_cast<size_t>(state->height-1-y)*stride,bytes+static_cast<size_t>(y)*stride,stride);
+            }else state->frame.assign(bytes,bytes+state->frame_bytes);
+            ++state->sequence;++state->decoded_frames;
         }catch(...){return E_OUTOFMEMORY;}
         return S_OK;
     }
@@ -258,7 +269,7 @@ struct Session {
         auto video=video_type(connected);
         if(connected.cbFormat)CoTaskMemFree(connected.pbFormat);if(connected.pUnk)connected.pUnk->Release();
         if(video.width<=0||video.height<=0||static_cast<uint64_t>(video.width)*video.height*4>max_frame_bytes)throw Failure{VFW_E_INVALIDMEDIATYPE};
-        {std::lock_guard lock(state->mutex);state->width=video.width;state->height=video.height;state->frame_bytes=static_cast<size_t>(video.width)*video.height*4;}
+        {std::lock_guard lock(state->mutex);state->width=video.width;state->height=video.height;state->top_down=video.top_down;state->frame_bytes=static_cast<size_t>(video.width)*video.height*4;}
         check(source.graph.As(&control));check(source.graph.As(&events));
         ComPtr<IMediaFilter> filter;check(source.graph.As(&filter));check(filter->SetSyncSource(nullptr));
         started=std::chrono::steady_clock::now();check(control->Run());
@@ -279,11 +290,32 @@ HRESULT ub_camera_list(wchar_t** output)noexcept {
     return guard([&]{Apartment apartment;std::wstring json=L"[";bool first=true;auto list=monikers();
         if(list)for(ComPtr<IMoniker> moniker;list->Next(1,&moniker,nullptr)==S_OK;moniker.Reset()){
             ComPtr<IPropertyBag> bag;if(FAILED(moniker->BindToStorage(nullptr,nullptr,IID_PPV_ARGS(&bag))))continue;
-            auto path=property(bag.Get(),L"DevicePath");if(path.empty())continue;
+            auto path=camera_path(moniker.Get(),bag.Get());if(path.empty())continue;
             if(!first)json+=L",";first=false;
             json+=L"{\"path\":"+quote(path)+L",\"name\":"+quote(property(bag.Get(),L"FriendlyName"))+L",\"identities\":"+identities(path)+L"}";
         }
         result_string(json+L"]",output);
+    });
+}
+// Called only for our emulator's verified identity by its elevated receiver.
+HRESULT ub_camera_set_name(const wchar_t* path,const wchar_t* name)noexcept {
+    if(!path||!name||wcslen(name)>100)return E_INVALIDARG;
+    return guard([&]{Apartment apartment;auto list=monikers();bool found=false;
+        if(list)for(ComPtr<IMoniker> moniker;list->Next(1,&moniker,nullptr)==S_OK;moniker.Reset()){
+            ComPtr<IPropertyBag> bag;if(FAILED(moniker->BindToStorage(nullptr,nullptr,IID_PPV_ARGS(&bag))))continue;
+            if(_wcsicmp(camera_path(moniker.Get(),bag.Get()).c_str(),path)!=0)continue;
+            PropertyValue value;value.value.vt=VT_BSTR;value.value.bstrVal=SysAllocString(name);if(!value.value.bstrVal)throw std::bad_alloc();
+            check(bag->Write(L"FriendlyName",&value.value));found=true;break;
+        }
+        if(!found)throw Failure{HRESULT_FROM_WIN32(ERROR_NOT_FOUND)};
+        DeviceInfoSet owned;SP_DEVICE_INTERFACE_DATA iface{};iface.cbSize=sizeof(iface);
+        if(owned.value==INVALID_HANDLE_VALUE||!SetupDiOpenDeviceInterfaceW(owned.value,path,0,&iface))throw Failure{HRESULT_FROM_WIN32(GetLastError())};
+        DWORD length=0;SetupDiGetDeviceInterfaceDetailW(owned.value,&iface,nullptr,0,&length,nullptr);
+        if(length<sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA_W)||length>65536)throw Failure{E_INVALIDARG};
+        std::vector<BYTE> storage(length);auto* detail=reinterpret_cast<SP_DEVICE_INTERFACE_DETAIL_DATA_W*>(storage.data());detail->cbSize=sizeof(*detail);
+        SP_DEVINFO_DATA node{};node.cbSize=sizeof(node);
+        if(!SetupDiGetDeviceInterfaceDetailW(owned.value,&iface,detail,length,nullptr,&node))throw Failure{HRESULT_FROM_WIN32(GetLastError())};
+        if(!SetupDiSetDeviceRegistryPropertyW(owned.value,&node,SPDRP_FRIENDLYNAME,reinterpret_cast<const BYTE*>(name),static_cast<DWORD>((wcslen(name)+1)*sizeof(wchar_t))))throw Failure{HRESULT_FROM_WIN32(GetLastError())};
     });
 }
 HRESULT ub_camera_modes(const wchar_t* path,wchar_t** output)noexcept {

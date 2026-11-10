@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.2.2 — 2026-11-10
+
+### Added
+
+- Client-to-server video feeding an emulated USB/UVC MJPEG camera through the unchanged signed USBIP-WIN2 controller and Windows `usbvideo.sys`.
+- Configurable camera name and stable serial identity; changing the displayed name updates only the owned camera's DirectShow and PnP properties.
+- Server **USB camera — receive video** and client **Send video** dialogs, with dependent controls disabled when the mode is off, and translations in all five languages.
+- DirectShow moniker support for software video sources, including installed OBS/Unity Capture filters without a PnP DevicePath.
+- Separate network video port, client IP allowlist, mutual connection authentication and per-frame HMAC/replay checks, bounded latest-frame storage, and automatic reconnection.
+- Black-frame fallback when a source disappears, preserving the local USB camera registration and leaving physical USB sessions running.
+- Video startup tasks and independent one-minute heartbeat checks, recovering an exited endpoint or one whose progress stops for two minutes.
+- `usbbridge-camera.exe`, video configuration/status/on/off CLI commands, private connection-key export files, and measured source/output FPS in diagnostics.
+- Automatic AVX2 JPEG encoding where supported, with a fallback for other CPUs.
+
+### Fixed
+
+- The generated UVC endpoint is excluded from physical USB publication to prevent recapturing its own output.
+- Saving video settings while the selected source is absent preserves its identity instead of replacing it with the test pattern.
+- Portable packaging accepts dependency license timestamps older than ZIP's supported date range.
+- Video status expires stale connection claims, and setup waits for a newly written ready report rather than accepting an earlier process's file.
+- Installer maintenance stops, resumes and removes the owned video tasks and firewall rules alongside the existing USB components.
+
 ## 0.2.1 — 2026-11-10
 
 ### Fixed
