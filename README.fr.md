@@ -11,11 +11,14 @@
 
 Un redirecteur USB over IP (USB/IP) open source pour Windows 11 x64. Partagez de vrais périphériques USB sur un LAN ou un VPN, dont webcams et interfaces ADB/stockage de téléphones Android. Le serveur Rust exporte les appareils sélectionnés ; le client Windows les importe via un contrôleur USB virtuel. Sans activation, expiration d'essai ni quota de périphériques lié à une licence.
 
-**v0.2.2 — Windows 11 x64.** Serveur et client USB en Rust avec interface graphique, ligne de commande, découverte et reconnexion automatiques, installateur MSI et ZIP portable. [Télécharger la dernière version](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+**v0.2.3 — Windows 11 x64.** Serveur et client USB en Rust avec interface graphique, ligne de commande, découverte et reconnexion automatiques, installateur MSI et ZIP portable. [Télécharger la dernière version](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
 
 **État des agents dans la v0.2.1 :** les contrôleurs serveur et client ont des superviseurs distincts. Un contrôleur arrêté redémarre automatiquement ; un signal de vie figé est détecté après deux minutes. Des tâches indépendantes vérifient aussi les superviseurs chaque minute. Les anciens rapports ne déclarent plus un périphérique connecté. Diagnostic : `usbbridge --config FILE server health` ou `client health`. [Modifications](CHANGELOG.md).
 
 ![Périphériques USB, serveur Windows, réseau de confiance et clients Windows ; schéma en anglais](docs/assets/architecture.svg)
+
+
+**v0.2.3 :** le nom est synchronisé entre DirectShow et Media Foundation. La capture se réveille à l’arrivée d’une image, réutilise des tampons bornés et publie ses temps de traitement. Pour une application source sur le PC client, suivre le [guide OBS/Unity Capture](docs/third-party-video.md) en anglais, avec exemples CLI et consignes pour un autre projet.
 
 ## Caméra USB alimentée par une source vidéo distante
 

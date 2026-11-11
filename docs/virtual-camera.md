@@ -11,6 +11,8 @@ flowchart LR
     E --> F[Video application]
 ```
 
+For a third-party producer running on the client PC, see the [OBS/Unity Capture integration guide](third-party-video.md) ([Русский](third-party-video.ru.md)). It covers source setup, interactive sessions, exact source identity, CLI integration and verification.
+
 ## Quick start
 
 1. Install the complete application package on both Windows 11 x64 PCs. The receiving server also needs the signed **USBIP-WIN2 client driver**, because it hosts the virtual USB controller. If this PC only has the physical-sharing server driver, run `Install-ProductionDrivers.ps1 -Role Client` from the complete application directory in an elevated PowerShell window. This installs the receiving USB controller without configuring another application role. Keep Secure Boot enabled; follow an upstream installer's request for a manual restart when needed.
@@ -23,7 +25,7 @@ The GUI stores connection keys using Windows DPAPI in protected files. A blank k
 ## Behavior
 
 - The camera's name is independent of its resolution. Calling it `4k web camera` does not turn a 720p source into a native 4K source. GUI modes advertise 30 FPS; measured source and output rates depend on the producer, encoding cost and network.
-- Changing the name preserves the serial identity and updates only the owned camera's PnP/DirectShow friendly name. Applying a name or resolution change reconnects this virtual camera; an application may need to reopen it.
+- Changing the name preserves the serial identity and updates only the owned camera's PnP name and its capture, video and Media Foundation camera interface names. Applying a name or resolution change reconnects this virtual camera; an application may need to reopen it.
 - Network/source loss leaves the receiving USB camera registered. After two seconds without a fresh image it supplies black, then resumes the selected source after reconnection. It never falls back to a different physical camera.
 - Video reception is configured independently of physical USB sharing. The generated camera is managed from its video dialog and is excluded from the physical publication table, preventing a capture loop.
 - The video channel uses TCP/MJPEG with mutual authentication and per-frame HMAC-SHA256 integrity/replay protection. Images are not encrypted by this channel; use a trusted LAN or VPN. Its port and key are separate from USB data/discovery and USB proxy settings.

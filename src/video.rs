@@ -129,9 +129,22 @@ fn mac(secret: &[u8; 32], parts: &[&[u8]]) -> Hmac256 {
     value
 }
 fn read_exact(stream: &mut TcpStream, bytes: &mut [u8]) -> io::Result<()> {
-    let due = Instant::now() + Duration::from_secs(10);
+    read_exact_with_timeout(stream, bytes, Duration::from_secs(10))
+}
+fn read_exact_with_timeout(
+    stream: &mut TcpStream,
+    bytes: &mut [u8],
+    timeout: Duration,
+) -> io::Result<()> {
+    let due = Instant::now() + timeout;
     let mut offset = 0;
     while offset < bytes.len() {
+        if Instant::now() >= due {
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "video frame stalled",
+            ));
+        }
         match stream.read(&mut bytes[offset..]) {
             Ok(0) => return Err(io::ErrorKind::UnexpectedEof.into()),
             Ok(n) => offset += n,
@@ -310,14 +323,15 @@ pub fn receive(config: &ReceiverSettings, path: &Path) -> io::Result<()> {
   loop {
    if network.is_finished(){crate::diagnostics::event("video.listener.failed",serde_json::json!({"reason":"ingress thread exited"}));std::process::exit(1);}
    let attached=crate::vhci::imported_devices().and_then(|ports|{
-    if ports.iter().any(|p|p.busid==uvc::BUSID && p.server.eq_ignore_ascii_case(&local)){Ok(())}else{crate::vhci::attach(&local,uvc::BUSID,false).map(|port|{crate::diagnostics::event("uvc.local.attached",serde_json::json!({"port":port}));})}
+    if ports.iter().any(|p|p.busid==uvc::BUSID && p.server.eq_ignore_ascii_case(&local)){Ok(())}else{named=false;crate::vhci::attach(&local,uvc::BUSID,false).map(|port|{crate::diagnostics::event("uvc.local.attached",serde_json::json!({"port":port}));})}
    });
-   if let Err(error)=attached {if error.to_string()!=last_error {last_error=error.to_string();crate::diagnostics::event("uvc.local.attach.failed",serde_json::json!({"error":last_error}));}}else{last_error.clear();}
+   if let Err(error)=attached {named=false;if error.to_string()!=last_error {last_error=error.to_string();crate::diagnostics::event("uvc.local.attach.failed",serde_json::json!({"error":last_error}));}}else{last_error.clear();}
    if !named {
     let wanted=format!("USB\\VID_1209&PID_F002\\{}",state.config().serial);
     let result=crate::camera::list().and_then(|cameras|{
      let camera=cameras.into_iter().find(|c|c.identities.iter().any(|i|i.eq_ignore_ascii_case(&wanted))).ok_or_else(||io::Error::new(io::ErrorKind::NotFound,"emulated camera is still enumerating"))?;
-     if camera.name!=state.config().name {crate::camera::set_emulated_name(&camera.path,&state.config().name)?;}
+     // A matching DirectShow name does not prove that Media Foundation agrees.
+     crate::camera::set_emulated_name(&camera.path,&state.config().name)?;
      Ok(())
     });
     match result {Ok(())=>{named=true;crate::diagnostics::event("uvc.name.applied",serde_json::json!({"name":state.config().name,"serial":state.config().serial}));},Err(error)=>{if error.to_string()!=last_name_error{last_name_error=error.to_string();crate::diagnostics::event("uvc.name.pending",serde_json::json!({"error":last_name_error}));}}}
@@ -403,10 +417,71 @@ fn connect(
     Ok((stream, mode, session_key(secret, &h)))
 }
 #[cfg(windows)]
-fn resize(frame: &crate::camera::Frame, width: u16, height: u16) -> Vec<u8> {
+#[derive(Default)]
+struct StageTiming {
+    count: u64,
+    total_us: u64,
+    max_us: u64,
+}
+#[cfg(windows)]
+impl StageTiming {
+    fn record(&mut self, elapsed: Duration) {
+        let us = elapsed.as_micros().min(u128::from(u64::MAX)) as u64;
+        self.count = self.count.saturating_add(1);
+        self.total_us = self.total_us.saturating_add(us);
+        self.max_us = self.max_us.max(us);
+    }
+    fn report(&self) -> serde_json::Value {
+        serde_json::json!({"samples":self.count,"average_us":self.total_us.checked_div(self.count).unwrap_or(0),"max_us":self.max_us})
+    }
+}
+#[cfg(windows)]
+#[derive(Default)]
+struct FrameTimings {
+    resize: StageTiming,
+    encode: StageTiming,
+    send: StageTiming,
+    processing: StageTiming,
+    capture_to_send: StageTiming,
+    skipped: u64,
+}
+#[cfg(windows)]
+impl FrameTimings {
+    fn report(&self) -> serde_json::Value {
+        serde_json::json!({"resize":self.resize.report(),"encode":self.encode.report(),"socket_write":self.send.report(),
+            "processing":self.processing.report(),"decoded_callback_to_socket_write":self.capture_to_send.report(),"skipped_source_frames":self.skipped})
+    }
+}
+#[cfg(windows)]
+fn resize(
+    frame: &crate::camera::Frame,
+    width: u16,
+    height: u16,
+    pixels: &mut Vec<u8>,
+) -> io::Result<()> {
     let (w, h) = (usize::from(width), usize::from(height));
     let (sw, sh) = (frame.width as usize, frame.height as usize);
-    let mut pixels = vec![0; w * h * 4];
+    let size = w
+        .checked_mul(h)
+        .and_then(|n| n.checked_mul(4))
+        .filter(|n| *n <= crate::camera::MAX_FRAME_BYTES)
+        .ok_or_else(|| wire::invalid("video output dimensions exceed capture bound"))?;
+    if w == 0
+        || h == 0
+        || frame.width <= 0
+        || frame.height <= 0
+        || sw.checked_mul(sh).and_then(|n| n.checked_mul(4)) != Some(frame.pixels.len())
+    {
+        return Err(wire::invalid(
+            "video source dimensions do not match its buffer",
+        ));
+    }
+    if size > pixels.len() {
+        pixels
+            .try_reserve_exact(size - pixels.len())
+            .map_err(io::Error::other)?;
+    }
+    pixels.resize(size, 0);
     let (ox, oy, dw, dh) = crate::camera::fit(
         frame.width,
         frame.height,
@@ -420,8 +495,9 @@ fn resize(frame: &crate::camera::Frame, width: u16, height: u16) -> Vec<u8> {
         {
             target.copy_from_slice(source);
         }
-        return pixels;
+        return Ok(());
     }
+    pixels.fill(0);
     for y in 0..dh as usize {
         let sy = sh - 1 - y * sh / dh as usize;
         for x in 0..dw as usize {
@@ -431,14 +507,19 @@ fn resize(frame: &crate::camera::Frame, width: u16, height: u16) -> Vec<u8> {
             pixels[to..to + 4].copy_from_slice(&frame.pixels[from..from + 4]);
         }
     }
-    pixels
+    Ok(())
 }
 #[cfg(windows)]
-fn transmit(config: &SenderSettings, secret: &[u8; 32], path: &Path) -> io::Result<()> {
+fn transmit(
+    config: &SenderSettings,
+    secret: &[u8; 32],
+    path: &Path,
+    worker_slot: &mut Option<crate::camera::Worker>,
+) -> io::Result<()> {
     let (mut stream, mode, session) = connect(config, secret)?;
     let period = Duration::from_nanos(u64::from(mode.interval()) * 100);
     let mut due = Instant::now();
-    let worker = if config.camera == "test-pattern" {
+    *worker_slot = if config.camera == "test-pattern" {
         None
     } else {
         let cameras = crate::camera::list()?;
@@ -471,6 +552,10 @@ fn transmit(config: &SenderSettings, secret: &[u8; 32], path: &Path) -> io::Resu
         ))?;
         Some(worker)
     };
+    let worker = worker_slot.as_ref();
+    let mut pixels = Vec::new();
+    let mut jpeg = Vec::new();
+    let mut timing = FrameTimings::default();
     let mut sequence = 0u64;
     let mut source_sequence = 0u64;
     let mut last_status = Instant::now();
@@ -487,7 +572,9 @@ fn transmit(config: &SenderSettings, secret: &[u8; 32], path: &Path) -> io::Resu
             );
             continue;
         }
-        let jpeg = if let Some(worker) = &worker {
+        let mut captured = None;
+        let started = Instant::now();
+        if let Some(worker) = &worker {
             let events = std::mem::take(&mut *worker.events.lock().unwrap());
             for event in events {
                 if let crate::camera::Event::Error(error) = event {
@@ -505,22 +592,41 @@ fn transmit(config: &SenderSettings, secret: &[u8; 32], path: &Path) -> io::Resu
                 thread::sleep(Duration::from_millis(2));
                 continue;
             };
+            let skipped = frame
+                .sequence
+                .saturating_sub(source_sequence)
+                .saturating_sub(1);
+            timing.skipped = timing.skipped.saturating_add(skipped);
             source_sequence = frame.sequence;
             source_wait = Instant::now();
-            uvc::encode_bgra(
-                &resize(&frame, mode.width, mode.height),
+            captured = Some(frame.captured);
+            let prepare = Instant::now();
+            resize(&frame, mode.width, mode.height, &mut pixels)?;
+            timing.resize.record(prepare.elapsed());
+            let encode = Instant::now();
+            uvc::encode_bgra_into(
+                &pixels,
                 mode.width,
                 mode.height,
                 config.quality,
-            )?
+                &mut jpeg,
+                mode.frame_limit(),
+            )?;
+            timing.encode.record(encode.elapsed());
         } else {
-            uvc::pattern(&mode, sequence as usize % 12, false)?
-        };
+            jpeg = uvc::pattern(&mode, sequence as usize % 12, false)?;
+        }
         if jpeg.len() > mode.frame_limit() {
             return Err(wire::invalid("encoded frame exceeds announced UVC size"));
         }
         sequence = sequence.saturating_add(1);
+        let sending = Instant::now();
         send_frame(&mut stream, &session, sequence, &jpeg)?;
+        timing.send.record(sending.elapsed());
+        timing.processing.record(started.elapsed());
+        if let Some(captured) = captured {
+            timing.capture_to_send.record(captured.elapsed());
+        }
         let now = Instant::now();
         due = if now.saturating_duration_since(due) > period * 2 {
             now + period
@@ -530,8 +636,10 @@ fn transmit(config: &SenderSettings, secret: &[u8; 32], path: &Path) -> io::Resu
         if last_status.elapsed() >= Duration::from_secs(1) {
             crate::settings::save(
                 &path.with_extension("status.json"),
-                &serde_json::json!({"process_id":std::process::id(),"running":true,"connected":true,"updated_unix_ms":crate::recovery::timestamp(),"sent_frames":sequence,"width":mode.width,"height":mode.height,"fps":mode.fps}),
+                &serde_json::json!({"process_id":std::process::id(),"running":true,"connected":true,"updated_unix_ms":crate::recovery::timestamp(),"sent_frames":sequence,"width":mode.width,"height":mode.height,"fps":mode.fps,"timing":timing.report(),"bgra_buffer_bytes":pixels.len(),"jpeg_buffer_capacity":jpeg.capacity()}),
             )?;
+            crate::diagnostics::event("video.sender.timing", timing.report());
+            timing = FrameTimings::default();
             last_status = Instant::now();
         }
     }
@@ -547,7 +655,17 @@ pub fn send(config: &SenderSettings, path: &Path) -> io::Result<()> {
     let secret = key(&config.key_file)?;
     let mut retry = 1u64;
     loop {
-        if let Err(error) = transmit(config, &secret, path) {
+        let mut worker = None;
+        let result = transmit(config, &secret, path, &mut worker);
+        if let Some(worker) = worker
+            && !worker.shutdown(Duration::from_secs(5))
+        {
+            // Exit only this managed video process; never accumulate stuck capture threads.
+            return Err(io::Error::other(
+                "video capture did not drain; endpoint restart required",
+            ));
+        }
+        if let Err(error) = result {
             crate::diagnostics::event(
                 "video.sender.retry",
                 serde_json::json!({"error":error.to_string(),"retry_seconds":retry}),
@@ -564,6 +682,31 @@ pub fn send(config: &SenderSettings, path: &Path) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn continuous_partial_video_data_cannot_extend_the_frame_deadline() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let writer = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            for _ in 0..20 {
+                if stream.write_all(&[1]).is_err() {
+                    break;
+                }
+                thread::sleep(Duration::from_millis(20));
+            }
+        });
+        let mut stream = TcpStream::connect(address).unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_millis(50)))
+            .unwrap();
+        let started = Instant::now();
+        let error = read_exact_with_timeout(&mut stream, &mut [0; 20], Duration::from_millis(70))
+            .unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::TimedOut);
+        assert!(started.elapsed() < Duration::from_secs(1));
+        drop(stream);
+        writer.join().unwrap();
+    }
     #[test]
     fn challenge_and_frame_authentication_are_bound_to_session_and_contents() {
         let secret = [7; 32];
@@ -716,14 +859,24 @@ mod tests {
             width: 2,
             height: 2,
             sequence: 1,
+            captured: Instant::now(),
             pixels: vec![
                 255, 0, 0, 255, 255, 0, 0, 255, 0, 0, 255, 255, 0, 0, 255, 255,
             ],
         };
-        let output = resize(&frame, 2, 2);
+        let mut output = Vec::new();
+        resize(&frame, 2, 2, &mut output).unwrap();
         assert_eq!(&output[..4], &[0, 0, 255, 255]);
         assert_eq!(&output[8..12], &[255, 0, 0, 255]);
-        let wide = resize(&frame, 4, 2);
+        let mut wide = Vec::new();
+        resize(&frame, 4, 2, &mut wide).unwrap();
+        let pointer = wide.as_ptr();
+        for _ in 0..100 {
+            resize(&frame, 4, 2, &mut wide).unwrap();
+            assert_eq!(wide.as_ptr(), pointer);
+        }
+        assert!(resize(&frame, 0, 2, &mut wide).is_err());
+        assert!(resize(&frame, u16::MAX, u16::MAX, &mut wide).is_err());
         assert_eq!(&wide[..4], &[0; 4]);
         assert_eq!(&wide[4..8], &[0, 0, 255, 255]);
         assert_eq!(&wide[12..16], &[0; 4]);

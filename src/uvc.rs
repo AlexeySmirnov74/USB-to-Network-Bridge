@@ -208,15 +208,69 @@ pub fn jpeg_size(bytes: &[u8]) -> io::Result<(u16, u16)> {
     }
     Err(wire::invalid("JPEG has no baseline frame header"))
 }
-pub fn encode_bgra(pixels: &[u8], width: u16, height: u16, quality: u8) -> io::Result<Vec<u8>> {
-    if pixels.len() != usize::from(width) * usize::from(height) * 4 || !(1..=100).contains(&quality)
-    {
-        return Err(wire::invalid("invalid JPEG image dimensions/quality"));
+/// A reused output buffer with a hard bound enforced while the encoder writes.
+struct JpegOutput<'a> {
+    bytes: &'a mut Vec<u8>,
+    limit: usize,
+}
+impl io::Write for JpegOutput<'_> {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        let length = self
+            .bytes
+            .len()
+            .checked_add(bytes.len())
+            .filter(|length| *length <= self.limit)
+            .ok_or_else(|| wire::invalid("encoded frame exceeds announced UVC size"))?;
+        if length > self.bytes.capacity() {
+            let capacity = length
+                .max(self.bytes.capacity().saturating_mul(2))
+                .min(self.limit);
+            self.bytes
+                .try_reserve_exact(capacity - self.bytes.len())
+                .map_err(io::Error::other)?;
+        }
+        self.bytes.extend_from_slice(bytes);
+        Ok(bytes.len())
     }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+pub(crate) fn encode_bgra_into(
+    pixels: &[u8],
+    width: u16,
+    height: u16,
+    quality: u8,
+    output: &mut Vec<u8>,
+    limit: usize,
+) -> io::Result<()> {
+    if width == 0
+        || height == 0
+        || pixels.len() != usize::from(width) * usize::from(height) * 4
+        || !(1..=100).contains(&quality)
+        || limit == 0
+        || limit > MAX_JPEG
+    {
+        return Err(wire::invalid("invalid JPEG image dimensions/quality/limit"));
+    }
+    output.clear();
+    let result = jpeg_encoder::Encoder::new(
+        JpegOutput {
+            bytes: output,
+            limit,
+        },
+        quality,
+    )
+    .encode(pixels, width, height, jpeg_encoder::ColorType::Bgra)
+    .map_err(io::Error::other);
+    if result.is_err() {
+        output.clear();
+    }
+    result
+}
+pub fn encode_bgra(pixels: &[u8], width: u16, height: u16, quality: u8) -> io::Result<Vec<u8>> {
     let mut result = Vec::new();
-    jpeg_encoder::Encoder::new(&mut result, quality)
-        .encode(pixels, width, height, jpeg_encoder::ColorType::Bgra)
-        .map_err(io::Error::other)?;
+    encode_bgra_into(pixels, width, height, quality, &mut result, MAX_JPEG)?;
     Ok(result)
 }
 pub fn pattern(config: &Config, phase: usize, black: bool) -> io::Result<Vec<u8>> {
@@ -618,6 +672,25 @@ fn stream_frames(shared: Arc<Shared>, frames: Arc<Frames>, completed: SyncSender
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn jpeg_output_is_bounded_during_encoding_and_reuses_storage() {
+        let pixels = vec![127; 64 * 64 * 4];
+        let mut output = Vec::new();
+        encode_bgra_into(&pixels, 64, 64, 85, &mut output, 4096).unwrap();
+        assert_eq!(jpeg_size(&output).unwrap(), (64, 64));
+        let pointer = output.as_ptr();
+        let capacity = output.capacity();
+        for _ in 0..40 {
+            encode_bgra_into(&pixels, 64, 64, 85, &mut output, 4096).unwrap();
+            assert_eq!(output.as_ptr(), pointer);
+            assert_eq!(output.capacity(), capacity);
+        }
+        let mut small = Vec::new();
+        assert!(encode_bgra_into(&pixels, 64, 64, 100, &mut small, 64).is_err());
+        assert!(small.is_empty());
+        assert!(small.capacity() <= 64);
+        assert!(encode_bgra_into(&[], 0, 64, 85, &mut small, 4096).is_err());
+    }
     #[test]
     fn descriptors_have_valid_lengths_and_exact_mode() {
         let c = Config::default();

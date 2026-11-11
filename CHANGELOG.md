@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.3 — 2026-11-11
+
+### Added
+
+- English and Russian guides for connecting third-party client applications through OBS/Unity Capture, with GUI/CLI steps, exact source selection, diagnostics and a scoped integration handoff for another project. All five READMEs link to the guide.
+- Per-second sender timings for resize, JPEG encoding, socket writes and decoded-callback-to-write completion, along with skipped source frames and bounded buffer usage. These are local measurements, not end-to-end network latency.
+
+### Changed
+
+- Capture wakes on decoded-frame arrival instead of an unconditional 15 ms sleep. Sender BGRA/JPEG buffers are reused instead of allocating new working buffers for each frame.
+- JPEG output is bounded during encoding; invalid image dimensions and buffer growth fail cleanly. Reconnection waits for capture shutdown and exits the managed video endpoint if a third-party graph cannot drain, preventing accumulation of stuck capture workers.
+
+### Fixed
+
+- Continuous partial input no longer extends the video read deadline indefinitely.
+
+- Camera renaming now synchronizes the DirectShow capture, Media Foundation camera and video interface names for the exact emulated device. A matching DirectShow name no longer hides a stale Media Foundation label.
+- Camera naming readiness waits for both capture APIs and is rechecked after the local USB endpoint reconnects. Physical cameras are rejected before any naming property is written.
+
 ## 0.2.2 — 2026-11-10
 
 ### Added

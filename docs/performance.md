@@ -133,3 +133,45 @@ every scene or supported resolution.
 
 Microsoft documents the effect of this control in
 [auto-exposure priority](https://learn.microsoft.com/en-us/windows-hardware/drivers/stream/ksproperty-cameracontrol-auto-exposure-priority).
+
+## Client-to-server software video path (v0.2.3, 2026-11-11)
+
+The DirectShow capture worker and video encoding/socket worker already run on
+separate threads. More queued frames would age the image under load, so the
+bridge retains the newest decoded frame rather than an unbounded FIFO. JPEG
+encoding already selects AVX2 on supported CPUs. The new capture wakeup removes
+an unconditional 15 ms sleep; native waiting wakes on a decoded sample and is
+bounded so controls remain responsive.
+
+The sender now reuses its output BGRA/JPEG buffers. JPEG growth is checked while
+writing, up to the receiver's announced frame limit (at most 16 MiB); dimension
+arithmetic and capture frames are bounded separately. A failed reconnect drains
+the old capture worker before opening another. If a third-party graph does not
+shut down in five seconds, the managed video endpoint exits for its existing
+recovery task instead of accumulating further capture workers.
+
+A live Unity Capture source was kept unchanged on the Windows client. With the
+receiver set to 1280 × 720 / 30 FPS, 24 process/status samples over 46.35 seconds
+showed approximately **29.88 sender FPS**. The generated server camera separately
+received and decoded **360/360 frames in 12.021 seconds (29.95 FPS)**.
+
+| Sender stage | Mean across the sampled status windows |
+| --- | ---: |
+| Resize/orientation | 1.33 ms |
+| JPEG encoding | 8.89 ms |
+| Socket write, including frame authentication | 0.48 ms |
+| Total processing | 10.72 ms |
+| Native decoded-frame availability to completed socket write | 11.95 ms |
+
+These counters use the sender's monotonic clock. A completed socket write does
+not mean that the receiving application has displayed the frame. The values do
+not include producer rendering/exposure, full network transit, USB consumption
+or messenger rendering; no end-to-end latency reduction was measured.
+
+CPU usage was approximately **51% of one logical CPU** both before and after;
+the short comparison does not establish a CPU speedup. Process private bytes
+ranged from **19.80 to 23.52 MiB**, changing by −20 KiB between the first/last
+samples. Handles stayed at 234–235 and threads at 11. The reused 720p BGRA buffer
+was 3,686,400 bytes and JPEG capacity stayed at 131,072 bytes. This sampled run
+showed no progressive growth; it is not proof that every external filter or
+long-lived workload is leak-free. See the [memory audit](memory-audit.md).

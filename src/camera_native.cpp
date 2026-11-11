@@ -4,10 +4,13 @@
 #include <dvdmedia.h>
 #include <setupapi.h>
 #include <cfgmgr32.h>
+#include <initguid.h>
+#include <devpkey.h>
 #include <wrl/client.h>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <cwchar>
 #include <memory>
@@ -41,6 +44,7 @@ struct DeviceInfoSet {
     HDEVINFO value=SetupDiCreateDeviceInfoList(nullptr,nullptr);
     ~DeviceInfoSet(){if(value!=INVALID_HANDLE_VALUE)SetupDiDestroyDeviceInfoList(value);}
     DeviceInfoSet()=default;
+    explicit DeviceInfoSet(HDEVINFO handle):value(handle){}
     DeviceInfoSet(const DeviceInfoSet&)=delete;
     DeviceInfoSet& operator=(const DeviceInfoSet&)=delete;
 };
@@ -172,7 +176,8 @@ const GUID grabber_class={0xC1F400A0,0x3F08,0x11D3,{0x9F,0x0B,0x00,0x60,0x08,0x0
 const GUID null_class={0xC1F400A4,0x3F08,0x11D3,{0x9F,0x0B,0x00,0x60,0x08,0x03,0x9E,0x37}};
 struct Shared {
     std::atomic<uint64_t> input_frames{0},input_bytes{0},decoded_frames{0};
-    std::mutex mutex;std::vector<uint8_t> frame;uint64_t sequence=0;
+    std::mutex mutex;std::condition_variable ready;std::vector<uint8_t> frame;uint64_t sequence=0;
+    std::chrono::steady_clock::time_point captured;
     size_t frame_bytes=0;LONG width=0,height=0;bool top_down=false;
 };
 class Samples final:public ISampleGrabberCB {
@@ -195,7 +200,8 @@ public:
             if(state->top_down){state->frame.resize(state->frame_bytes);const auto stride=static_cast<size_t>(state->width)*4;
                 for(LONG y=0;y<state->height;++y)memcpy(state->frame.data()+static_cast<size_t>(state->height-1-y)*stride,bytes+static_cast<size_t>(y)*stride,stride);
             }else state->frame.assign(bytes,bytes+state->frame_bytes);
-            ++state->sequence;++state->decoded_frames;
+            state->captured=std::chrono::steady_clock::now();++state->sequence;++state->decoded_frames;
+            state->ready.notify_one();
         }catch(...){return E_OUTOFMEMORY;}
         return S_OK;
     }
@@ -275,6 +281,19 @@ struct Session {
         started=std::chrono::steady_clock::now();check(control->Run());
     }
 };
+// Keep the capture, Media Foundation camera and video interfaces in agreement.
+// Browsers can read the camera category even when DirectShow reports another name.
+static void set_camera_interface_name(HDEVINFO set,SP_DEVICE_INTERFACE_DATA& iface,const wchar_t* name) {
+    const DWORD size=static_cast<DWORD>((wcslen(name)+1)*sizeof(wchar_t));
+    std::vector<BYTE> property(size);memcpy(property.data(),name,size);
+    wchar_t current[101]{};DEVPROPTYPE type=0;DWORD bytes=0;
+    if(!SetupDiGetDeviceInterfacePropertyW(set,&iface,&DEVPKEY_DeviceInterface_FriendlyName,&type,reinterpret_cast<PBYTE>(current),sizeof(current),&bytes,0)
+       ||type!=DEVPROP_TYPE_STRING||wcscmp(current,name)!=0){
+        if(!SetupDiSetDeviceInterfacePropertyW(set,&iface,&DEVPKEY_DeviceInterface_FriendlyName,DEVPROP_TYPE_STRING,property.data(),size,0))throw Failure{HRESULT_FROM_WIN32(GetLastError())};
+    }
+    if(!SetupDiGetDeviceInterfacePropertyW(set,&iface,&DEVPKEY_DeviceInterface_FriendlyName,&type,reinterpret_cast<PBYTE>(current),sizeof(current),&bytes,0))throw Failure{HRESULT_FROM_WIN32(GetLastError())};
+    if(type!=DEVPROP_TYPE_STRING||wcscmp(current,name)!=0)throw Failure{HRESULT_FROM_WIN32(ERROR_INVALID_DATA)};
+}
 template<class F> HRESULT guard(F&& call)noexcept {
     try{call();return S_OK;}catch(const Failure& error){return error.value;}catch(const std::bad_alloc&){return E_OUTOFMEMORY;}catch(...){return E_FAIL;}
 }
@@ -284,7 +303,7 @@ HRESULT ub_camera_thread_initialize()noexcept {return CoInitializeEx(nullptr,COI
 void ub_camera_thread_uninitialize()noexcept {CoUninitialize();}
 struct UbCameraStats { uint64_t frames,bytes,decoded,elapsed_us;int32_t width,height;int64_t interval;int32_t error;uint32_t capture_backend; };
 static_assert(sizeof(UbCameraStats)==56);
-typedef void (*FrameCallback)(void*,const uint8_t*,size_t,int32_t,int32_t,uint64_t);
+typedef void (*FrameCallback)(void*,const uint8_t*,size_t,int32_t,int32_t,uint64_t,uint64_t);
 HRESULT ub_camera_list(wchar_t** output)noexcept {
     if(!output)return E_POINTER;*output=nullptr;
     return guard([&]{Apartment apartment;std::wstring json=L"[";bool first=true;auto list=monikers();
@@ -297,17 +316,9 @@ HRESULT ub_camera_list(wchar_t** output)noexcept {
         result_string(json+L"]",output);
     });
 }
-// Called only for our emulator's verified identity by its elevated receiver.
 HRESULT ub_camera_set_name(const wchar_t* path,const wchar_t* name)noexcept {
-    if(!path||!name||wcslen(name)>100)return E_INVALIDARG;
-    return guard([&]{Apartment apartment;auto list=monikers();bool found=false;
-        if(list)for(ComPtr<IMoniker> moniker;list->Next(1,&moniker,nullptr)==S_OK;moniker.Reset()){
-            ComPtr<IPropertyBag> bag;if(FAILED(moniker->BindToStorage(nullptr,nullptr,IID_PPV_ARGS(&bag))))continue;
-            if(_wcsicmp(camera_path(moniker.Get(),bag.Get()).c_str(),path)!=0)continue;
-            PropertyValue value;value.value.vt=VT_BSTR;value.value.bstrVal=SysAllocString(name);if(!value.value.bstrVal)throw std::bad_alloc();
-            check(bag->Write(L"FriendlyName",&value.value));found=true;break;
-        }
-        if(!found)throw Failure{HRESULT_FROM_WIN32(ERROR_NOT_FOUND)};
+    if(!path||!name||!wcslen(name)||wcslen(name)>100)return E_INVALIDARG;
+    return guard([&]{Apartment apartment;
         DeviceInfoSet owned;SP_DEVICE_INTERFACE_DATA iface{};iface.cbSize=sizeof(iface);
         if(owned.value==INVALID_HANDLE_VALUE||!SetupDiOpenDeviceInterfaceW(owned.value,path,0,&iface))throw Failure{HRESULT_FROM_WIN32(GetLastError())};
         DWORD length=0;SetupDiGetDeviceInterfaceDetailW(owned.value,&iface,nullptr,0,&length,nullptr);
@@ -315,6 +326,36 @@ HRESULT ub_camera_set_name(const wchar_t* path,const wchar_t* name)noexcept {
         std::vector<BYTE> storage(length);auto* detail=reinterpret_cast<SP_DEVICE_INTERFACE_DETAIL_DATA_W*>(storage.data());detail->cbSize=sizeof(*detail);
         SP_DEVINFO_DATA node{};node.cbSize=sizeof(node);
         if(!SetupDiGetDeviceInterfaceDetailW(owned.value,&iface,detail,length,nullptr,&node))throw Failure{HRESULT_FROM_WIN32(GetLastError())};
+        wchar_t instance[MAX_DEVICE_ID_LEN]{};
+        if(CM_Get_Device_IDW(node.DevInst,instance,MAX_DEVICE_ID_LEN,0)!=CR_SUCCESS)throw Failure{E_FAIL};
+        constexpr wchar_t prefix[]=L"USB\\VID_1209&PID_F002&MI_";
+        // Refuse foreign cameras before writing any property, including DirectShow.
+        if(_wcsnicmp(instance,prefix,(sizeof(prefix)/sizeof(wchar_t))-1)!=0)throw Failure{E_ACCESSDENIED};
+        const GUID categories[]={
+            {0x65e8773d,0x8f56,0x11d0,{0xa3,0xb9,0x00,0xa0,0xc9,0x22,0x31,0x96}},
+            {0xe5323777,0xf976,0x4f5b,{0x9b,0x55,0xb9,0x46,0x99,0xc4,0x6e,0x44}},
+            {0x6994ad05,0x93ef,0x11d0,{0xa3,0xcc,0x00,0xa0,0xc9,0x22,0x31,0x96}}
+        };
+        bool found[3]{};
+        for(size_t category=0;category<3;++category){
+            DeviceInfoSet interfaces(SetupDiGetClassDevsW(&categories[category],instance,nullptr,DIGCF_DEVICEINTERFACE|DIGCF_PRESENT));
+            if(interfaces.value==INVALID_HANDLE_VALUE)throw Failure{HRESULT_FROM_WIN32(GetLastError())};
+            for(DWORD index=0;;++index){
+                SP_DEVICE_INTERFACE_DATA registered{};registered.cbSize=sizeof(registered);
+                if(!SetupDiEnumDeviceInterfaces(interfaces.value,nullptr,&categories[category],index,&registered)){
+                    const DWORD error=GetLastError();if(error==ERROR_NO_MORE_ITEMS)break;throw Failure{HRESULT_FROM_WIN32(error)};
+                }
+                DWORD count=0;SetupDiGetDeviceInterfaceDetailW(interfaces.value,&registered,nullptr,0,&count,nullptr);
+                if(count<sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA_W)||count>65536)throw Failure{E_INVALIDARG};
+                std::vector<BYTE> entry(count);auto* info=reinterpret_cast<SP_DEVICE_INTERFACE_DETAIL_DATA_W*>(entry.data());info->cbSize=sizeof(*info);
+                SP_DEVINFO_DATA owner{};owner.cbSize=sizeof(owner);
+                if(!SetupDiGetDeviceInterfaceDetailW(interfaces.value,&registered,info,count,nullptr,&owner))throw Failure{HRESULT_FROM_WIN32(GetLastError())};
+                if(owner.DevInst!=node.DevInst)throw Failure{E_ACCESSDENIED};
+                set_camera_interface_name(interfaces.value,registered,name);found[category]=true;
+            }
+        }
+        // Wait for both advertised APIs before reporting the name as applied.
+        if(!found[0]||!found[1])throw Failure{HRESULT_FROM_WIN32(ERROR_NOT_READY)};
         if(!SetupDiSetDeviceRegistryPropertyW(owned.value,&node,SPDRP_FRIENDLYNAME,reinterpret_cast<const BYTE*>(name),static_cast<DWORD>((wcslen(name)+1)*sizeof(wchar_t))))throw Failure{HRESULT_FROM_WIN32(GetLastError())};
     });
 }
@@ -341,6 +382,7 @@ HRESULT ub_camera_open(const wchar_t* path,int32_t index,const wchar_t* key,void
 HRESULT ub_camera_poll(void* handle,uint64_t* last_sequence,FrameCallback callback,void* context,UbCameraStats* stats)noexcept {
     if(!handle||!last_sequence||!callback||!stats)return E_POINTER;
     return guard([&]{auto& session=*static_cast<Session*>(handle);auto& state=*session.state;
+        {std::unique_lock lock(state.mutex);state.ready.wait_for(lock,std::chrono::milliseconds(15),[&]{return state.sequence!=*last_sequence;});}
         stats->frames=state.input_frames.load();stats->bytes=state.input_bytes.load();stats->decoded=state.decoded_frames.load();
         stats->elapsed_us=static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-session.started).count());
         stats->width=state.width;stats->height=state.height;stats->interval=session.interval;stats->error=0;
@@ -354,7 +396,7 @@ HRESULT ub_camera_poll(void* handle,uint64_t* last_sequence,FrameCallback callba
         }
         std::lock_guard lock(state.mutex);
         if(state.sequence!=*last_sequence&&!state.frame.empty()){
-            callback(context,state.frame.data(),state.frame.size(),state.width,state.height,state.sequence);*last_sequence=state.sequence;
+            callback(context,state.frame.data(),state.frame.size(),state.width,state.height,state.sequence,static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-state.captured).count()));*last_sequence=state.sequence;
         }
     });
 }

@@ -87,3 +87,37 @@ The two shared palette brushes and the reusable preview bitmap are intentional
 bounded caches. Camera storage keeps the latest frame rather than an unbounded
 video queue. Resource growth should therefore be compared after warmup, at the
 same capture state, and across enough cycles to distinguish caching from a trend.
+
+## Software video follow-up — v0.2.3, 2026-11-11
+
+The client-to-server video path was reviewed for per-frame allocation, oversized
+input, lifetime across reconnects and persistent queues. It retains one latest
+decoded frame; consumers hold an `Arc` while processing it. Cloning that handle
+does not clone its pixel storage. Network ingress admits at most four handshake
+workers and one authenticated active sender. Its complete JPEG slot and the
+current UVC frame are bounded; camera frames are capped at 64 MiB and network
+JPEGs at the announced mode limit, at most 16 MiB. These are per-buffer bounds,
+not a 16 MiB limit for the entire application process.
+
+Changes reuse the sender's BGRA/JPEG working storage, enforce JPEG output growth
+inside the writer, reject invalid/overflowing output dimensions and enforce a
+read deadline even while bytes continue to trickle in. Before reconnecting, the
+sender waits for its capture worker to finish. If an external DirectShow graph
+cannot drain, only that managed video process exits for recovery, avoiding an
+unbounded series of abandoned capture threads. No physical USB session is
+restarted for this video cleanup.
+
+Regression tests encode repeated frames without reallocating the warmed output,
+reject a JPEG exceeding a deliberately small writer bound, check orientation
+and letterbox reuse, reject overflowing dimensions and time out continuous
+partial input. The existing transfer lifecycle/memory tests also passed.
+`Build.ps1` passed 95 unit and 29 integration tests; 23 Python qualification tests
+passed separately.
+
+On the unchanged live Unity Capture source, 24 samples over 46.35 seconds showed
+19.80–23.52 MiB private bytes, −20 KiB first-to-last, 234–235 handles and 11
+threads. The sender remained connected throughout. The BGRA working buffer was
+3,686,400 bytes and JPEG capacity 131,072 bytes. This is evidence of bounded
+storage and no progressive growth in the sampled workload, not an exhaustive
+heap/kernel-pool audit or a guarantee about every third-party filter. Timing
+and FPS are recorded in [performance measurements](performance.md).

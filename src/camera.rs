@@ -186,6 +186,8 @@ pub struct Frame {
     pub width: i32,
     pub height: i32,
     pub sequence: u64,
+    /// Time of the native decoded-sample callback, before capture polling.
+    pub captured: Instant,
 }
 pub const MAX_FRAME_BYTES: usize = 64 * 1024 * 1024;
 pub fn fit(
@@ -228,7 +230,7 @@ unsafe extern "C" {
     fn ub_camera_poll(
         handle: *mut c_void,
         last: *mut u64,
-        callback: extern "C" fn(*mut c_void, *const u8, usize, i32, i32, u64),
+        callback: extern "C" fn(*mut c_void, *const u8, usize, i32, i32, u64, u64),
         context: *mut c_void,
         stats: *mut Stats,
     ) -> i32;
@@ -353,6 +355,7 @@ impl Session {
             width: i32,
             height: i32,
             sequence: u64,
+            age_us: u64,
         ) {
             let Some(expected) = frame_bytes(width, height) else {
                 return;
@@ -366,6 +369,9 @@ impl Session {
                 width,
                 height,
                 sequence,
+                captured: Instant::now()
+                    .checked_sub(Duration::from_micros(age_us))
+                    .unwrap_or_else(Instant::now),
             });
             *frames.lock().unwrap() = Some(frame);
         }
@@ -482,7 +488,7 @@ impl Worker {
                             queue.lock().unwrap().push(Event::Error(error.to_string()));session.take();
                         }
                     }
-                    thread::sleep(Duration::from_millis(15));
+                    // Native polling waits for a new frame, bounded to keep actions responsive.
                 }
             }
                 drop(session);drop(apartment);done.store(true,Ordering::Release);

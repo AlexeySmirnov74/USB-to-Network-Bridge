@@ -36,3 +36,7 @@ Flag changes that restart unrelated devices during publication, release driver b
 ## Versioned updates
 
 The user requires a new version for each published update. Bump Cargo.toml/Cargo.lock, keep GUI/EXE/MSI metadata consistent, describe actual changes in CHANGELOG.md, and publish a new matching GitHub tag and release with tested EXEs, MSI, portable ZIP, source ZIP and hashes. Preserve older tags and releases; do not replace assets in a published previous version.
+
+## Camera checks
+
+Camera name checks must compare fresh DirectShow and Media Foundation enumeration, including their separate interface properties. For video changes, preserve the configured producer and keys, measure actual frame progress and bounded buffers, and distinguish local processing timings from end-to-end latency. See docs/third-party-video.md for integration with another project.
