@@ -11,11 +11,11 @@
 
 面向 Windows 11 x64 的开源 USB over IP（USB/IP）重定向工具。通过局域网或 VPN 在 Windows 计算机间共享真实 USB 设备，包括摄像头和 Android 手机的 ADB 接口/存储。Rust 服务器导出选定设备，Windows 客户端通过虚拟 USB 控制器导入。无需激活，没有试用倒计时，也没有许可证规定的设备数量限制。
 
-**v0.2.3：Windows 11 x64。** 使用 Rust 编写的 USB 服务器和客户端，提供图形界面、命令行、自动发现与重连、MSI 安装包及便携 ZIP。[下载最新版本](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest)。
+**v0.2.4：Windows 11 x64。** 使用 Rust 编写的 USB 服务器和客户端，提供图形界面、命令行、自动发现与重连、MSI 安装包及便携 ZIP。[下载最新版本](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest)。
 
 **v0.2.1 代理健康检查：**服务器和客户端控制器分别由监控程序管理。退出的控制器会自动重启；心跳停止两分钟后会被检测到。独立的 Windows 任务每分钟还会检查并恢复监控程序。过期状态不再显示设备已连接。诊断命令：`usbbridge --config FILE server health` 或 `client health`。[更新记录](CHANGELOG.md)。
 
-![USB 设备、Windows 服务器、可信网络及 Windows 客户端的英文连接示意图](docs/assets/architecture.svg)
+![USB Bridge 架构：服务器向客户端共享物理 USB 设备，客户端的 OBS/Unity Capture 视频发送到服务器 USB/UVC 摄像头；英文示意图](docs/assets/architecture.svg)
 
 
 **v0.2.3：** 摄像头名称在 DirectShow 与 Media Foundation 之间同步。捕获在新帧到达时唤醒，重复使用有容量限制的工作缓冲区，并报告处理耗时。客户端电脑上的第三方视频应用可参考 [OBS/Unity Capture 集成指南](docs/third-party-video.md)（英文），其中包括命令行示例及其他项目的集成任务说明。

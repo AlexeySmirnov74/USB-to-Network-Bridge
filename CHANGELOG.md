@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.4 — 2026-11-11
+
+### Documentation
+
+- Redrawn English architecture diagram shows both physical USB sharing from server to clients and independent client-to-server video through OBS/Unity Capture or a DirectShow camera.
+- Diagram identifies the signed capture/controller drivers, configurable default network ports, server-local UVC connection, camera naming, source-loss behavior and network trust requirements.
+- All five READMEs use the updated diagram and describe both directions in image alternative text. Application behavior is unchanged.
+
 ## 0.2.3 — 2026-11-11
 
 ### Added

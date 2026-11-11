@@ -1,5 +1,7 @@
 # USB to Network Bridge: architecture and implementation limits
 
+![Physical USB sharing and independent client-to-server video with their Windows drivers and default ports](assets/architecture.svg)
+
 USBBridge implements USB/IP 1.1.1. Device listing/import uses a short-lived management exchange; each imported device then owns a TCP connection. The data reader uses a one-second socket poll to observe cancellation and retries timeouts indefinitely, including mid-header reads. There is no session, trial or idle expiry. TCP keepalive detects a broken peer.
 
 ```text
