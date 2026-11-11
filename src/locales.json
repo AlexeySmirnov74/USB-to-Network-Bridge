@@ -1,4 +1,25 @@
 {
+  "Silent microphone": {
+    "en": "Silent microphone",
+    "ru": "Микрофон (тишина)",
+    "de": "Mikrofon (Stille)",
+    "fr": "Microphone silencieux",
+    "zh": "静音麦克风"
+  },
+  "Client USB camera": {
+    "en": "Client USB camera",
+    "ru": "USB-камера клиента",
+    "de": "USB-Kamera des Clients",
+    "fr": "Caméra USB du client",
+    "zh": "客户端 USB 摄像头"
+  },
+  "Client camera settings applied": {
+    "en": "Client camera settings applied",
+    "ru": "Настройки камеры клиента применены",
+    "de": "Einstellungen der Client-Kamera übernommen",
+    "fr": "Paramètres de la caméra du client appliqués",
+    "zh": "客户端摄像头设置已应用"
+  },
   "Low-light compensation (may reduce FPS)": {
     "en": "Low-light compensation (may reduce FPS)",
     "ru": "Компенсация слабого освещения (может снижать FPS)",

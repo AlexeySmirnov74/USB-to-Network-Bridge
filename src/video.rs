@@ -28,16 +28,30 @@ pub struct ReceiverSettings {
     pub camera: Config,
     pub usb_port: u16,
     pub video_port: u16,
+    /// Local client cameras must not expose a network ingress listener.
+    #[serde(default)]
+    pub loopback_only: bool,
     pub allowed_ips: Vec<IpAddr>,
     pub key_file: PathBuf,
 }
 impl ReceiverSettings {
+    pub fn video_address(&self) -> std::net::SocketAddrV4 {
+        std::net::SocketAddrV4::new(
+            if self.loopback_only {
+                std::net::Ipv4Addr::LOCALHOST
+            } else {
+                std::net::Ipv4Addr::UNSPECIFIED
+            },
+            self.video_port,
+        )
+    }
     pub fn validate(&self) -> io::Result<()> {
         self.camera.validate()?;
         if self.usb_port == 0
             || self.video_port == 0
             || self.usb_port == self.video_port
             || self.allowed_ips.is_empty()
+            || (self.loopback_only && self.allowed_ips.iter().any(|ip| !ip.is_loopback()))
             || !self.key_file.is_absolute()
         {
             return Err(wire::invalid(
@@ -80,6 +94,33 @@ pub fn receiver_path(config: &Path) -> PathBuf {
 }
 pub fn sender_path(config: &Path) -> PathBuf {
     role_path(config, "send")
+}
+pub fn local_sender_path(config: &Path) -> PathBuf {
+    role_path(config, "local-send")
+}
+
+#[cfg(windows)]
+pub fn allowed_source(camera: &crate::camera::Camera) -> bool {
+    !camera
+        .identities
+        .iter()
+        .any(|id| uvc::is_emulated_identity(id))
+}
+
+/// A display name is accepted only for this explicitly registered, unique slot.
+/// Return its real enumerated identity; never guess a different camera.
+#[cfg(windows)]
+pub fn unity_client_source(cameras: &[crate::camera::Camera]) -> io::Result<String> {
+    let matches: Vec<_> = cameras
+        .iter()
+        .filter(|camera| camera.name == "Unity Capture Client" && allowed_source(camera))
+        .collect();
+    let [camera] = matches.as_slice() else {
+        return Err(wire::invalid(
+            "Unity Capture Client is missing or ambiguous. Register the dedicated Unity Capture client slot before enabling the local camera.",
+        ));
+    };
+    Ok(camera.path.clone())
 }
 
 fn expire_status(value: &mut serde_json::Value, now: u64) -> bool {
@@ -308,7 +349,7 @@ pub fn receive(config: &ReceiverSettings, path: &Path) -> io::Result<()> {
     let secret = key(&config.key_file)?;
     let frames = Frames::new(config.camera.clone())?;
     let usb = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, config.usb_port))?;
-    let video = TcpListener::bind((std::net::Ipv4Addr::UNSPECIFIED, config.video_port))?;
+    let video = TcpListener::bind(config.video_address())?;
     let state = frames.clone();
     let allowed = config.allowed_ips.clone();
     let network = thread::Builder::new()
@@ -532,6 +573,11 @@ fn transmit(
                 "video source not found; select its exact identity",
             ));
         };
+        if !allowed_source(camera) {
+            return Err(wire::invalid(
+                "A generated USB Bridge camera cannot be used as a video source",
+            ));
+        }
         let modes = crate::camera::modes(&camera.path)?;
         let selected = modes
             .iter()
@@ -739,6 +785,7 @@ mod tests {
             camera: Config::default(),
             usb_port: 13250,
             video_port: 13250,
+            loopback_only: false,
             allowed_ips: vec![],
             key_file: "C:\\key.credential".into(),
         };
@@ -891,5 +938,50 @@ mod tests {
             sender_path(Path::new("fixture/client.local.json")),
             Path::new("fixture/client.video-send.local.json")
         );
+        assert_eq!(
+            local_sender_path(Path::new("fixture/client.local.json")),
+            Path::new("fixture/client.video-local-send.local.json")
+        );
+    }
+    #[test]
+    fn old_receiver_files_preserve_network_ingress_and_local_camera_is_loopback_only() {
+        let original = serde_json::json!({
+            "enabled":false,"camera":Config::default(),"usb_port":13250,
+            "video_port":13251,"allowed_ips":["127.0.0.1"],"key_file":"unused"
+        });
+        let mut config: ReceiverSettings = serde_json::from_value(original).unwrap();
+        assert!(!config.loopback_only);
+        assert!(config.video_address().ip().is_unspecified());
+        config.loopback_only = true;
+        assert!(config.video_address().ip().is_loopback());
+        assert_eq!(config.video_address().port(), 13251);
+        config.key_file = std::env::temp_dir().join("unused.key");
+        assert!(config.validate().is_ok());
+        config.allowed_ips.push("192.0.2.1".parse().unwrap());
+        assert!(config.validate().is_err());
+    }
+    #[cfg(windows)]
+    #[test]
+    fn local_unity_slot_is_exact_and_unique_and_generated_cameras_are_rejected() {
+        let camera = |name: &str, path: &str, id: &str| crate::camera::Camera {
+            name: name.into(),
+            path: path.into(),
+            identities: vec![id.into()],
+        };
+        let client = camera("Unity Capture Client", "slot-1", "slot-1");
+        let server = camera("Unity Capture Server", "slot-0", "slot-0");
+        assert_eq!(
+            unity_client_source(&[server, client.clone()]).unwrap(),
+            "slot-1"
+        );
+        assert!(unity_client_source(&[]).is_err());
+        assert!(unity_client_source(&[client.clone(), client]).is_err());
+        let generated = camera(
+            "Unity Capture Client",
+            "owned",
+            "USB\\VID_1209&PID_F002\\serial",
+        );
+        assert!(!allowed_source(&generated));
+        assert!(unity_client_source(&[generated]).is_err());
     }
 }

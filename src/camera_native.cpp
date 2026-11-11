@@ -69,7 +69,11 @@ std::wstring property(IPropertyBag* bag,const wchar_t* key) {
 }
 // Pure DirectShow sources (OBS/Unity Capture) need not have a PnP DevicePath.
 std::wstring camera_path(IMoniker* moniker,IPropertyBag* bag) {
-    auto path=property(bag,L"DevicePath");if(!path.empty())return path;
+    // Unity registers every slot with the placeholder "foo:bar". Its moniker
+    // includes the slot CLSID and remains unique across friendly-name changes.
+    auto path=property(bag,L"DevicePath");
+    if(!path.empty()&&_wcsicmp(path.c_str(),L"foo:bar")!=0)return path;
+    path.clear();
     LPOLESTR display=nullptr;
     if(SUCCEEDED(moniker->GetDisplayName(nullptr,nullptr,&display))&&display){path=display;CoTaskMemFree(display);}
     return path;

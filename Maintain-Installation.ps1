@@ -30,7 +30,7 @@ if($Operation-eq 'Resume'){
  foreach($entry in @($journal.tasks)){
   $task=Get-ScheduledTask -TaskPath $entry.path -TaskName $entry.name -ErrorAction SilentlyContinue
   if(-not $task){Register-ScheduledTask -TaskPath $entry.path -TaskName $entry.name -Xml $entry.xml|Out-Null}
-  elseif(@($task.Actions|Where-Object Execute -ne $agent).Count){throw 'A different installation now owns a startup task.'}
+  elseif(@($task.Actions).Count-ne 1-or @($task.Actions|Where-Object {$_.Execute-notin $ownedPrograms}).Count){throw 'A different installation now owns a startup task.'}
   $xml=[xml]$entry.xml
   $wasEnabled=([string]$xml.Task.Settings.Enabled)-ne 'false'
   if($wasEnabled){Enable-ScheduledTask -TaskPath $entry.path -TaskName $entry.name|Out-Null}else{Disable-ScheduledTask -TaskPath $entry.path -TaskName $entry.name|Out-Null}

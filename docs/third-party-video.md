@@ -59,7 +59,7 @@ Set-Location C:\USBBridge
 .\usbbridge.exe --config .\client.local.json client video status
 ```
 
-Use the exact `path` (or an unambiguous USB identity) returned by `client cameras`. Names can be duplicated; do not automatically select the first camera. Some Unity Capture versions report the literal path `foo:bar`. This is an [upstream filter registration value](https://github.com/schellingb/UnityCapture/blob/master/Source/UnityCaptureFilter.cpp), not a network destination, connection key or required example value. Use the value actually enumerated on that PC. If several sources expose the same identity, resolve the ambiguity before enabling video.
+Use the exact `path` (or an unambiguous USB identity) returned by `client cameras`. Names can be duplicated; do not automatically select the first camera. Older Bridge versions could expose Unity Capture's literal `foo:bar` registration placeholder. Version 0.2.5 uses each slot's unique DirectShow moniker instead. Keep the exact enumerated path; do not copy the placeholder into a new configuration. For separate client and server sources, see the [dual-camera setup](dual-camera.md).
 
 This example updates an **already configured** sender. It preserves `server` and `key_file` and never reads or prints the key. Replace the source placeholder with an enumerated path:
 

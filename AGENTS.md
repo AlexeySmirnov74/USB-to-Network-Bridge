@@ -24,7 +24,7 @@ USB to Network Bridge is a Rust USB/IP server and Windows client. The documented
 
 ## Verification
 
-For Rust/C++ behavior changes, use Build.ps1 (formatting, Clippy, tests and release build) and relevant hardware checks. Python release/qualification changes use:
+Respect the user's request for focused verification: run formatting, Clippy, a release build, and tests of changed scenarios with relevant hardware checks. Reuse accepted results for unchanged code; do not repeat the full suite or GPU/long runs by habit. Build.ps1 remains the full verification entry point when a full run is actually justified. Python release/qualification changes use:
     py -3 -m unittest discover -s tests -p 'test_*.py'
 
 For documentation/media changes, validate links, all five README variants and image files; rebuilding or installing drivers is unnecessary.
@@ -40,3 +40,15 @@ The user requires a new version for each published update. Bump Cargo.toml/Cargo
 ## Camera checks
 
 Camera name checks must compare fresh DirectShow and Media Foundation enumeration, including their separate interface properties. For video changes, preserve the configured producer and keys, measure actual frame progress and bounded buffers, and distinguish local processing timings from end-to-end latency. See docs/third-party-video.md for integration with another project.
+
+## Dual video destinations
+
+Read docs/dual-camera.md. Client local-camera settings create a separate loopback-only receiver and LocalSend task, keeping the original network sender unchanged. Unity Capture Server and Client must resolve to unique exact monikers (slots 0/1); the upstream foo:bar placeholder is not unique. Keep UVC serials stable across rename and reject generated VID1209/PIDF002 sources. Private key ACLs must explicitly grant TokenUser, SYSTEM and Administrators; OWNER RIGHTS alone is insufficient for elevated setup followed by a limited sender. Task Scheduler capture principals use the real Windows token SAM account, not USERDOMAIN hints.
+
+## Optional silent USB microphone
+
+`camera.microphone` defaults false. Enabled receivers expose UVC video and a UAC1 microphone in the same USB composite container, preserving the camera serial. The microphone generates only local 48 kHz mono PCM16 zero samples; never open a physical microphone, forward audio, or select a default audio source. The inbox Windows audio driver and existing signed virtual controller remain unchanged. Audio Endpoint Builder and Windows Audio must run for Windows to expose the capture endpoint. Applications may still require a separate microphone selection.
+
+Keep audio work independent of video, bound ISO queues/packet counts, preserve original ISO offsets when compacting USB/IP replies, and coordinate completion handoff with unlink/alternate shutdown. Audio pacing uses an absolute deadline: do not reset it for ordinary late Windows timer wakeups, which otherwise slow audio to roughly 64% of the declared rate. Only genuine idle or bounded excessive lag rebases the clock.
+
+For changes here use the focused silent_microphone tests and bounded capture of the verified generated microphone/container. Check zero samples, sustained frame delivery, and video progress; never record or probe a physical/default microphone. Preserve unrelated transport processes and device selections.

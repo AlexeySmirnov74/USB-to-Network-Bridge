@@ -21,7 +21,7 @@ fn run() -> io::Result<()> {
     #[cfg(windows)]
     if matches!(
         command.as_str(),
-        "receive" | "send" | "check-receive" | "check-send"
+        "receive" | "send" | "check-receive" | "check-send" | "check-local-send"
     ) {
         #[link(name = "kernel32")]
         unsafe extern "system" {
@@ -38,7 +38,10 @@ fn run() -> io::Result<()> {
         }
     }
 
-    if command == "check-receive" || command == "check-send" {
+    if matches!(
+        command.as_str(),
+        "check-receive" | "check-send" | "check-local-send"
+    ) {
         if args.next().as_deref() != Some("--config") {
             return Err(io::Error::other("video health requires --config FILE"));
         }
@@ -54,6 +57,8 @@ fn run() -> io::Result<()> {
             use std::os::windows::process::CommandExt;
             let role = if command == "check-receive" {
                 "Receive"
+            } else if command == "check-local-send" {
+                "LocalSend"
             } else {
                 "Send"
             };
@@ -231,7 +236,7 @@ fn run() -> io::Result<()> {
     }
     if command != "serve" {
         println!(
-            "USB to Network Bridge v.{} - USB/UVC camera\nusbbridge-camera serve [--name NAME] [--serial ID] [--width N] [--height N] [--fps N]\n  [--listen IP:PORT] [--allow-ip IP] [--no-test-pattern] [--status FILE]\nusbbridge-camera attach HOST:PORT\nusbbridge-camera detach PORT\nusbbridge-camera receive|send --config FILE\nusbbridge-camera keygen NEW.key",
+            "USB to Network Bridge v.{} - USB/UVC camera\nusbbridge-camera serve [--name NAME] [--serial ID] [--width N] [--height N] [--fps N]\n  [--listen IP:PORT] [--allow-ip IP] [--no-test-pattern] [--microphone] [--status FILE]\nusbbridge-camera attach HOST:PORT\nusbbridge-camera detach PORT\nusbbridge-camera receive|send --config FILE\nusbbridge-camera keygen NEW.key",
             usbbridge::APP_VERSION
         );
         return Ok(());
@@ -243,6 +248,10 @@ fn run() -> io::Result<()> {
     while let Some(key) = args.next() {
         if key == "--no-test-pattern" {
             config.test_pattern = false;
+            continue;
+        }
+        if key == "--microphone" {
+            config.microphone = true;
             continue;
         }
         let value = args

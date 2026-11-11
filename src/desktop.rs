@@ -878,6 +878,10 @@ fn video_source_options(
     cameras: &[crate::camera::Camera],
     saved: &str,
 ) -> (Vec<String>, Vec<String>, usize) {
+    let cameras: Vec<_> = cameras
+        .iter()
+        .filter(|camera| crate::video::allowed_source(camera))
+        .collect();
     let mut labels = vec![crate::i18n::t("Test pattern").into()];
     let mut identities = vec!["test-pattern".to_owned()];
     labels.extend(cameras.iter().map(|c| c.name.clone()));
@@ -893,6 +897,19 @@ fn video_source_options(
         identities.len() - 1
     };
     (labels, identities, selected)
+}
+fn silent_microphone_field(saved: Option<&serde_json::Value>) -> Field {
+    let enabled = saved
+        .and_then(|v| v["camera"]["microphone"].as_bool())
+        .unwrap_or(false);
+    Field {
+        label: crate::i18n::t("Silent microphone").into(),
+        value: usize::from(enabled).to_string(),
+        kind: FieldKind::Choice(vec![
+            crate::i18n::t("Disabled").into(),
+            crate::i18n::t("Enabled").into(),
+        ]),
+    }
 }
 pub fn video_settings(owner: HWND, path: &Path, role: Role) {
     let result = (|| -> io::Result<()> {
@@ -996,6 +1013,9 @@ pub fn video_settings(owner: HWND, path: &Path, role: Role) {
             value: String::new(),
             kind: FieldKind::Password,
         });
+        if receive {
+            fields.push(silent_microphone_field(old.as_ref()));
+        }
         let Some(values) = form_with_rules(
             owner,
             &format!("{title} v.{}", crate::APP_VERSION),
@@ -1051,6 +1071,7 @@ pub fn video_settings(owner: HWND, path: &Path, role: Role) {
                 height: selected.1,
                 fps: 30,
                 test_pattern: false,
+                microphone: values[5] == "1",
             };
             let value = crate::video::ReceiverSettings {
                 enabled,
@@ -1060,6 +1081,10 @@ pub fn video_settings(owner: HWND, path: &Path, role: Role) {
                     .and_then(|v| v["usb_port"].as_u64())
                     .unwrap_or(13250) as u16,
                 video_port: parse_port(&values[3])?,
+                loopback_only: old
+                    .as_ref()
+                    .and_then(|v| v["loopback_only"].as_bool())
+                    .unwrap_or(false),
                 allowed_ips: host.allowed_ips,
                 key_file,
             };
@@ -1101,32 +1126,73 @@ pub fn video_settings(owner: HWND, path: &Path, role: Role) {
     }
 }
 pub fn video_apply(path: &Path, role: Role, value: serde_json::Value) -> io::Result<()> {
+    video_apply_endpoint(
+        path,
+        if role == Role::Server {
+            VideoEndpoint::Receive
+        } else {
+            VideoEndpoint::Send
+        },
+        value,
+    )
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VideoEndpoint {
+    Receive,
+    Send,
+    LocalSend,
+}
+impl VideoEndpoint {
+    fn settings_path(self, path: &Path) -> PathBuf {
+        match self {
+            Self::Receive => crate::video::receiver_path(path),
+            Self::Send => crate::video::sender_path(path),
+            Self::LocalSend => crate::video::local_sender_path(path),
+        }
+    }
+    fn helper_role(self) -> &'static str {
+        match self {
+            Self::Receive => "Receive",
+            Self::Send => "Send",
+            Self::LocalSend => "LocalSend",
+        }
+    }
+}
+// SSH can report USERDOMAIN=WORKGROUP for a local account. Task Scheduler
+// needs the token's real SAM identity (for example, LLM2\calc), not env hints.
+fn video_interactive_user() -> io::Result<String> {
+    #[link(name = "secur32")]
+    unsafe extern "system" {
+        fn GetUserNameExW(format: i32, name: *mut u16, size: *mut u32) -> u8;
+    }
+    let mut name = [0u16; 512];
+    let mut size = name.len() as u32;
+    if unsafe { GetUserNameExW(2, name.as_mut_ptr(), &mut size) } == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    let count = (size as usize).min(name.len());
+    let count = name[..count].iter().position(|c| *c == 0).unwrap_or(count);
+    String::from_utf16(&name[..count]).map_err(io::Error::other)
+}
+fn video_apply_endpoint(
+    path: &Path,
+    endpoint: VideoEndpoint,
+    value: serde_json::Value,
+) -> io::Result<()> {
     use std::os::windows::process::CommandExt;
-    let config = if role == Role::Server {
-        crate::video::receiver_path(path)
-    } else {
-        crate::video::sender_path(path)
-    };
+    let config = endpoint.settings_path(path);
     let request = config.with_extension(format!("{}.local.request.json", uuid::Uuid::new_v4()));
     settings::save(&request, &value)?;
     let runtime = std::env::current_exe()?
         .parent()
         .ok_or_else(|| io::Error::other("runtime missing"))?
         .to_path_buf();
-    let user = format!(
-        "{}\\{}",
-        std::env::var("USERDOMAIN").unwrap_or_default(),
-        std::env::var("USERNAME").unwrap_or_default()
-    );
+    let user = video_interactive_user()?;
     let result = std::process::Command::new("powershell.exe")
         .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
         .arg(runtime.join("Set-VideoMode.ps1"))
         .arg("-Role")
-        .arg(if role == Role::Server {
-            "Receive"
-        } else {
-            "Send"
-        })
+        .arg(endpoint.helper_role())
         .arg("-Config")
         .arg(&config)
         .arg("-RequestFile")
@@ -1138,11 +1204,234 @@ pub fn video_apply(path: &Path, role: Role, value: serde_json::Value) -> io::Res
         .status();
     let _ = std::fs::remove_file(&request);
     if !result?.success() {
-        return Err(io::Error::other(crate::i18n::t(
-            "Video configuration failed; check the video log",
+        let details =
+            settings::read::<serde_json::Value>(&config.with_extension("operation.local.json"))
+                .ok()
+                .filter(|value| {
+                    request
+                        .to_str()
+                        .is_some_and(|name| value["request_file"].as_str() == Some(name))
+                })
+                .and_then(|value| value["error"].as_str().map(str::to_owned));
+        return Err(io::Error::other(format!(
+            "{}{}",
+            crate::i18n::t("Video configuration failed; check the video log"),
+            details
+                .map(|message| format!(": {message}"))
+                .unwrap_or_default()
         )));
     }
     Ok(())
+}
+
+/// Configure the two owned client-local endpoints together. Never touch the
+/// existing network sender, server camera, or physical USB selections.
+pub fn local_camera_apply(path: &Path, value: serde_json::Value) -> io::Result<()> {
+    let receiver: crate::video::ReceiverSettings =
+        serde_json::from_value(value.clone()).map_err(io::Error::other)?;
+    receiver.validate()?;
+    if !receiver.loopback_only || receiver.allowed_ips.iter().any(|ip| !ip.is_loopback()) {
+        return Err(io::Error::other(
+            "The client-local camera requires loopback-only video and loopback allowed IPs",
+        ));
+    }
+    let _operation =
+        settings::acquire_file_lock(&path.with_extension("local-camera-operation.lock"))?;
+    let receiver_path = crate::video::receiver_path(path);
+    let sender_path = crate::video::local_sender_path(path);
+    let previous_receiver = optional_video_settings(&receiver_path)?;
+    let previous_sender = optional_video_settings(&sender_path)?;
+    if let Some(previous) = &previous_receiver
+        && previous["camera"]["serial"].as_str() != Some(receiver.camera.serial.as_str())
+    {
+        return Err(io::Error::other(
+            "Keep the existing client camera serial when changing its settings",
+        ));
+    }
+    let camera = if receiver.enabled {
+        crate::video::unity_client_source(&crate::camera::list()?)?
+    } else {
+        previous_sender
+            .as_ref()
+            .and_then(|v| v["camera"].as_str())
+            .unwrap_or("unavailable")
+            .into()
+    };
+    let sender = crate::video::SenderSettings {
+        enabled: receiver.enabled,
+        server: format!("127.0.0.1:{}", receiver.video_port),
+        camera,
+        quality: previous_sender
+            .as_ref()
+            .and_then(|v| v["quality"].as_u64())
+            .and_then(|q| q.try_into().ok())
+            .unwrap_or(85),
+        key_file: receiver.key_file.clone(),
+    };
+    sender.validate()?;
+    let sender = serde_json::to_value(sender).map_err(io::Error::other)?;
+    video_apply_endpoint(path, VideoEndpoint::Receive, value.clone())?;
+    if let Err(error) = video_apply_endpoint(path, VideoEndpoint::LocalSend, sender.clone()) {
+        // A new endpoint has no old running state; disabling its committed
+        // configuration is the reversible counterpart of creating it.
+        let had_sender = previous_sender.is_some();
+        let mut old_sender = previous_sender.unwrap_or(sender);
+        if !had_sender {
+            old_sender["enabled"] = serde_json::json!(false);
+        }
+        let mut old_receiver = previous_receiver.clone().unwrap_or(value);
+        if previous_receiver.is_none() {
+            old_receiver["enabled"] = serde_json::json!(false);
+        }
+        // Restore receiver first so an originally running sender has its target.
+        let restore_receive = video_apply_endpoint(path, VideoEndpoint::Receive, old_receiver);
+        let restore_send = video_apply_endpoint(path, VideoEndpoint::LocalSend, old_sender);
+        return Err(io::Error::other(format!(
+            "Client camera update failed: {error}; receiver rollback: {}; local sender rollback: {}",
+            operation_result(restore_receive),
+            operation_result(restore_send)
+        )));
+    }
+    Ok(())
+}
+fn optional_video_settings(path: &Path) -> io::Result<Option<serde_json::Value>> {
+    match settings::read(path) {
+        Ok(value) => Ok(Some(value)),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error),
+    }
+}
+fn operation_result(result: io::Result<()>) -> String {
+    match result {
+        Ok(()) => "ok".into(),
+        Err(error) => error.to_string(),
+    }
+}
+pub fn local_camera_settings(owner: HWND, path: &Path) {
+    let result = (|| -> io::Result<()> {
+        let file = crate::video::receiver_path(path);
+        let old = optional_video_settings(&file)?;
+        let saved = old.as_ref();
+        let mode_list = [(640u16, 480u16), (1280, 720), (1920, 1080), (3840, 2160)];
+        let current = (
+            saved
+                .and_then(|v| v["camera"]["width"].as_u64())
+                .unwrap_or(1280) as u16,
+            saved
+                .and_then(|v| v["camera"]["height"].as_u64())
+                .unwrap_or(720) as u16,
+        );
+        let fields = vec![
+            Field {
+                label: crate::i18n::t("Enable and start with Windows").into(),
+                value: usize::from(saved.is_some_and(|v| v["enabled"].as_bool() == Some(true)))
+                    .to_string(),
+                kind: FieldKind::Choice(vec![
+                    crate::i18n::t("Disabled").into(),
+                    crate::i18n::t("Enabled").into(),
+                ]),
+            },
+            Field::text(
+                crate::i18n::t("Camera name"),
+                saved
+                    .and_then(|v| v["camera"]["name"].as_str())
+                    .unwrap_or("2k web camera"),
+            ),
+            Field {
+                label: crate::i18n::t("Video mode").into(),
+                value: mode_list
+                    .iter()
+                    .position(|m| *m == current)
+                    .unwrap_or(1)
+                    .to_string(),
+                kind: FieldKind::Choice(
+                    mode_list
+                        .iter()
+                        .map(|(w, h)| format!("{w} x {h} - 30 FPS"))
+                        .collect(),
+                ),
+            },
+            Field::number(
+                crate::i18n::t("Video TCP port"),
+                saved
+                    .and_then(|v| v["video_port"].as_u64())
+                    .unwrap_or(13251) as u16,
+            ),
+            silent_microphone_field(saved),
+        ];
+        let Some(values) = form_with_rules(
+            owner,
+            &format!(
+                "{} v.{}",
+                crate::i18n::t("Client USB camera"),
+                crate::APP_VERSION
+            ),
+            fields,
+            false,
+            FormRules::Video,
+        ) else {
+            return Ok(());
+        };
+        let enabled = values[0] == "1";
+        // Validate the explicitly named producer slot before creating a key or
+        // starting a UAC operation. Never capture an unrelated camera.
+        if enabled {
+            crate::video::unity_client_source(&crate::camera::list()?)?;
+        }
+        let key_file = match saved.and_then(|v| v["key_file"].as_str()) {
+            Some(path) => PathBuf::from(path),
+            None => crate::credentials::save_at(
+                &file
+                    .parent()
+                    .unwrap_or(Path::new("."))
+                    .join("video-credentials"),
+                &crate::proxy::Credentials {
+                    username: "USBBridgeLocalVideo".into(),
+                    password: format!(
+                        "{}{}",
+                        uuid::Uuid::new_v4().simple(),
+                        uuid::Uuid::new_v4().simple()
+                    ),
+                },
+            )?,
+        };
+        let (width, height) = *values[2]
+            .parse::<usize>()
+            .ok()
+            .and_then(|i| mode_list.get(i))
+            .ok_or_else(|| io::Error::other("Invalid camera mode"))?;
+        let receiver = crate::video::ReceiverSettings {
+            enabled,
+            camera: crate::uvc::Config {
+                name: values[1].trim().into(),
+                serial: saved
+                    .and_then(|v| v["camera"]["serial"].as_str())
+                    .map(str::to_owned)
+                    .unwrap_or_else(|| format!("UBC-{}", uuid::Uuid::new_v4().simple())),
+                width,
+                height,
+                fps: 30,
+                test_pattern: false,
+                microphone: values[4] == "1",
+            },
+            usb_port: saved.and_then(|v| v["usb_port"].as_u64()).unwrap_or(13250) as u16,
+            video_port: parse_port(&values[3])?,
+            loopback_only: true,
+            allowed_ips: vec![std::net::Ipv4Addr::LOCALHOST.into()],
+            key_file,
+        };
+        receiver.validate()?;
+        let value = serde_json::to_value(receiver).map_err(io::Error::other)?;
+        let path = path.to_path_buf();
+        std::thread::spawn(move || match local_camera_apply(&path, value) {
+            Ok(()) => information(null_mut(), crate::i18n::t("Client camera settings applied")),
+            Err(error) => information(null_mut(), &error.to_string()),
+        });
+        Ok(())
+    })();
+    if let Err(error) = result {
+        information(owner, &error.to_string());
+    }
 }
 pub fn server_settings(owner: HWND, path: &Path) {
     let result = (|| -> io::Result<()> {
@@ -1225,6 +1514,7 @@ pub fn server_settings(owner: HWND, path: &Path) {
     }
 }
 const VIDEO_SETTINGS: usize = 130;
+const LOCAL_CAMERA_SETTINGS: usize = 131;
 const REFRESH: u32 = WM_APP + 40;
 const CONNECT: usize = 101;
 const DISCONNECT: usize = 102;
@@ -1463,6 +1753,7 @@ impl ClientWindow {
                 (CONNECT, crate::i18n::t("Подключить устройство")),
                 (DISCONNECT, crate::i18n::t("Отключить устройство")),
                 (VIDEO_SETTINGS, crate::i18n::t("Send video")),
+                (LOCAL_CAMERA_SETTINGS, crate::i18n::t("Client USB camera")),
             ] {
                 AppendMenuW(device, MF_STRING, id, wide(text).as_ptr());
             }
@@ -2290,6 +2581,7 @@ impl ClientUi {
         let owner = self.window.get();
         match id {
             VIDEO_SETTINGS => video_settings(owner, &self.path, Role::Client),
+            LOCAL_CAMERA_SETTINGS => local_camera_settings(owner, &self.path),
             CAMERA_PREVIEW | DEVICE_CAMERA_PREVIEW => {
                 let identity = (id == DEVICE_CAMERA_PREVIEW)
                     .then(|| self.selected().and_then(|(_, _, identity)| identity))
@@ -2963,6 +3255,59 @@ unsafe extern "system" fn client_procedure(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn silent_microphone_choice_preserves_saved_value_and_defaults_off() {
+        assert_eq!(super::silent_microphone_field(None).value, "0");
+        for saved in [
+            serde_json::json!({}),
+            serde_json::json!({"camera":{"name":"Existing camera"}}),
+            serde_json::json!({"camera":{"microphone":false}}),
+        ] {
+            assert_eq!(super::silent_microphone_field(Some(&saved)).value, "0");
+        }
+        let saved = serde_json::json!({"enabled":false,"camera":{"name":"Renamed camera","microphone":true}});
+        let field = super::silent_microphone_field(Some(&saved));
+        assert_eq!(field.value, "1");
+        assert_eq!(field.label, crate::i18n::t("Silent microphone"));
+        let super::FieldKind::Choice(choices) = field.kind else {
+            panic!("microphone must be an explicit off/on choice")
+        };
+        assert_eq!(choices.len(), 2);
+        assert_eq!(choices[1], crate::i18n::t("Enabled"));
+        assert_eq!(saved["camera"]["microphone"], true);
+    }
+    #[test]
+    fn silent_microphone_choice_is_disabled_without_reset_when_video_is_off() {
+        let saved = serde_json::json!({"camera":{"microphone":true}});
+        let field = super::silent_microphone_field(Some(&saved));
+        for index in [4, 5] {
+            assert!(!super::FormRules::Video.enabled(index, &[0]));
+            assert!(super::FormRules::Video.enabled(index, &[1]));
+        }
+        assert!(super::FormRules::Video.enabled(0, &[0]));
+        assert_eq!(field.value, "1");
+    }
+    #[test]
+    fn local_camera_endpoint_paths_do_not_replace_the_network_sender() {
+        use super::VideoEndpoint;
+        use std::path::Path;
+        let config = Path::new("fixture/client.local.json");
+        assert_eq!(
+            VideoEndpoint::Receive.settings_path(config),
+            Path::new("fixture/client.video-receive.local.json")
+        );
+        assert_eq!(
+            VideoEndpoint::LocalSend.settings_path(config),
+            Path::new("fixture/client.video-local-send.local.json")
+        );
+        assert_eq!(
+            VideoEndpoint::Send.settings_path(config),
+            Path::new("fixture/client.video-send.local.json")
+        );
+        assert_eq!(VideoEndpoint::Receive.helper_role(), "Receive");
+        assert_eq!(VideoEndpoint::LocalSend.helper_role(), "LocalSend");
+        assert_eq!(VideoEndpoint::Send.helper_role(), "Send");
+    }
     #[test]
     fn video_settings_keep_an_absent_source_and_distinguish_equal_names() {
         let make = |id: &str| crate::camera::Camera {

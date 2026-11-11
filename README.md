@@ -11,7 +11,7 @@
 
 An open-source USB over IP (USB/IP) redirector for Windows 11 x64. Share real USB devices between Windows computers over a LAN or VPN, including webcams and Android phone ADB/storage. A Rust server exports selected devices; a Windows client imports them through a virtual USB controller. No activation, trial timer or license-based device limit.
 
-**v0.2.4 — Windows 11 x64.** A Rust USB server and client with a desktop GUI, command-line control, automatic discovery and reconnect, plus an MSI installer and portable ZIP. [Download the latest release](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+**v0.2.6 — Windows 11 x64.** A Rust USB server and client with a desktop GUI, command-line control, automatic discovery and reconnect, plus an MSI installer and portable ZIP. [Download the latest release](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
 
 **Agent health in v0.2.1:** server and client controllers run under separate supervisors. Exited controllers restart automatically; stopped heartbeat progress is detected after two minutes. Independent one-minute scheduled checks also recover a missing or stalled supervisor. Stale reports no longer claim a connected device. Use `usbbridge --config FILE server health` or `client health` to inspect current health. See [changes](CHANGELOG.md).
 
@@ -25,6 +25,12 @@ An open-source USB over IP (USB/IP) redirector for Windows 11 x64. Share real US
 **New in v0.2.2:** send video from a Windows client into a USB/UVC camera on the Windows server. Choose **Server → USB camera — receive video**, set its name (for example `4k web camera`), then configure **Device → Send video** on the client with the source, server address and the same connection key. The server uses the signed USBIP-WIN2 controller and Windows `usbvideo.sys`; the camera has no mandatory Media Foundation name suffix. Installed OBS/Unity Capture sources are selected through DirectShow. See the [video camera quick start](docs/virtual-camera.md).
 
 The video path uses authenticated TCP/MJPEG and retains the USB camera while a lost source reconnects, showing black instead of switching to another camera. Each endpoint has startup recovery and an independent heartbeat check. The name is configurable independently of resolution; 1280×720 at approximately 30 FPS was measured with a real camera source. Use a trusted LAN or VPN: frame authentication does not encrypt the images. The virtual USB controller remains visible in the Windows device tree.
+
+**Optional silent microphone:** each generated USB camera can also expose a USB Audio Class capture input under the same composite device. Enable **Silent microphone** in the receiver camera settings. It always supplies silence; it never captures a real microphone. Select it separately in messenger audio settings if needed. [Setup](docs/dual-camera.md#optional-silent-microphone).
+
+## Two independent video destinations
+
+DeepLive and other producers can use **Unity Capture Server** to feed the server USB camera (for example, `4k web camera`), or **Unity Capture Client** to feed a separate USB camera on the client (default `2k web camera`). Both USB cameras have independent persistent identities and editable names. Configure the client camera under **Device → Client USB camera**. The client route stays on loopback; the server route retains its network destination and connection key. See the [dual camera setup](docs/dual-camera.md).
 
 ## What you can do
 
@@ -156,7 +162,7 @@ Set-Location USB-to-Network-Bridge
 .\Package.ps1
 ```
 
-`Build.ps1` checks formatting, runs Clippy and tests, and builds seven release executables. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.4-windows-x64.zip` with runtime helpers, examples, docs, and dependency licenses. Drivers are downloaded from upstream, verified against pinned SHA-256 and Authenticode in `driver-installers.json`, and are not bundled. CI builds/packages without installing USB drivers; hardware tests remain separate.
+`Build.ps1` checks formatting, runs Clippy and tests, and builds seven release executables. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.6-windows-x64.zip` with runtime helpers, examples, docs, and dependency licenses. Drivers are downloaded from upstream, verified against pinned SHA-256 and Authenticode in `driver-installers.json`, and are not bundled. CI builds/packages without installing USB drivers; hardware tests remain separate.
 
 ## Installation and runtime
 

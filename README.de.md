@@ -11,7 +11,7 @@
 
 Ein quelloffener USB-over-IP-Redirector (USB/IP) für Windows 11 x64. Teilen Sie echte USB-Geräte über LAN oder VPN zwischen Windows-PCs, darunter Webcams und ADB/Speicher von Android-Telefonen. Der Rust-Server gibt ausgewählte Geräte frei; der Windows-Client bindet sie über einen virtuellen USB-Controller ein. Keine Aktivierung, keine Testzeitbegrenzung und kein lizenzbedingtes Gerätelimit.
 
-**v0.2.4 — Windows 11 x64.** USB-Server und Client in Rust mit grafischer Oberfläche, Kommandozeile, automatischer Suche und Wiederverbindung sowie MSI-Installer und portablem ZIP. [Aktuelle Version herunterladen](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+**v0.2.6 — Windows 11 x64.** USB-Server und Client in Rust mit grafischer Oberfläche, Kommandozeile, automatischer Suche und Wiederverbindung sowie MSI-Installer und portablem ZIP. [Aktuelle Version herunterladen](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
 
 **Agentenprüfung in v0.2.1:** Server- und Client-Controller haben eigene Supervisoren. Beendete Controller starten automatisch neu; ein eingefrorener Heartbeat wird nach zwei Minuten erkannt. Unabhängige Aufgaben prüfen die Supervisoren jede Minute. Veraltete Berichte melden Geräte nicht mehr als verbunden. Diagnose: `usbbridge --config FILE server health` oder `client health`. [Änderungen](CHANGELOG.md).
 
@@ -25,6 +25,12 @@ Ein quelloffener USB-over-IP-Redirector (USB/IP) für Windows 11 x64. Teilen Sie
 **Neu in v0.2.2:** Video vom Windows-Client an eine USB/UVC-Kamera auf dem Windows-Server senden. Unter **Server → USB-Kamera — Video empfangen** den Namen festlegen, etwa `4k web camera`. Auf dem Client unter **Gerät → Video senden** Quelle, Serveradresse und denselben Verbindungsschlüssel wählen. Die Kamera nutzt den signierten USBIP-WIN2-Controller und Windows `usbvideo.sys`, ohne den vorgeschriebenen Media-Foundation-Namenszusatz. Installierte OBS-/Unity-Capture-Quellen werden über DirectShow ausgewählt. [Video-Schnellstart](docs/virtual-camera.md).
 
 Der authentifizierte TCP/MJPEG-Pfad hält die USB-Kamera bei Verbindungsproblemen angemeldet und zeigt Schwarz, bis die Quelle zurückkehrt. Beide Endpunkte haben Autostart und unabhängige Heartbeat-Prüfungen. Der Name bestimmt nicht die Auflösung; mit einer echten Kamera wurden ungefähr 30 FPS bei 1280×720 gemessen. Ein vertrauenswürdiges LAN oder VPN verwenden: die Authentifizierung verschlüsselt die Bilder nicht. Der virtuelle USB-Controller bleibt im Windows-Gerätebaum erkennbar.
+
+**Optionales stummes Mikrofon:** aktivieren Sie **Silent microphone** in den Einstellungen der empfangenden Kamera. Der USB-Audioeingang gehört zum selben Verbundgerät und liefert ausschließlich Stille, ohne ein echtes Mikrofon aufzunehmen. Wählen Sie ihn bei Bedarf separat in den Audioeinstellungen der Messenger-App. [Einrichtung](docs/dual-camera.md#optional-silent-microphone).
+
+## Zwei unabhängige Videoziele
+
+**Unity Capture Server** sendet den Videostream an die USB-Kamera des Servers (z. B. `4k web camera`); **Unity Capture Client** an eine separate USB-Kamera auf dem Client (standardmäßig `2k web camera`). Beide Kameras haben eigene dauerhafte Identitäten und änderbare Namen. Die Client-Kamera wird unter **Device → Client USB camera** konfiguriert. Die lokale Route verwendet Loopback; Serveradresse und Verbindungsschlüssel bleiben erhalten. [Einrichtung](docs/dual-camera.md).
 
 ## Funktionen
 

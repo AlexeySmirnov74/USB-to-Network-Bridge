@@ -1,5 +1,5 @@
 //! Machine DPAPI permits the SYSTEM recovery agent to use credentials saved by the UI.
-//! An explicit protected file DACL grants access only to its owner, SYSTEM and administrators.
+//! A protected file DACL grants access to the creating token's user, SYSTEM and administrators.
 use crate::proxy::Credentials;
 use std::{
     io,
@@ -59,6 +59,82 @@ pub fn save(auth: &Credentials) -> io::Result<PathBuf> {
     save_at(&root, auth)
 }
 #[cfg(windows)]
+struct LocalAllocation(*mut std::ffi::c_void);
+#[cfg(windows)]
+impl Drop for LocalAllocation {
+    fn drop(&mut self) {
+        unsafe {
+            windows_sys::Win32::Foundation::LocalFree(self.0);
+        }
+    }
+}
+#[cfg(windows)]
+fn token_user_sid() -> io::Result<String> {
+    use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
+    use windows_sys::Win32::{
+        Security::{
+            Authorization::ConvertSidToStringSidW, GetTokenInformation, TOKEN_QUERY, TOKEN_USER,
+            TokenUser,
+        },
+        System::Threading::{GetCurrentProcess, OpenProcessToken},
+    };
+    let mut raw_token = std::ptr::null_mut();
+    if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut raw_token) } == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    let token = unsafe { OwnedHandle::from_raw_handle(raw_token) };
+    let mut bytes = 0u32;
+    let result = unsafe {
+        GetTokenInformation(
+            token.as_raw_handle(),
+            TokenUser,
+            std::ptr::null_mut(),
+            0,
+            &mut bytes,
+        )
+    };
+    if result == 0 && io::Error::last_os_error().raw_os_error() != Some(122) {
+        return Err(io::Error::last_os_error());
+    }
+    if bytes < std::mem::size_of::<TOKEN_USER>() as u32 || bytes > 65536 {
+        return Err(io::Error::other("Invalid Windows token user buffer length"));
+    }
+    // Word storage meets TOKEN_USER's pointer alignment, unlike a byte vector.
+    let mut storage = vec![0usize; (bytes as usize).div_ceil(std::mem::size_of::<usize>())];
+    let capacity = (storage.len() * std::mem::size_of::<usize>()) as u32;
+    if unsafe {
+        GetTokenInformation(
+            token.as_raw_handle(),
+            TokenUser,
+            storage.as_mut_ptr().cast(),
+            capacity,
+            &mut bytes,
+        )
+    } == 0
+    {
+        return Err(io::Error::last_os_error());
+    }
+    if bytes < std::mem::size_of::<TOKEN_USER>() as u32 || bytes > capacity {
+        return Err(io::Error::other("Invalid Windows token user result length"));
+    }
+    let user = unsafe { &*storage.as_ptr().cast::<TOKEN_USER>() };
+    let mut text = std::ptr::null_mut();
+    if unsafe { ConvertSidToStringSidW(user.User.Sid, &mut text) } == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    let _text = LocalAllocation(text.cast());
+    // Windows string SIDs are short; reject an unexpectedly unbounded result.
+    let mut wide = Vec::new();
+    for index in 0..256 {
+        let ch = unsafe { *text.add(index) };
+        if ch == 0 {
+            return String::from_utf16(&wide).map_err(io::Error::other);
+        }
+        wide.push(ch);
+    }
+    Err(io::Error::other("Windows token user SID is too long"))
+}
+#[cfg(windows)]
 fn create_private_file(path: &Path) -> io::Result<std::fs::File> {
     use std::os::windows::{ffi::OsStrExt, io::FromRawHandle};
     use windows_sys::Win32::{
@@ -70,7 +146,9 @@ fn create_private_file(path: &Path) -> io::Result<std::fs::File> {
         Storage::FileSystem::{CREATE_NEW, CreateFileW, FILE_ATTRIBUTE_NORMAL},
     };
     let name: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
-    let sddl: Vec<u16> = "D:P(A;;FA;;;SY)(A;;FA;;;BA)(A;;FA;;;OW)"
+    // An elevated process may create files owned by Administrators. OWNER
+    // RIGHTS alone then excludes that same account's limited scheduled token.
+    let sddl: Vec<u16> = format!("D:P(A;;FA;;;SY)(A;;FA;;;BA)(A;;FA;;;{})", token_user_sid()?)
         .encode_utf16()
         .chain(Some(0))
         .collect();
@@ -171,6 +249,52 @@ pub fn save(_auth: &Credentials) -> io::Result<PathBuf> {
 #[cfg(all(test, windows))]
 mod tests {
     use super::*;
+    #[test]
+    fn new_key_dacl_explicitly_grants_token_user_without_owner_or_world_access() {
+        use std::os::windows::process::CommandExt;
+        struct Cleanup(PathBuf);
+        impl Drop for Cleanup {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_file(&self.0);
+            }
+        }
+        let path =
+            std::env::temp_dir().join(format!("usbbridge-key-acl-{}.key", uuid::Uuid::new_v4()));
+        let _cleanup = Cleanup(path.clone());
+        // This synthetic value is never printed or read by the ACL inspector.
+        save_key(&path, "unused-fixture-key-for-acl-test").unwrap();
+        let output=std::process::Command::new("powershell.exe")
+            .args(["-NoProfile","-NonInteractive","-Command"])
+            .arg(r"$ErrorActionPreference='Stop';$acl=Get-Acl -LiteralPath $env:USB_BRIDGE_TEST_ACL_FILE;[ordered]@{protected=$acl.AreAccessRulesProtected;grants=@($acl.GetAccessRules($true,$false,[Security.Principal.SecurityIdentifier])|ForEach-Object{[ordered]@{sid=$_.IdentityReference.Value;allow=($_.AccessControlType-eq 'Allow');full=($_.FileSystemRights-band [Security.AccessControl.FileSystemRights]::FullControl)-eq [Security.AccessControl.FileSystemRights]::FullControl}})}|ConvertTo-Json -Depth 4 -Compress")
+            .env("USB_BRIDGE_TEST_ACL_FILE",&path)
+            .creation_flags(0x08000000)
+            .output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let acl: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(acl["protected"], true);
+        let creator = token_user_sid().unwrap();
+        let grants = acl["grants"].as_array().unwrap();
+        assert!(
+            grants
+                .iter()
+                .any(|ace| ace["sid"].as_str() == Some(creator.as_str()))
+        );
+        for ace in grants {
+            assert_eq!(ace["allow"], true);
+            assert_eq!(ace["full"], true);
+            let sid = ace["sid"].as_str().unwrap();
+            assert!(
+                sid == creator || sid == "S-1-5-18" || sid == "S-1-5-32-544",
+                "unexpected private-file ACL trustee"
+            );
+            assert_ne!(sid, "S-1-3-4"); // OWNER RIGHTS is not the creating user.
+            assert_ne!(sid, "S-1-1-0"); // Everyone.
+        }
+    }
     #[test]
     fn protected_credentials_roundtrip_without_plaintext_on_disk() {
         let dir = std::env::temp_dir().join(format!("usbbridge-secrets-{}", uuid::Uuid::new_v4()));

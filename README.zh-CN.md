@@ -11,7 +11,7 @@
 
 面向 Windows 11 x64 的开源 USB over IP（USB/IP）重定向工具。通过局域网或 VPN 在 Windows 计算机间共享真实 USB 设备，包括摄像头和 Android 手机的 ADB 接口/存储。Rust 服务器导出选定设备，Windows 客户端通过虚拟 USB 控制器导入。无需激活，没有试用倒计时，也没有许可证规定的设备数量限制。
 
-**v0.2.4：Windows 11 x64。** 使用 Rust 编写的 USB 服务器和客户端，提供图形界面、命令行、自动发现与重连、MSI 安装包及便携 ZIP。[下载最新版本](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest)。
+**v0.2.6：Windows 11 x64。** 使用 Rust 编写的 USB 服务器和客户端，提供图形界面、命令行、自动发现与重连、MSI 安装包及便携 ZIP。[下载最新版本](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest)。
 
 **v0.2.1 代理健康检查：**服务器和客户端控制器分别由监控程序管理。退出的控制器会自动重启；心跳停止两分钟后会被检测到。独立的 Windows 任务每分钟还会检查并恢复监控程序。过期状态不再显示设备已连接。诊断命令：`usbbridge --config FILE server health` 或 `client health`。[更新记录](CHANGELOG.md)。
 
@@ -25,6 +25,12 @@
 **v0.2.2 新功能：** 将 Windows 客户端的视频发送到 Windows 服务器上的 USB/UVC 摄像头。在服务器选择 **服务器 → USB 摄像头 — 接收视频** 并设置名称，例如 `4k web camera`；在客户端选择 **设备 → 发送视频**，设置视频源、服务器地址和相同的连接密钥。摄像头使用已签名的 USBIP-WIN2 控制器和 Windows 自带的 `usbvideo.sys`，无需 Media Foundation 强制添加的名称后缀。已安装的 OBS/Unity Capture 视频源通过 DirectShow 选择。[视频摄像头快速入门](docs/virtual-camera.md)。
 
 视频通过具有身份验证的 TCP/MJPEG 传输。视频源中断时，USB 摄像头保持连接并显示黑色画面，随后自动恢复；两个模块均支持自动启动和独立心跳检查。名称与分辨率独立；使用真实摄像头源测试时，1280×720 约为 30 FPS。请使用可信局域网或 VPN：身份验证不会加密图像。Windows 设备树中仍然可以识别虚拟 USB 控制器。
+
+**可选静音麦克风：** 在接收端摄像头设置中启用 **Silent microphone**，即可为同一复合 USB 设备添加音频输入。它始终输出静音，不采集真实麦克风。必要时请在通信应用的音频设置中单独选择它。[配置说明](docs/dual-camera.md#optional-silent-microphone)。
+
+## 两个独立的视频目标
+
+**Unity Capture Server** 将视频发送到服务器的 USB 摄像头（例如 `4k web camera`）；**Unity Capture Client** 将视频发送到客户端独立的 USB 摄像头（默认名为 `2k web camera`）。两台摄像头有独立的持久标识，名称均可修改。通过 **Device → Client USB camera** 配置客户端摄像头。本地路径仅使用回环连接，服务器地址和连接密钥保持独立。[配置说明](docs/dual-camera.md)。
 
 ## 功能
 

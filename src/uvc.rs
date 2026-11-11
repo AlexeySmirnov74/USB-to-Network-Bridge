@@ -27,6 +27,10 @@ pub fn is_emulated_identity(identity: &str) -> bool {
 pub const MAX_JPEG: usize = 16 * 1024 * 1024;
 const PAYLOAD: usize = 16 * 1024;
 const CLOCK: u32 = 48_000_000;
+const AUDIO_RATE: u32 = 48_000;
+const AUDIO_PACKET: usize = 96;
+const AUDIO_MAX_PACKETS: usize = 1024;
+const AUDIO_QUEUE: usize = 128;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub name: String,
@@ -35,6 +39,9 @@ pub struct Config {
     pub height: u16,
     pub fps: u32,
     pub test_pattern: bool,
+    /// Optional silent UAC1 microphone in the same USB composite device.
+    #[serde(default)]
+    pub microphone: bool,
 }
 impl Default for Config {
     fn default() -> Self {
@@ -45,6 +52,7 @@ impl Default for Config {
             height: 480,
             fps: 30,
             test_pattern: true,
+            microphone: false,
         }
     }
 }
@@ -92,7 +100,11 @@ impl Config {
             protocol: 1,
             configuration: 1,
             configurations: 1,
-            interfaces: vec![[14, 1, 0, 0], [14, 2, 0, 0]],
+            interfaces: if self.microphone {
+                vec![[14, 1, 0, 0], [14, 2, 0, 0], [1, 1, 0, 0], [1, 2, 0, 0]]
+            } else {
+                vec![[14, 1, 0, 0], [14, 2, 0, 0]]
+            },
         }
     }
     pub fn device_descriptor(&self) -> Vec<u8> {
@@ -131,7 +143,32 @@ impl Config {
         result.extend([9, 4, 1, 0, 1, 14, 2, 0, 0]);
         result.extend(vs);
         result.extend([7, 5, 0x81, 2, 0, 2, 0]);
+        if self.microphone {
+            result.extend(audio_descriptors());
+            let length = result.len() as u16;
+            result[2..4].copy_from_slice(&length.to_le_bytes());
+            result[4] = 4;
+        }
         result
+    }
+    fn other_speed_descriptor(&self) -> Vec<u8> {
+        let mut descriptors = self.configuration_descriptor();
+        descriptors[1] = 7;
+        let mut offset = 0;
+        while offset < descriptors.len() {
+            let length = descriptors[offset] as usize;
+            if descriptors[offset + 1] == 5 {
+                match descriptors[offset + 2] {
+                    0x81 => {
+                        descriptors[offset + 4..offset + 6].copy_from_slice(&64u16.to_le_bytes())
+                    }
+                    0x82 => descriptors[offset + 6] = 1, // Full speed: 1 ms.
+                    _ => {}
+                }
+            }
+            offset += length;
+        }
+        descriptors
     }
     fn probe(&self) -> Vec<u8> {
         let mut result = vec![0, 0, 1, 1];
@@ -151,6 +188,7 @@ impl Config {
             1 => "USB to Network Bridge",
             2 => &self.name,
             3 => &self.serial,
+            4 if self.microphone => "Microphone",
             _ => return None,
         };
         let mut result = vec![0, 3];
@@ -160,6 +198,26 @@ impl Config {
         result[0] = result.len() as u8;
         Some(result)
     }
+}
+
+/// UAC1: microphone input terminal -> master-mute feature -> USB streaming
+/// output terminal. HS bInterval=4 means 8 microframes = 1 ms, 48 mono i16
+/// samples. The clock is synchronous to the emulated bus, with no feedback EP.
+fn audio_descriptors() -> Vec<u8> {
+    vec![
+        8, 11, 2, 2, 1, 0, 0, 2, // Audio IAD: adapter keeps the camera product name.
+        9, 4, 2, 0, 0, 1, 1, 0, 2, // AudioControl adapter name, not its microphone pin name.
+        9, 0x24, 1, 0, 1, 39, 0, 1, 3, // UAC1 header: total CS AC length 39.
+        12, 0x24, 2, 1, 1, 2, 0, 1, 0, 0, 0, 4, // Mono microphone input terminal 1.
+        9, 0x24, 6, 2, 1, 1, 1, 0, 0, // Feature 2: master mute only.
+        9, 0x24, 3, 3, 1, 1, 0, 2, 4, // USB streaming output terminal 3.
+        9, 4, 3, 0, 0, 1, 2, 0, 4, // Default zero-bandwidth alt 0.
+        9, 4, 3, 1, 1, 1, 2, 0, 4, // Operational AudioStreaming alt 1.
+        7, 0x24, 1, 3, 1, 1, 0, // Terminal 3, PCM format tag.
+        11, 0x24, 2, 1, 1, 2, 16, 1, 0x80, 0xbb, 0, // Mono PCM16, 48000 Hz.
+        9, 5, 0x82, 0x0d, 96, 0, 4, 0, 0, // Synchronous isochronous IN.
+        7, 0x25, 1, 1, 0, 0, 0, // Sampling-frequency control, no pitch.
+    ]
 }
 
 /// Only baseline JPEG of the announced size is accepted before kernel delivery.
@@ -401,6 +459,7 @@ impl Provider for UvcProvider {
                 active: None,
                 cancel_active: false,
                 committed: false,
+                audio: AudioState::default(),
             }),
             wake: Condvar::new(),
             stop: AtomicBool::new(false),
@@ -411,11 +470,30 @@ impl Provider for UvcProvider {
         let worker = thread::Builder::new()
             .name("uvc-bulk".into())
             .spawn(move || stream_frames(signal, frames, output))?;
+        let audio_worker = if self.frames.config.microphone {
+            let signal = shared.clone();
+            let output = completed.clone();
+            match thread::Builder::new()
+                .name("uac-silence".into())
+                .spawn(move || stream_silence(signal, output))
+            {
+                Ok(worker) => Some(worker),
+                Err(error) => {
+                    shared.stop.store(true, Ordering::Release);
+                    shared.wake.notify_all();
+                    let _ = worker.join();
+                    return Err(error);
+                }
+            }
+        } else {
+            None
+        };
         Ok(Arc::new(UvcSession {
             shared,
             completed,
             config: self.frames.config.clone(),
             worker: Mutex::new(Some(worker)),
+            audio_worker: Mutex::new(audio_worker),
         }))
     }
 }
@@ -424,6 +502,29 @@ struct State {
     active: Option<u32>,
     cancel_active: bool,
     committed: bool,
+    audio: AudioState,
+}
+struct AudioState {
+    pending: VecDeque<Submit>,
+    active: Option<u32>,
+    cancel_active: bool,
+    generation: u64,
+    alternate: u8,
+    configuration: u8,
+    muted: bool,
+}
+impl Default for AudioState {
+    fn default() -> Self {
+        Self {
+            pending: VecDeque::new(),
+            active: None,
+            cancel_active: false,
+            generation: 0,
+            alternate: 0,
+            configuration: 1,
+            muted: false,
+        }
+    }
 }
 struct Shared {
     state: Mutex<State>,
@@ -435,6 +536,7 @@ struct UvcSession {
     completed: SyncSender<Completion>,
     config: Config,
     worker: Mutex<Option<thread::JoinHandle<()>>>,
+    audio_worker: Mutex<Option<thread::JoinHandle<()>>>,
 }
 fn deliver(sender: &SyncSender<Completion>, stop: &AtomicBool, mut reply: Completion) -> bool {
     while !stop.load(Ordering::Acquire) {
@@ -450,10 +552,115 @@ fn deliver(sender: &SyncSender<Completion>, stop: &AtomicBool, mut reply: Comple
     false
 }
 impl UvcSession {
+    fn audio_alternate(&self, alternate: u8, configuration: Option<u8>) -> Option<Vec<u8>> {
+        let pending = {
+            let mut state = self.shared.state.lock().unwrap();
+            let audio = &mut state.audio;
+            if configuration.is_none() && audio.configuration == 0 {
+                return None;
+            }
+            if let Some(value) = configuration {
+                audio.configuration = value;
+            }
+            audio.alternate = alternate;
+            audio.generation = audio.generation.wrapping_add(1);
+            audio.pending.drain(..).collect::<Vec<_>>()
+        };
+        self.shared.wake.notify_all();
+        crate::diagnostics::event(
+            if alternate == 1 {
+                "uac.start"
+            } else {
+                "uac.stop"
+            },
+            serde_json::json!({"rate":AUDIO_RATE,"channels":1,"bits":16,"silent":true}),
+        );
+        for request in pending {
+            if !deliver(
+                &self.completed,
+                &self.shared.stop,
+                audio_reply(&request, -108),
+            ) {
+                return None;
+            }
+        }
+        Some(Vec::new())
+    }
+    fn audio_control(&self, request: &Submit) -> Option<Vec<u8>> {
+        let s = request.setup;
+        let value = u16::from_le_bytes([s[2], s[3]]);
+        let index = u16::from_le_bytes([s[4], s[5]]);
+        let length = u16::from_le_bytes([s[6], s[7]]) as usize;
+        // Standard configuration and alternate settings affect only this audio
+        // function; the original bulk-video probe/commit path is independent.
+        match (s[0], s[1], value, index) {
+            (0x00, 9, 0..=1, 0)
+                if request.direction == 0 && length == 0 && request.data.is_empty() =>
+            {
+                return self.audio_alternate(0, Some(value as u8));
+            }
+            (0x80, 8, 0, 0) if request.direction == 1 => {
+                return Some(vec![self.shared.state.lock().unwrap().audio.configuration]);
+            }
+            (0x81, 10, 0, 2) if request.direction == 1 => return Some(vec![0]),
+            (0x81, 0, 0, 2 | 3) | (0x82, 0, 0, 0x82) if request.direction == 1 => {
+                return Some(vec![0, 0]);
+            }
+            (0x81, 10, 0, 3) if request.direction == 1 => {
+                return Some(vec![self.shared.state.lock().unwrap().audio.alternate]);
+            }
+            (0x01, 11, 0, 2) if request.direction == 0 && length == 0 => return Some(Vec::new()),
+            (0x01, 11, 0..=1, 3) if request.direction == 0 && length == 0 => {
+                return self.audio_alternate(value as u8, None);
+            }
+            _ => {}
+        }
+        // Feature unit 2 on AudioControl interface 2, master-channel mute.
+        if index == 0x0202 && value == 0x0100 && length == 1 {
+            match (s[0], s[1], request.direction) {
+                (0xa1, 0x81, 1) => {
+                    return Some(vec![u8::from(
+                        self.shared.state.lock().unwrap().audio.muted,
+                    )]);
+                }
+                (0x21, 1, 0) if request.data.len() == 1 && request.data[0] <= 1 => {
+                    self.shared.state.lock().unwrap().audio.muted = request.data[0] != 0;
+                    return Some(Vec::new());
+                }
+                _ => return None,
+            }
+        }
+        // Fixed-rate sampling control on isochronous endpoint 0x82.
+        // UAC1 5.2.3.2.3.1 rounds unsupported requested rates to the sole
+        // supported value. PCM data stays silent regardless of master mute.
+        if index == 0x0082 && value == 0x0100 && length == 3 {
+            match (s[0], s[1], request.direction) {
+                (0xa2, 0x81..=0x83, 1) => return Some(AUDIO_RATE.to_le_bytes()[..3].to_vec()),
+                (0xa2, 0x84, 1) => return Some(vec![0, 0, 0]),
+                (0x22, 1, 0) if request.data.len() == 3 && request.data[2] & 0x80 == 0 => {
+                    return Some(Vec::new());
+                }
+                _ => return None,
+            }
+        }
+        None
+    }
     fn control(&self, request: &Submit) -> Option<Vec<u8>> {
         let s = request.setup;
         let value = u16::from_le_bytes([s[2], s[3]]);
         let index = u16::from_le_bytes([s[4], s[5]]);
+        if self.config.microphone
+            && (index == 2
+                || index == 3
+                || index == 0x0202
+                || index == 0x0082
+                || matches!((s[0], s[1]), (0, 9) | (0x80, 8)))
+        {
+            // Descriptor requests still use the normal descriptor dispatcher.
+            if !(s[0] == 0x80 && s[1] == 6) {
+                return self.audio_control(request);
+            }
+        }
         let result = match s[0] & 0x60 {
             0 => match s[1] {
                 6 => match (value >> 8) as u8 {
@@ -461,13 +668,7 @@ impl UvcSession {
                     2 => self.config.configuration_descriptor(),
                     3 => self.config.string_descriptor(value as u8)?,
                     6 => vec![10, 6, 0, 2, 0xef, 2, 1, 64, 1, 0],
-                    7 => {
-                        let mut d = self.config.configuration_descriptor();
-                        d[1] = 7;
-                        let n = d.len();
-                        d[n - 3..n - 1].copy_from_slice(&64u16.to_le_bytes());
-                        d
-                    }
+                    7 => self.config.other_speed_descriptor(),
                     _ => return None,
                 },
                 0 => vec![0, 0],
@@ -558,10 +759,32 @@ impl Session for UvcSession {
             }
             state.pending.push_back(request);
             self.shared.wake.notify_all();
+        } else if request.endpoint == 2 && self.config.microphone {
+            let status = {
+                let mut state = self.shared.state.lock().unwrap();
+                if !valid_audio_request(&request) {
+                    -22
+                } else if state.audio.alternate != 1 || state.audio.configuration == 0 {
+                    -108
+                } else if state.audio.pending.len() >= AUDIO_QUEUE {
+                    -28
+                } else {
+                    state.audio.pending.push_back(request);
+                    self.shared.wake.notify_all();
+                    return Ok(());
+                }
+            };
+            if !deliver(
+                &self.completed,
+                &self.shared.stop,
+                audio_reply(&request, status),
+            ) {
+                return Err(io::ErrorKind::BrokenPipe.into());
+            }
         } else if !deliver(
             &self.completed,
             &self.shared.stop,
-            Completion::submit(&request, -32, 0, Vec::new(), 0, Vec::new()),
+            audio_reply(&request, -32),
         ) {
             return Err(io::ErrorKind::BrokenPipe.into());
         }
@@ -571,11 +794,20 @@ impl Session for UvcSession {
         let mut state = self.shared.state.lock().unwrap();
         let before = state.pending.len();
         state.pending.retain(|r| r.seq != target);
-        let found = before != state.pending.len() || state.active == Some(target);
+        let audio_before = state.audio.pending.len();
+        state.audio.pending.retain(|r| r.seq != target);
+        let found = before != state.pending.len()
+            || state.active == Some(target)
+            || audio_before != state.audio.pending.len()
+            || state.audio.active == Some(target);
         if state.active == Some(target) {
             state.cancel_active = true;
         }
+        if state.audio.active == Some(target) {
+            state.audio.cancel_active = true;
+        }
         drop(state);
+        self.shared.wake.notify_all();
         if !deliver(
             &self.completed,
             &self.shared.stop,
@@ -592,6 +824,186 @@ impl Drop for UvcSession {
         self.shared.wake.notify_all();
         if let Some(worker) = self.worker.lock().unwrap().take() {
             let _ = worker.join();
+        }
+        if let Some(worker) = self.audio_worker.lock().unwrap().take() {
+            let _ = worker.join();
+        }
+    }
+}
+
+fn valid_audio_request(request: &Submit) -> bool {
+    if request.direction != 1
+        || request.iso.is_empty()
+        || request.iso.len() > AUDIO_MAX_PACKETS
+        || request.packet_count as usize != request.iso.len()
+        || request.length > wire::MAX_TRANSFER
+        || !request.data.is_empty()
+    {
+        return false;
+    }
+    let mut end = 0usize;
+    for packet in &request.iso {
+        let offset = packet.offset as usize;
+        let Some(next) = offset.checked_add(packet.length as usize) else {
+            return false;
+        };
+        if offset < end || next > request.length || packet.actual > packet.length {
+            return false;
+        }
+        end = next;
+    }
+    true
+}
+
+/// USB/IP transmits packed payload, but the client requires each packet's
+/// ORIGINAL offset and requested length. It reinserts the gaps in its URB.
+fn audio_reply(request: &Submit, status: i32) -> Completion {
+    let mut actual = 0usize;
+    let iso = request
+        .iso
+        .iter()
+        .map(|packet| {
+            let bytes = if status == 0 {
+                (packet.length as usize).min(AUDIO_PACKET) & !1
+            } else {
+                0
+            };
+            actual += bytes;
+            wire::IsoPacket {
+                offset: packet.offset,
+                length: packet.length,
+                actual: bytes as u32,
+                status: if status == 0 && packet.length > 0 && packet.length < (AUDIO_PACKET as u32)
+                {
+                    -75
+                } else {
+                    status
+                },
+            }
+        })
+        .collect();
+    // Only the compacted 96-byte packets are allocated, never the request's
+    // potentially sparse original transfer buffer.
+    Completion::submit(request, status, actual, vec![0; actual], 0, iso)
+}
+
+struct AudioClock {
+    due: Instant,
+    generation: u64,
+}
+impl AudioClock {
+    fn new(now: Instant) -> Self {
+        Self {
+            due: now,
+            generation: u64::MAX,
+        }
+    }
+    fn reset(&mut self) {
+        self.generation = u64::MAX;
+    }
+    fn deadline(
+        &mut self,
+        generation: u64,
+        packets: usize,
+        now: Instant,
+        idle: Duration,
+    ) -> Instant {
+        // The Windows condition-variable timer can wake a 10 ms wait after
+        // 15.6 ms. Re-anchoring on each late wake permanently loses samples.
+        // Retain the USB clock and catch up bounded queued batches instead.
+        if generation != self.generation
+            || idle >= Duration::from_millis(100)
+            || now.saturating_duration_since(self.due) > Duration::from_millis(250)
+        {
+            self.due = now;
+            self.generation = generation;
+        }
+        self.due += Duration::from_millis(packets as u64);
+        self.due
+    }
+}
+fn stream_silence(shared: Arc<Shared>, completed: SyncSender<Completion>) {
+    let mut clock = AudioClock::new(Instant::now());
+    loop {
+        let (request, generation, idle) = {
+            let mut state = shared.state.lock().unwrap();
+            let mut idle_since = None;
+            while (state.audio.pending.is_empty() || state.audio.alternate != 1)
+                && !shared.stop.load(Ordering::Acquire)
+            {
+                if state.audio.pending.is_empty() {
+                    idle_since.get_or_insert_with(Instant::now);
+                }
+                state = shared.wake.wait(state).unwrap();
+            }
+            if shared.stop.load(Ordering::Acquire) {
+                return;
+            }
+            let audio = &mut state.audio;
+            let request = audio.pending.pop_front().unwrap();
+            audio.active = Some(request.seq);
+            audio.cancel_active = false;
+            (
+                request,
+                audio.generation,
+                idle_since.map(|since| since.elapsed()).unwrap_or_default(),
+            )
+        };
+        let now = Instant::now();
+        let due = clock.deadline(generation, request.iso.len(), now, idle);
+        let mut state = shared.state.lock().unwrap();
+        while Instant::now() < due
+            && !shared.stop.load(Ordering::Acquire)
+            && !state.audio.cancel_active
+            && state.audio.generation == generation
+        {
+            let wait = due.saturating_duration_since(Instant::now());
+            state = shared.wake.wait_timeout(state, wait).unwrap().0;
+        }
+        if shared.stop.load(Ordering::Acquire) {
+            return;
+        }
+        if state.audio.cancel_active {
+            state.audio.active = None;
+            clock.reset();
+            continue;
+        }
+        let mut status = if state.audio.generation == generation {
+            0
+        } else {
+            -108
+        };
+        let mut reply = audio_reply(&request, status);
+        // State lock serializes completion handoff with UNLINK. A successful
+        // unlink can never be followed by RET_SUBMIT, including backpressure.
+        loop {
+            if shared.stop.load(Ordering::Acquire) {
+                return;
+            }
+            if state.audio.cancel_active {
+                state.audio.active = None;
+                clock.reset();
+                break;
+            }
+            if state.audio.generation != generation && status == 0 {
+                status = -108;
+                reply = audio_reply(&request, status);
+            }
+            match completed.try_send(reply) {
+                Ok(()) => {
+                    state.audio.active = None;
+                    break;
+                }
+                Err(TrySendError::Disconnected(_)) => return,
+                Err(TrySendError::Full(value)) => {
+                    reply = value;
+                    state = shared
+                        .wake
+                        .wait_timeout(state, Duration::from_millis(2))
+                        .unwrap()
+                        .0;
+                }
+            }
         }
     }
 }
@@ -764,6 +1176,434 @@ mod tests {
             interval: 0,
             iso: Vec::new(),
         }
+    }
+    #[test]
+    fn silent_microphone_descriptors_and_legacy_camera_are_consistent() {
+        let legacy: Config = serde_json::from_value(serde_json::json!({
+            "name":"Fixture","serial":"same-serial","width":64,"height":48,
+            "fps":30,"test_pattern":false
+        }))
+        .unwrap();
+        assert!(!legacy.microphone);
+        let mut enabled = legacy.clone();
+        enabled.microphone = true;
+        let base = legacy.configuration_descriptor();
+        let descriptors = enabled.configuration_descriptor();
+        assert_eq!(base.len(), 143);
+        assert_eq!(descriptors.len(), base.len() + audio_descriptors().len());
+        assert_eq!(
+            u16::from_le_bytes([descriptors[2], descriptors[3]]) as usize,
+            descriptors.len()
+        );
+        assert_eq!(descriptors[4], 4);
+        let mut video_prefix = descriptors[..base.len()].to_vec();
+        video_prefix[2..4].copy_from_slice(&base[2..4]);
+        video_prefix[4] = 2;
+        assert_eq!(video_prefix, base);
+        assert_eq!(enabled.device_descriptor(), legacy.device_descriptor());
+        assert_eq!(enabled.string_descriptor(3), legacy.string_descriptor(3));
+        assert_eq!(enabled.string_descriptor(2), legacy.string_descriptor(2));
+        let microphone = enabled.string_descriptor(4).unwrap();
+        assert_eq!(
+            String::from_utf16(
+                &microphone[2..]
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|b| u16::from_le_bytes([b[0], b[1]]))
+                    .collect::<Vec<_>>()
+            )
+            .unwrap(),
+            "Microphone"
+        );
+        assert_eq!(audio_descriptors()[7], 2); // Adapter keeps the product name.
+        assert_eq!(audio_descriptors()[16], 2);
+        assert_eq!(
+            enabled.device().interfaces,
+            vec![[14, 1, 0, 0], [14, 2, 0, 0], [1, 1, 0, 0], [1, 2, 0, 0]]
+        );
+        let mut position = 0;
+        let mut audio_endpoint = false;
+        let other = enabled.other_speed_descriptor();
+        while position < descriptors.len() {
+            let length = descriptors[position] as usize;
+            assert!(length >= 2 && position + length <= descriptors.len());
+            let d = &descriptors[position..position + length];
+            if d[1] == 5 && d[2] == 0x82 {
+                assert_eq!(d, &[9, 5, 0x82, 0x0d, 96, 0, 4, 0, 0]);
+                assert_eq!(other[position + 6], 1);
+                audio_endpoint = true;
+            }
+            if d[1] == 5 && d[2] == 0x81 {
+                assert_eq!(&other[position + 4..position + 6], &64u16.to_le_bytes());
+            }
+            position += length;
+        }
+        assert!(audio_endpoint);
+        assert_eq!(
+            &audio_descriptors()[17..26],
+            &[9, 0x24, 1, 0, 1, 39, 0, 1, 3]
+        );
+        let mut original_other = legacy.configuration_descriptor();
+        original_other[1] = 7;
+        let n = original_other.len();
+        original_other[n - 3..n - 1].copy_from_slice(&64u16.to_le_bytes());
+        assert_eq!(legacy.other_speed_descriptor(), original_other);
+    }
+    fn audio_test_session(
+        capacity: usize,
+        worker: bool,
+    ) -> (UvcSession, std::sync::mpsc::Receiver<Completion>) {
+        let (completed, rx) = std::sync::mpsc::sync_channel(capacity);
+        let shared = Arc::new(Shared {
+            state: Mutex::new(State {
+                pending: VecDeque::new(),
+                active: None,
+                cancel_active: false,
+                committed: false,
+                audio: AudioState::default(),
+            }),
+            wake: Condvar::new(),
+            stop: AtomicBool::new(false),
+        });
+        let audio_worker = if worker {
+            let signal = shared.clone();
+            let output = completed.clone();
+            Some(thread::spawn(move || stream_silence(signal, output)))
+        } else {
+            None
+        };
+        (
+            UvcSession {
+                shared,
+                completed,
+                config: Config {
+                    microphone: true,
+                    ..Config::default()
+                },
+                worker: Mutex::new(None),
+                audio_worker: Mutex::new(audio_worker),
+            },
+            rx,
+        )
+    }
+    #[test]
+    fn silent_microphone_clock_keeps_rate_when_windows_wakes_late() {
+        let start = Instant::now();
+        let mut clock = AudioClock::new(start);
+        let mut now = start;
+        let mut batches = 0u64;
+        // Model a 15.625 ms Windows timer while the host queues 10 ms ISO
+        // batches. Repeated relative sleeps lose ~36% of the nominal rate.
+        let quantum = Duration::from_micros(15_625);
+        while now.duration_since(start) < Duration::from_secs(5) {
+            let deadline = clock.deadline(1, 10, now, Duration::ZERO);
+            if deadline > now {
+                let wait = deadline.duration_since(now).as_nanos();
+                let ticks = wait.div_ceil(quantum.as_nanos()) as u32;
+                now += quantum * ticks;
+            }
+            batches += 1;
+        }
+        let wall = now.duration_since(start);
+        let audio = Duration::from_millis(batches * 10);
+        assert!(
+            wall.saturating_sub(audio) <= quantum,
+            "late wakes must not reduce the sustained sample clock"
+        );
+        assert_eq!(clock.due, start + audio);
+        // Explicit stop/cancel, a real input-queue idle period and a large
+        // scheduling gap re-anchor; they must not dump old batches forever.
+        clock.reset();
+        assert_eq!(
+            clock.deadline(1, 10, now, Duration::ZERO),
+            now + Duration::from_millis(10)
+        );
+        now += Duration::from_millis(150);
+        assert_eq!(
+            clock.deadline(1, 10, now, Duration::from_millis(120)),
+            now + Duration::from_millis(10)
+        );
+        now += Duration::from_millis(300);
+        assert_eq!(
+            clock.deadline(1, 10, now, Duration::ZERO),
+            now + Duration::from_millis(10)
+        );
+        now += Duration::from_millis(5);
+        assert_eq!(
+            clock.deadline(2, 10, now, Duration::ZERO),
+            now + Duration::from_millis(10)
+        );
+    }
+    fn audio_request(seq: u32, count: usize) -> Submit {
+        let mut r = request(seq, 2, 1, count * AUDIO_PACKET, [0; 8], Vec::new());
+        r.packet_count = count as u32;
+        r.interval = 8;
+        r.iso = (0..count)
+            .map(|n| wire::IsoPacket {
+                offset: (n * AUDIO_PACKET) as u32,
+                length: AUDIO_PACKET as u32,
+                ..wire::IsoPacket::default()
+            })
+            .collect();
+        r
+    }
+    fn set_audio_alt(session: &UvcSession, alt: u8) {
+        assert!(
+            session
+                .control(&request(
+                    900,
+                    0,
+                    0,
+                    0,
+                    [1, 11, alt, 0, 3, 0, 0, 0],
+                    Vec::new()
+                ))
+                .is_some()
+        );
+    }
+    #[test]
+    fn silent_microphone_controls_match_advertised_rate_mute_and_alternates() {
+        let (session, _rx) = audio_test_session(8, false);
+        assert_eq!(
+            session.control(&request(
+                1,
+                0,
+                1,
+                1,
+                [0x81, 10, 0, 0, 3, 0, 1, 0],
+                Vec::new()
+            )),
+            Some(vec![0])
+        );
+        set_audio_alt(&session, 1);
+        assert_eq!(
+            session.control(&request(
+                1,
+                0,
+                1,
+                1,
+                [0x81, 10, 0, 0, 3, 0, 1, 0],
+                Vec::new()
+            )),
+            Some(vec![1])
+        );
+        for code in 0x81..=0x83 {
+            assert_eq!(
+                session.control(&request(
+                    2,
+                    0,
+                    1,
+                    3,
+                    [0xa2, code, 0, 1, 0x82, 0, 3, 0],
+                    Vec::new()
+                )),
+                Some(vec![0x80, 0xbb, 0])
+            );
+        }
+        assert_eq!(
+            session.control(&request(
+                2,
+                0,
+                1,
+                3,
+                [0xa2, 0x84, 0, 1, 0x82, 0, 3, 0],
+                Vec::new()
+            )),
+            Some(vec![0, 0, 0])
+        );
+        assert!(
+            session
+                .control(&request(
+                    2,
+                    0,
+                    0,
+                    3,
+                    [0x22, 1, 0, 1, 0x82, 0, 3, 0],
+                    vec![0x44, 0xac, 0]
+                ))
+                .is_some()
+        );
+        assert_eq!(
+            session.control(&request(
+                2,
+                0,
+                1,
+                3,
+                [0xa2, 0x81, 0, 1, 0x82, 0, 3, 0],
+                Vec::new()
+            )),
+            Some(vec![0x80, 0xbb, 0])
+        );
+        assert!(
+            session
+                .control(&request(3, 0, 0, 1, [0x21, 1, 0, 1, 2, 2, 1, 0], vec![1]))
+                .is_some()
+        );
+        assert_eq!(
+            session.control(&request(
+                4,
+                0,
+                1,
+                1,
+                [0xa1, 0x81, 0, 1, 2, 2, 1, 0],
+                Vec::new()
+            )),
+            Some(vec![1])
+        );
+        assert!(
+            session
+                .control(&request(5, 0, 0, 1, [0x21, 1, 1, 1, 2, 2, 1, 0], vec![1]))
+                .is_none()
+        );
+        assert!(
+            session
+                .control(&request(6, 0, 0, 0, [1, 11, 2, 0, 3, 0, 0, 0], Vec::new()))
+                .is_none()
+        );
+        assert!(
+            session
+                .control(&request(7, 0, 0, 0, [0, 9, 0, 0, 0, 0, 0, 0], Vec::new()))
+                .is_some()
+        );
+        assert_eq!(
+            session.control(&request(
+                8,
+                0,
+                1,
+                1,
+                [0x80, 8, 0, 0, 0, 0, 1, 0],
+                Vec::new()
+            )),
+            Some(vec![0])
+        );
+        assert!(
+            session
+                .control(&request(9, 0, 0, 0, [1, 11, 1, 0, 3, 0, 0, 0], Vec::new()))
+                .is_none()
+        );
+    }
+    #[test]
+    fn silent_microphone_iso_is_paced_compacted_and_independent_of_video() {
+        let frames = Frames::new(Config {
+            width: 64,
+            height: 48,
+            microphone: true,
+            test_pattern: false,
+            ..Config::default()
+        })
+        .unwrap();
+        assert!(!frames.source_live());
+        let (tx, rx) = std::sync::mpsc::sync_channel(8);
+        let session = UvcProvider::new(frames).open(BUSID, tx).unwrap();
+        session
+            .submit(request(1, 0, 0, 0, [1, 11, 1, 0, 3, 0, 0, 0], Vec::new()))
+            .unwrap();
+        assert_eq!(
+            wire::u32be(&rx.recv_timeout(Duration::from_secs(1)).unwrap().header[20..]),
+            0
+        );
+        let mut req = audio_request(2, 3);
+        req.length = 768;
+        req.iso = vec![
+            wire::IsoPacket {
+                offset: 0,
+                length: 128,
+                ..Default::default()
+            },
+            wire::IsoPacket {
+                offset: 128,
+                length: 128,
+                ..Default::default()
+            },
+            wire::IsoPacket {
+                offset: 512,
+                length: 256,
+                ..Default::default()
+            },
+        ];
+        assert!(valid_audio_request(&req));
+        let started = Instant::now();
+        session.submit(req).unwrap();
+        let reply = rx.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert!(started.elapsed() >= Duration::from_millis(2));
+        assert_eq!(reply.data, vec![0; 288]);
+        assert_eq!(wire::u32be(&reply.header[24..]), 288);
+        assert_eq!(wire::u32be(&reply.header[36..]), 0);
+        assert_eq!(
+            reply
+                .iso
+                .iter()
+                .map(|p| (p.offset, p.length, p.actual, p.status))
+                .collect::<Vec<_>>(),
+            vec![(0, 128, 96, 0), (128, 128, 96, 0), (512, 256, 96, 0)]
+        );
+        let mut bytes = Vec::new();
+        reply.write(&mut bytes).unwrap();
+        assert_eq!(bytes.len(), 48 + 288 + 48);
+        assert_eq!(wire::u32be(&bytes[48 + 288 + 32..]), 512);
+        let mut bad = audio_request(3, 2);
+        bad.iso[1].offset = 1;
+        assert!(!valid_audio_request(&bad));
+        session.submit(bad).unwrap();
+        let rejected = rx.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert_eq!(wire::u32be(&rejected.header[20..]) as i32, -22);
+        assert_eq!(rejected.iso.len(), 2);
+        assert!(
+            rejected
+                .iso
+                .iter()
+                .all(|p| p.actual == 0 && p.status == -22)
+        );
+        assert!(!valid_audio_request(&audio_request(
+            4,
+            AUDIO_MAX_PACKETS + 1
+        )));
+    }
+    #[test]
+    fn silent_microphone_unlink_stop_restart_and_full_queue_shutdown_drain() {
+        let (session, rx) = audio_test_session(1, true);
+        set_audio_alt(&session, 1);
+        session.submit(audio_request(1, 512)).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(1);
+        while session.shared.state.lock().unwrap().audio.active != Some(1) {
+            assert!(Instant::now() < deadline);
+            thread::yield_now();
+        }
+        session.submit(audio_request(2, 1)).unwrap();
+        session.cancel(3, 2).unwrap();
+        assert_eq!(
+            wire::u32be(&rx.recv_timeout(Duration::from_secs(1)).unwrap().header),
+            wire::RET_UNLINK
+        );
+        session.cancel(4, 1).unwrap();
+        let cancel = rx.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert_eq!(wire::u32be(&cancel.header), wire::RET_UNLINK);
+        assert_eq!(wire::u32be(&cancel.header[20..]), 0);
+        assert!(rx.recv_timeout(Duration::from_millis(10)).is_err());
+        session.submit(audio_request(5, 1)).unwrap();
+        assert_eq!(
+            wire::u32be(&rx.recv_timeout(Duration::from_millis(100)).unwrap().header[4..]),
+            5
+        );
+        session.submit(audio_request(6, 512)).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(1);
+        while session.shared.state.lock().unwrap().audio.active != Some(6) {
+            assert!(Instant::now() < deadline);
+            thread::yield_now();
+        }
+        set_audio_alt(&session, 0);
+        let stopped = rx.recv_timeout(Duration::from_millis(100)).unwrap();
+        assert_eq!(wire::u32be(&stopped.header[4..]), 6);
+        assert_eq!(wire::u32be(&stopped.header[20..]) as i32, -108);
+        set_audio_alt(&session, 1);
+        session.submit(audio_request(7, 1)).unwrap();
+        thread::sleep(Duration::from_millis(5)); // Leave the bounded output full.
+        session.submit(audio_request(8, 1)).unwrap();
+        thread::sleep(Duration::from_millis(5));
+        let started = Instant::now();
+        drop(session);
+        assert!(started.elapsed() < Duration::from_millis(500));
     }
     #[test]
     fn usb_frame_is_complete_jpeg_with_stable_timestamp_and_frame_boundary() {

@@ -29,6 +29,8 @@ Both roles:
   logs                                  Print log locations
   video settings|status|on|off           Manage USB camera receiver/server or video sender/client
   video configure FILE                  Apply video settings JSON (key_file contains no inline secret)
+  local-camera settings|status|on|off    Client-local USB camera and Unity Capture Client sender
+  local-camera configure FILE           Apply local receiver settings and keep its sender synchronized
   about                                 Print version and repository
   cameras                               List cameras available in local Windows
   camera-modes CAMERA                   List video modes for an exact camera path/identity
@@ -337,6 +339,30 @@ pub fn run(mut args: Vec<String>) -> io::Result<()> {
         json!({"role":if role==Role::Server {"server"}else{"client"},"command":command,"arguments":args}),
     );
     match command.as_str() {
+        "local-camera" if role == Role::Client && !args.is_empty() => {
+            let file = crate::video::receiver_path(&config);
+            match args[0].as_str() {
+                "settings" if args.len() == 1 => print(&settings::read::<Value>(&file)?),
+                "status" if args.len() == 1 => print(&json!({
+                    "receiver":crate::video::status(&file),
+                    "sender":crate::video::status(&crate::video::local_sender_path(&config))
+                })),
+                "configure" if args.len() == 2 => {
+                    let value: Value = settings::read(Path::new(&args[1]))?;
+                    crate::desktop::local_camera_apply(&config, value)?;
+                    print(&json!({"success":true}))
+                }
+                "on" | "off" if args.len() == 1 => {
+                    let mut value: Value = settings::read(&file)?;
+                    value["enabled"] = json!(args[0] == "on");
+                    crate::desktop::local_camera_apply(&config, value)?;
+                    print(&json!({"success":true}))
+                }
+                _ => Err(invalid(
+                    "local-camera requires settings|status|on|off|configure FILE",
+                )),
+            }
+        }
         "video" if !args.is_empty() => {
             let receive = role == Role::Server;
             let file = if receive {

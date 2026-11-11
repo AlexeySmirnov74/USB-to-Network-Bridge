@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.6
+
+- Add an optional silent USB Audio Class microphone to each generated USB/UVC camera.
+- Camera and capture audio share one composite USB parent and device container; microphone data is always zero PCM, with no physical microphone capture or network audio.
+- Add a saved Silent microphone setting to server and client-local camera dialogs; old configurations remain video-only until enabled.
+- Keep USB identities, video format and independent routing while re-enumerating only the configured generated camera.
+
+## 0.2.5
+
+- Add a separate, renameable USB/UVC camera on the client and a loopback-only receive mode.
+- Keep client-local and network video senders independent, with separate scheduled recovery tasks and keys.
+- Identify Unity Capture slots by their unique DirectShow monikers, avoiding duplicate placeholder identities.
+- Add explicit Unity Capture Server / Client producer setup and reject generated USB camera capture loops.
+- Resolve interactive capture accounts from the Windows token and grant private keys to the creating user, including elevated setup followed by a limited sender.
+- Allow installer maintenance to resume owned video tasks as well as controller tasks.
+
 ## 0.2.4 — 2026-11-11
 
 ### Documentation

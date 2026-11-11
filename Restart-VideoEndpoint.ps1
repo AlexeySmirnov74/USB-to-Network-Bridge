@@ -1,7 +1,7 @@
 ﻿# Independent video watchdog. Recover only the registered, enabled endpoint.
-param([Parameter(Mandatory=$true)][ValidateSet('Receive','Send')][string]$Role,[Parameter(Mandatory=$true)][string]$Config)
+param([Parameter(Mandatory=$true)][ValidateSet('Receive','Send','LocalSend')][string]$Role,[Parameter(Mandatory=$true)][string]$Config)
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
-$Config=[IO.Path]::GetFullPath($Config);$exe=Join-Path $PSScriptRoot 'usbbridge-camera.exe';$mode=$Role.ToLowerInvariant();$taskName='USBBridge.Video.'+$Role;$taskPath='\USBBridge\';$lease=$null
+$Config=[IO.Path]::GetFullPath($Config);$exe=Join-Path $PSScriptRoot 'usbbridge-camera.exe';$mode=if($Role-eq 'Receive'){'receive'}else{'send'};$healthMode=if($Role-eq 'LocalSend'){'local-send'}else{$mode};$taskName='USBBridge.Video.'+$Role;$taskPath='\USBBridge\';$lease=$null
 try {
  try{$lease=[IO.File]::Open([IO.Path]::ChangeExtension($Config,'operation-video.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)}catch [IO.IOException]{[ordered]@{action='configuration_busy'}|ConvertTo-Json -Compress;exit 0}
  $task=Get-ScheduledTask -TaskPath $taskPath -TaskName $taskName -ErrorAction SilentlyContinue
