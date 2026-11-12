@@ -1,0 +1,37 @@
+name: Offline driver chain diagnostics
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  certificates:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect existing Windows public CA certificates
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $wanted=@('4EFC31460C619ECAE59C1BCE2C008036D94C84B8','F40042E2E5F7E8EF8189FED15519AECE42C3BFA2')
+          $result=@(foreach($location in @('CurrentUser','LocalMachine')) {
+            foreach($name in @('Root','CA','AuthRoot')) {
+              $store=[Security.Cryptography.X509Certificates.X509Store]::new($name,$location)
+              try {
+                $store.Open([Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
+                foreach($thumb in $wanted) {
+                  $match=@($store.Certificates|Where-Object Thumbprint -eq $thumb)
+                  [ordered]@{location=$location;store=$name;sha1=$thumb;present=($match.Count-gt 0);subject=@($match|ForEach-Object Subject)}
+                }
+              }finally{$store.Dispose()}
+            }
+          })
+          $result|ConvertTo-Json -Depth 5
+      - name: Fetch and verify pinned inputs at build time
+        shell: powershell
+        run: |
+          $ProgressPreference='SilentlyContinue'
+          try { ./Download-Drivers.ps1 -Role Both } catch { Write-Host ('SIGNATURE_DIAGNOSTIC: '+$_.Exception.Message) }
+      - name: Inspect offline publisher and timestamp chains
+        shell: powershell
+        run: |
+          if(Test-Path -LiteralPath ./Test-DriverCertificateChain.ps1){./Test-DriverCertificateChain.ps1}
