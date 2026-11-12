@@ -36,14 +36,24 @@ fn mode(role: Role) -> &'static str {
         "--client"
     }
 }
-fn pause(stop: &AtomicBool, duration: Duration) {
+fn pause(
+    stop: &AtomicBool,
+    duration: Duration,
+    mut exit_requested: impl FnMut() -> io::Result<bool>,
+) -> io::Result<bool> {
     let end = Instant::now() + duration;
     while !stop.load(Ordering::Acquire) && Instant::now() < end {
+        // The marker is written by another process: the local stop flag alone
+        // cannot wake this wait. Keep the normal supervision/heartbeat cadence.
+        if exit_requested()? {
+            return Ok(true);
+        }
         thread::sleep(
             end.saturating_duration_since(Instant::now())
                 .min(Duration::from_millis(100)),
         );
     }
+    Ok(false)
 }
 fn spawn(config: &Path, role: Role) -> io::Result<Child> {
     let stderr = config.with_extension("agent-errors.log");
@@ -68,6 +78,9 @@ fn spawn(config: &Path, role: Role) -> io::Result<Child> {
         .spawn()
 }
 pub fn run(config: &Path, role: Role, stop: Arc<AtomicBool>) -> io::Result<()> {
+    if crate::lifecycle::is_exit_requested(config, role)? {
+        return Ok(());
+    }
     let name = role_name(role);
     let wire_role = name.to_ascii_lowercase();
     crate::diagnostics::init(config, &format!("{wire_role}-supervisor"));
@@ -85,7 +98,48 @@ pub fn run(config: &Path, role: Role, stop: Arc<AtomicBool>) -> io::Result<()> {
         "supervisor.start",
         json!({"role":wire_role,"heartbeat_timeout_seconds":health::TIMEOUT.as_secs()}),
     );
+    let mut exit_held = false;
+    let mut hold_error_reported = false;
     while !stop.load(Ordering::Acquire) {
+        let exit_requested = match crate::lifecycle::is_exit_requested(config, role) {
+            Ok(requested) => requested,
+            Err(error) if exit_held => {
+                // Once handed off, marker I/O cannot release the task's job.
+                // Only a valid cleared marker may resume normal supervision.
+                if !hold_error_reported {
+                    crate::diagnostics::event(
+                        "supervisor.exit.marker_error",
+                        json!({"role":wire_role,"error":error.to_string(),"action":"retain_handoff"}),
+                    );
+                    hold_error_reported = true;
+                }
+                true
+            }
+            Err(error) => return Err(error),
+        };
+        if exit_requested {
+            if !exit_held {
+                crate::diagnostics::event(
+                    "supervisor.exit.handoff",
+                    json!({"role":wire_role,"reason":"coordinator owns task and driver shutdown"}),
+                );
+                exit_held = true;
+            }
+            // Completing this scheduled task can terminate its descendant job,
+            // including an in-flight driver helper. Keep the entire supervisor
+            // alive until the coordinator drains the backend and stops its task.
+            // No heartbeat/recovery/respawn work may run while the role is held.
+            thread::sleep(Duration::from_millis(100));
+            continue;
+        }
+        if exit_held {
+            // A failed/canceled coordinator may roll its marker back. Resume the
+            // retained child normally, with a fresh health grace period.
+            progress = Progress::new(started.elapsed());
+            exit_held = false;
+            hold_error_reported = false;
+            crate::diagnostics::event("supervisor.exit.resumed", json!({"role":wire_role}));
+        }
         lease.beat()?;
         if let Some(process) = child.as_mut() {
             let pid = process.id();
@@ -117,7 +171,9 @@ pub fn run(config: &Path, role: Role, stop: Arc<AtomicBool>) -> io::Result<()> {
         }
         if child.is_none() && Instant::now() >= next_start {
             // Respect a controller started manually; never terminate a process we do not own.
-            if !instance::running(name, "Control")? {
+            if !crate::lifecycle::is_exit_requested(config, role)?
+                && !instance::running(name, "Control")?
+            {
                 attempt = attempt.saturating_add(1);
                 match spawn(config, role) {
                     Ok(process) => {
@@ -136,7 +192,20 @@ pub fn run(config: &Path, role: Role, stop: Arc<AtomicBool>) -> io::Result<()> {
             }
             next_start = Instant::now() + Duration::from_secs(5);
         }
-        pause(&stop, Duration::from_secs(2));
+        // A marker wakes idle supervision promptly, then enters the handoff
+        // above; it must never complete the task or kill its child on its own.
+        pause(&stop, Duration::from_secs(2), || {
+            let requested = crate::lifecycle::is_exit_requested(config, role)?;
+            if requested {
+                // Latch at the first observation, before the next marker read.
+                exit_held = true;
+                crate::diagnostics::event(
+                    "supervisor.exit.handoff",
+                    json!({"role":wire_role,"reason":"coordinator owns task and driver shutdown"}),
+                );
+            }
+            Ok(requested)
+        })?;
     }
     if let Some(mut process) = child {
         let _ = process.kill();
@@ -207,6 +276,9 @@ pub fn status(config: &Path, role: Role) -> io::Result<Value> {
 }
 
 pub fn check(config: &Path, role: Role) -> io::Result<()> {
+    if crate::lifecycle::is_exit_requested(config, role)? {
+        return Ok(());
+    }
     let name = role_name(role);
     crate::diagnostics::init(config, &format!("{}-health", name.to_ascii_lowercase()));
     let Some(_instance) = instance::acquire(name, "HealthCheck")? else {
@@ -233,6 +305,9 @@ pub fn check(config: &Path, role: Role) -> io::Result<()> {
         .parent()
         .ok_or_else(|| io::Error::other("Runtime directory missing"))?
         .to_path_buf();
+    if crate::lifecycle::is_exit_requested(config, role)? {
+        return Ok(());
+    }
     let output = Command::new("powershell.exe")
         .args([
             "-NoProfile",
@@ -257,4 +332,64 @@ pub fn check(config: &Path, role: Role) -> io::Result<()> {
         ));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn external_exit_interrupts_the_existing_idle_wait() {
+        let stop = AtomicBool::new(false);
+        let mut polls = 0;
+        assert!(
+            pause(&stop, Duration::from_secs(2), || {
+                polls += 1;
+                Ok(polls == 2)
+            })
+            .unwrap()
+        );
+        assert_eq!(polls, 2);
+    }
+
+    #[test]
+    fn local_stop_avoids_marker_io_and_sleep() {
+        let stop = AtomicBool::new(true);
+        assert!(
+            !pause(&stop, Duration::from_secs(2), || {
+                panic!("an already stopped supervisor must not poll")
+            })
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn marker_errors_remain_errors() {
+        let stop = AtomicBool::new(false);
+        let error = pause(&stop, Duration::from_secs(2), || {
+            Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "marker ACL",
+            ))
+        })
+        .unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+    }
+
+    #[test]
+    fn ordinary_wait_sleeps_instead_of_spinning() {
+        let stop = AtomicBool::new(false);
+        let began = Instant::now();
+        let duration = Duration::from_millis(20);
+        let mut polls = 0;
+        assert!(
+            !pause(&stop, duration, || {
+                polls += 1;
+                Ok(false)
+            })
+            .unwrap()
+        );
+        assert!(began.elapsed() >= duration);
+        assert_eq!(polls, 1);
+    }
 }

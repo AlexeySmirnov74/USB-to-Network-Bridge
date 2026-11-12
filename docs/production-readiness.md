@@ -9,6 +9,7 @@ Use Windows x64, Rust stable MSVC with rustfmt/Clippy, MSVC C++ Build Tools, Win
 ~~~powershell
 .\Build.ps1
 py -3 -m unittest discover -s tests -p 'test_*.py'
+.\Download-Drivers.ps1 -Role Both
 .\Package.ps1
 .\Build-Installer.ps1
 .\Test-Installer.ps1 -Elevate
@@ -20,8 +21,13 @@ CI builds the application, runs automated and installer lifecycle tests, and upl
 
 ## Files needed at runtime
 
+The distribution root contains the Server and Client desktop launcher EXEs only,
+plus `app`. Internal executables, helpers, examples, docs and dependency licenses
+are packaged inside `app`; repository source paths remain unchanged.
+`app/SHA256.json` lists all payload files relative to the distribution root.
+
 - Runtime: Publish-Device.ps1, Configure-Server.ps1, Set-ServerState.ps1, Switch-Backend.ps1, Ensure-Exports.ps1, Native-Capture.ps1, Restart-UsbPort.ps1, New-BackendMutex.ps1 and Write-DebugEvent.ps1.
-- Setup and maintenance: Open-Installation.ps1, Configure-Installation.ps1, Maintain-Installation.ps1, Restart-AgentSupervisor.ps1, Set-Autostart.ps1, Download-Drivers.ps1, Install-ProductionDrivers.ps1 and Inspect-Host.ps1.
+- Setup and maintenance: Open-Installation.ps1, FirstRun-Identity.ps1, Configure-Installation.ps1, Migrate-PortableLayout.ps1, Maintain-Installation.ps1, Restart-AgentSupervisor.ps1, Set-Autostart.ps1, Download-Drivers.ps1, Install-ProductionDrivers.ps1 and Inspect-Host.ps1.
 - Build and qualification scripts are development tools. Removing runtime helpers from an installed copy breaks operation.
 
 ## Development verification
@@ -41,3 +47,11 @@ The public release assets are the two desktop launcher EXEs, MSI, portable ZIP, 
 See [installation](installation.md). Installer maintenance affects only tasks, processes and firewall rules owned by its exact executable path. USB driver installations and private role data are retained during application removal.
 
 For migration, back up private configuration and owned task/firewall settings. Stop the old installation explicitly before configuring the new role. Update runtime/profile/config paths and startup actions together; moving a live server interrupts its own device sessions. Do not ship toolchain compatibility junctions.
+
+## Preparing the offline driver payload
+
+Run `Download-Drivers.ps1 -Role Both` once on the connected build machine. It fetches only the exact upstream installers from `driver-installers.json`; `Verify-DriverInstaller.ps1` verifies their hashes and signatures locally. `Package.ps1` requires both verified files and copies only those named installers into the runtime payload. `Ensure-ProductionDrivers.ps1` handles local-only installation/repair and is shared by first-run setup and generated-camera receivers.
+
+Publish the matching driver-sources archive alongside binary releases, as described in [driver source availability](driver-sources.md). The project source ZIP remains a text-only archive of the reviewed Git tree. It excludes runtime settings, downloaded binaries, driver sources, toolchains, logs and credentials.
+
+Build the corresponding-source mirror after placing the exact files listed in `driver-sources.json` under `tools/driver-sources`: `python Package-DriverSources.py`. An alternate local directory can be selected with `--source-directory PATH`. This command verifies every source hash and never downloads files.

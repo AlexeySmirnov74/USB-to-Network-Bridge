@@ -11,7 +11,9 @@
 
 An open-source USB over IP (USB/IP) redirector for Windows 11 x64. Share real USB devices between Windows computers over a LAN or VPN, including webcams and Android phone ADB/storage. A Rust server exports selected devices; a Windows client imports them through a virtual USB controller. No activation, trial timer or license-based device limit.
 
-**v0.2.6 — Windows 11 x64.** A Rust USB server and client with a desktop GUI, command-line control, automatic discovery and reconnect, plus an MSI installer and portable ZIP. [Download the latest release](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+**v0.2.11 — Windows 11 x64.** A Rust USB server and client with a desktop GUI, command-line control, automatic discovery and reconnect, plus an MSI installer and portable ZIP. [Download the latest release](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+
+**Offline setup:** the portable ZIP and MSI include the signed server and client driver installers. Copy both launchers and the entire `app` folder to another Windows 11 x64 PC; first-run installation uses only local files. [Installation](docs/installation.md) · [Driver licenses and source](docs/driver-sources.md).
 
 **Agent health in v0.2.1:** server and client controllers run under separate supervisors. Exited controllers restart automatically; stopped heartbeat progress is detected after two minutes. Independent one-minute scheduled checks also recover a missing or stalled supervisor. Stale reports no longer claim a connected device. Use `usbbridge --config FILE server health` or `client health` to inspect current health. See [changes](CHANGELOG.md).
 
@@ -81,55 +83,33 @@ For a concise product description and common use cases, see the [project FAQ](do
 
 You need two Windows 11 x64 computers, administrator access for driver/setup operations, and a trusted network or VPN. Secure Boot can remain enabled: no test signing is required for the upstream drivers. Only publish devices that may be handed over to another computer; capturing a mouse, keyboard, or disk removes its local availability.
 
-### 1. Get the applications
+### 1. Get and open the applications
 
-Download the MSI or portable ZIP from [Releases](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest). The [MSI guide](docs/installation.md) covers role selection and Start menu first-run setup.
+Download the MSI or complete portable ZIP from [Releases](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest). The [installation guide](docs/installation.md) covers both layouts and moving a portable copy to another PC. Developer builds are available from successful [CI runs](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/actions/workflows/ci.yml).
 
-For portable deployment, extract the application ZIP into a writable directory such as `C:\USBBridge` on both computers. Run the commands below from that directory and keep the `.ps1` helpers beside the EXEs. Developer builds are also available from successful [CI runs](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/actions/workflows/ci.yml).
+Extract the complete portable ZIP, for example to `C:\USBBridge`. Its root has only two launchers and the support folder:
 
-
-### 2. Set up the server
-
-After setup, double-click **`USB-to-Network-Bridge-Server.exe`** on the server or **`USB-to-Network-Bridge-Client.exe`** on the client. Both open the correct GUI without a console window and reuse saved settings. Keep them with the complete application folder. The MSI Start menu shortcuts use these launchers too; `usbbridge.exe` remains the command-line tool.
-
-[Download Server EXE](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Server.exe) · [Download Client EXE](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Client.exe). Place individual EXE downloads in the complete application folder described above.
-
-In **Windows PowerShell as Administrator**, on the computer with the physical devices:
-
-```powershell
-Set-Location C:\USBBridge
-# Replace the documentation address with the actual client's LAN/VPN IP.
-.\Install-ProductionDrivers.ps1 -Role Server -AllowedPeer 192.0.2.10
-Copy-Item .\server.example.psd1 .\server.local.psd1
-notepad .\server.local.psd1
+```text
+USB-to-Network-Bridge-Server.exe
+USB-to-Network-Bridge-Client.exe
+app/
 ```
 
-Set `AllowedPeers` to the actual client IP address(es). Keep `Export = @()` for the first start; select devices in the GUI afterwards. If the upstream installer requests a restart, restart manually before continuing. Existing driver installations are not overwritten: inspect/manage them with `Inspect-Host.ps1` and the upstream installer instead of reinstalling blindly.
+Double-click **`USB-to-Network-Bridge-Server.exe`** or **`USB-to-Network-Bridge-Client.exe`**. The MSI Start menu shortcuts use these same launchers. Keep `app` with them: it contains the internal executables, PowerShell helpers, documentation and licenses. The command-line tool is `app\usbbridge.exe`; individual launcher downloads need the complete matching package.
 
-```powershell
-.\Switch-Backend.ps1 -Backend Native -RuntimeDirectory C:\USBBridge
-.\Set-Autostart.ps1 -Role Server -RuntimeDirectory C:\USBBridge `
-    -Config C:\USBBridge\host.local.json -Profile C:\USBBridge\server.local.psd1
-.\USB-to-Network-Bridge-Server.exe
-```
+The launcher checks the selected role's required drivers automatically. Missing drivers are installed from the verified local installers in `app\tools\driver-installers`; setup and repair do not download anything. Keep the complete folder when copying to a new PC. Approve UAC when required, and restart Windows manually if requested. Secure Boot and driver signature settings are retained. Existing driver installations and role settings are reused.
 
-The tray icon and GUI show server status. Right-click a device → **Share**, or double-click an unshared device row. To use the stock transport, switch the server module in Settings or run `Switch-Backend.ps1 -Backend Usbipd`; changing the transport reconnects active devices.
+### 2. Start the server
 
-### 3. Set up the client
+Open the Server launcher on the PC with physical USB devices. A fresh server starts disabled, with only loopback allowed and no devices shared. In **Settings**, enter the actual client LAN/VPN IP addresses; enable the server, then right-click a device → **Share**, or double-click an unshared row. Choose **Native** or **usbipd-win** in server Settings; changing the backend reconnects active devices.
 
-In **Windows PowerShell as Administrator**, on the remote computer:
+### 3. Start the client
 
-```powershell
-Set-Location C:\USBBridge
-.\Install-ProductionDrivers.ps1 -Role Client
-Copy-Item .\client.example.json .\client.local.json
-# Restart manually first if the driver installer requests it.
-.\Set-Autostart.ps1 -Role Client -RuntimeDirectory C:\USBBridge `
-    -Config C:\USBBridge\client.local.json
-.\USB-to-Network-Bridge-Client.exe
-```
+Open the Client launcher on the remote PC. Choose **Find servers**, select a server and shared device, then **Connect**. Use **Add server** with the server's IP/hostname and ports when discovery cannot cross the network. Choices are saved and reconnect automatically; **Disconnect** cancels the corresponding choice. Selecting a server node pauses/resumes its remembered devices independently of other servers.
 
-Use **Find servers**, select a server, select a shared device, then **Connect**. If discovery cannot cross the network, use **Add server** with its LAN/VPN address. Saved device choices reconnect automatically; **Disconnect** cancels the corresponding choice. Selecting a server node allows pausing/resuming all its remembered devices without affecting other servers.
+When a configured portable client is copied to a different PC, choose whether to **keep saved server connections** or **start with new settings**; Cancel changes nothing. Keeping connections retains server/device selections and preferences, but machine-bound credentials and local-camera bindings must be configured again. A server copied to a different PC receives fresh machine-specific setup. See [moving a portable copy](docs/installation.md#moving-a-portable-copy-to-another-pc).
+
+Settings use paths relative to their JSON file; `@app` identifies the current application directory. To move an existing deployment on the same Windows installation, close the applications, move both launchers with the complete `app` folder, then open the required launcher. A one-time UAC request updates owned startup tasks, firewall rules and shortcuts while preserving settings, camera identities and keys. Windows registrations use full paths and are updated automatically.
 
 ### 4. Check the connection
 
@@ -145,6 +125,8 @@ Ports can be changed to **1–65535**. The USB data and catalog ports must diffe
 
 ## Operation and diagnostics
 
+Choose **File → Exit application** or **tray icon → Exit application** to stop that role completely, including its USB connections and video processes. Health checks respect this choice until the role is reopened or Windows restarts; saved startup settings are retained. Closing the window keeps background work running.
+
 Closing the GUI leaves background work running. Startup tasks restore the server/client after Windows starts, including before user logon; an interactive tray appears after logon. One instance of each role is allowed per computer. Disable startup with `Set-Autostart.ps1 -Role Server` (or `Client`) using the same runtime/config arguments and `-Disable`.
 
 Detailed rotating development logs are stored in `logs\*.debug.jsonl` beside the configuration: UI actions, USB identities/ports, reconnects, and errors. Video images, USB payloads, and passwords are not logged. Logs can still contain IP addresses, local paths, and device serial numbers; review them before posting publicly.
@@ -159,10 +141,11 @@ Requirements: Windows x64, Rust stable (MSVC target, `rustfmt`, `clippy`), MSVC 
 git clone https://github.com/AlexeySmirnov74/USB-to-Network-Bridge.git
 Set-Location USB-to-Network-Bridge
 .\Build.ps1
+.\Download-Drivers.ps1 -Role Both
 .\Package.ps1
 ```
 
-`Build.ps1` checks formatting, runs Clippy and tests, and builds seven release executables. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.6-windows-x64.zip` with runtime helpers, examples, docs, and dependency licenses. Drivers are downloaded from upstream, verified against pinned SHA-256 and Authenticode in `driver-installers.json`, and are not bundled. CI builds/packages without installing USB drivers; hardware tests remain separate.
+`Build.ps1` checks formatting, runs Clippy and tests, and builds seven release executables. Developers run `Download-Drivers.ps1 -Role Both` once with internet access before packaging. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.11-windows-x64.zip` including both original signed driver installers, runtime helpers, examples, docs and dependency licenses. SHA-256 and offline Authenticode checks use `driver-installers.json`. CI downloads the pinned inputs at build time and packages them without installing USB drivers; hardware tests remain separate.
 
 ## Installation and runtime
 

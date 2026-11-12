@@ -1,5 +1,6 @@
 ﻿# Start/stop the selected transport while preserving device selection and autostart.
 param([Parameter(Mandatory=$true)][string]$Config,[Parameter(Mandatory=$true)][string]$RequestFile,[switch]$Elevate)
+. (Join-Path $PSScriptRoot 'Portable-Paths.ps1')
 $ErrorActionPreference='Stop'
 $Config=[IO.Path]::GetFullPath($Config)
 $RequestFile=[IO.Path]::GetFullPath($RequestFile)
@@ -22,7 +23,9 @@ try{
     $hostData=Get-Content -LiteralPath $Config -Raw|ConvertFrom-Json
     $request=Get-Content -LiteralPath $RequestFile -Raw|ConvertFrom-Json
     if($request.enabled-isnot [bool]){throw 'Request enabled must be a boolean.'}
-    $runtime=(Resolve-Path -LiteralPath $hostData.runtime).Path
+    $runtime=(Resolve-Path -LiteralPath (Resolve-BridgeConfigPath $hostData.runtime $Config)).Path
+    $profile=(Resolve-Path -LiteralPath (Resolve-BridgeConfigPath $hostData.profile $Config)).Path
+    $hostData=ConvertTo-BridgePortableConfig $hostData $Config $runtime
     $agent=Join-Path $runtime 'usbbridge-agent.exe'
     $task=Get-ScheduledTask -TaskPath '\USBBridge\' -TaskName 'USBBridge.Server' -ErrorAction Stop
     if(@($task.Actions).Count-ne 1-or @($task.Actions|Where-Object {$_.Execute-ne $agent-or $_.Arguments-notlike ('*--host --config "'+$Config+'"*')}).Count){throw 'Server task belongs to another installation.'}
@@ -37,7 +40,7 @@ try{
         $running=Get-Process -Id $process.ProcessId -ErrorAction SilentlyContinue
         if($running){Stop-Process -Id $running.Id -Force;$running.WaitForExit()}
     }
-    & (Join-Path $runtime 'Switch-Backend.ps1') -Backend $backend -RuntimeDirectory $runtime -Profile $hostData.profile -Stop:(-not $request.enabled)
+    & (Join-Path $runtime 'Switch-Backend.ps1') -Backend $backend -RuntimeDirectory $runtime -Profile $profile -Stop:(-not $request.enabled)
     if(-not $?){throw 'Cannot change server state. See backend-switch-status.json.'}
     $hostData|Add-Member -NotePropertyName enabled -NotePropertyValue ([bool]$request.enabled) -Force
     Write-Atomic $Config $hostData
@@ -51,7 +54,7 @@ try{
     $failure=$_.Exception.Message
     if($stoppedController){
         try{
-            if(-not $oldEnabled){& (Join-Path $runtime 'Switch-Backend.ps1') -Backend $backend -RuntimeDirectory $runtime -Profile $hostData.profile -Stop}
+            if(-not $oldEnabled){& (Join-Path $runtime 'Switch-Backend.ps1') -Backend $backend -RuntimeDirectory $runtime -Profile $profile -Stop}
             $hostData|Add-Member -NotePropertyName enabled -NotePropertyValue $oldEnabled -Force
             Write-Atomic $Config $hostData
             $task|Enable-ScheduledTask|Out-Null

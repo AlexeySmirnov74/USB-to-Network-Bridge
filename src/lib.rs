@@ -25,6 +25,8 @@ pub mod instance;
 pub mod inventory;
 #[cfg(windows)]
 pub mod launcher;
+#[cfg(windows)]
+pub mod lifecycle;
 pub mod management;
 #[cfg(windows)]
 mod native_capture;

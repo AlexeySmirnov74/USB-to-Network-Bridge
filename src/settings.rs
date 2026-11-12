@@ -6,6 +6,275 @@ use std::{
     path::{Path, PathBuf},
 };
 
+// Filesystem paths in JSON are relative to that JSON, never the process cwd.
+// Device interface paths and camera monikers deliberately are not path fields.
+fn is_settings_path_field(name: &str) -> bool {
+    matches!(name, "runtime" | "profile" | "key_file" | "credential_file")
+}
+
+fn normalized_absolute(path: &Path) -> io::Result<PathBuf> {
+    use std::path::Component;
+    if !path.is_absolute() {
+        return Err(crate::wire::invalid("settings path is not fully qualified"));
+    }
+    let mut result = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if matches!(result.components().next_back(), Some(Component::Normal(_))) {
+                    result.pop();
+                } else {
+                    return Err(crate::wire::invalid(
+                        "settings path escapes the volume root",
+                    ));
+                }
+            }
+            _ => result.push(component.as_os_str()),
+        }
+    }
+    Ok(result)
+}
+
+fn same_path_component(first: std::path::Component<'_>, second: std::path::Component<'_>) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn CompareStringOrdinal(
+                first: *const u16,
+                first_len: i32,
+                second: *const u16,
+                second_len: i32,
+                ignore_case: i32,
+            ) -> i32;
+        }
+        let first: Vec<_> = first.as_os_str().encode_wide().collect();
+        let second: Vec<_> = second.as_os_str().encode_wide().collect();
+        // Windows uses ordinal case-insensitive filenames, including Cyrillic.
+        unsafe {
+            CompareStringOrdinal(
+                first.as_ptr(),
+                first.len() as i32,
+                second.as_ptr(),
+                second.len() as i32,
+                1,
+            ) == 2
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        first == second
+    }
+}
+
+fn relative_settings_path(path: &Path, base: &Path) -> Option<PathBuf> {
+    let path: Vec<_> = path.components().collect();
+    let base: Vec<_> = base.components().collect();
+    let common = path
+        .iter()
+        .zip(&base)
+        .take_while(|(a, b)| same_path_component(**a, **b))
+        .count();
+    // A volume/UNC share mismatch cannot be expressed as a relative path.
+    if common == 0
+        || base[common..]
+            .iter()
+            .any(|part| !matches!(part, std::path::Component::Normal(_)))
+    {
+        return None;
+    }
+    let mut result = PathBuf::new();
+    for _ in &base[common..] {
+        result.push("..");
+    }
+    for part in &path[common..] {
+        result.push(part.as_os_str());
+    }
+    if result.as_os_str().is_empty() {
+        result.push(".");
+    }
+    Some(result)
+}
+
+fn under_settings_base(path: &Path, base: &Path) -> Option<PathBuf> {
+    let relative = relative_settings_path(path, base)?;
+    if relative
+        .components()
+        .any(|part| matches!(part, std::path::Component::ParentDir))
+    {
+        None
+    } else {
+        Some(relative)
+    }
+}
+
+fn anchored_settings_path(anchor: &str, suffix: &Path) -> String {
+    if suffix == Path::new(".") {
+        anchor.into()
+    } else {
+        format!("{anchor}/{}", suffix.to_string_lossy().replace('\\', "/"))
+    }
+}
+
+fn resolve_anchored_settings_path(base: &Path, suffix: &str) -> io::Result<PathBuf> {
+    let resolved = normalized_absolute(&base.join(suffix))?;
+    if under_settings_base(&resolved, base).is_none() {
+        return Err(crate::wire::invalid(
+            "anchored settings path escapes its base directory",
+        ));
+    }
+    Ok(resolved)
+}
+
+fn resolve_settings_path(
+    value: &str,
+    base: &Path,
+    app: &Path,
+    common: Option<&Path>,
+) -> io::Result<PathBuf> {
+    let (anchor, suffix) = value.split_once(['/', '\\']).unwrap_or((value, ""));
+    if anchor.eq_ignore_ascii_case("@app") || anchor.eq_ignore_ascii_case("@programdata") {
+        let suffix = Path::new(suffix);
+        if suffix.has_root()
+            || suffix
+                .components()
+                .any(|part| matches!(part, std::path::Component::Prefix(_)))
+        {
+            return Err(crate::wire::invalid(
+                "anchored settings path must have a relative suffix",
+            ));
+        }
+    }
+    if anchor.eq_ignore_ascii_case("@app") {
+        return resolve_anchored_settings_path(app, suffix);
+    }
+    if anchor.eq_ignore_ascii_case("@programdata") {
+        let common = common.ok_or_else(|| {
+            crate::wire::invalid("PROGRAMDATA is unavailable for this settings path")
+        })?;
+        return resolve_anchored_settings_path(common, suffix);
+    }
+    if value.starts_with('@') {
+        return Err(crate::wire::invalid("unknown settings path anchor"));
+    }
+    let path = Path::new(value);
+    if path.is_absolute() {
+        return normalized_absolute(path);
+    }
+    // C:relative and \\rooted-without-volume depend on per-drive process state.
+    if path.has_root()
+        || path
+            .components()
+            .any(|part| matches!(part, std::path::Component::Prefix(_)))
+    {
+        return Err(crate::wire::invalid(
+            "ambiguous settings path; use a config-relative path or @app",
+        ));
+    }
+    normalized_absolute(&base.join(path))
+}
+
+fn portable_settings_path(
+    name: &str,
+    absolute: &Path,
+    base: &Path,
+    app: &Path,
+    common: Option<&Path>,
+) -> io::Result<String> {
+    if (name == "runtime" || under_settings_base(base, app).is_none())
+        && let Some(relative) = under_settings_base(absolute, app)
+    {
+        return Ok(anchored_settings_path("@app", &relative));
+    }
+    if let Some(common) = common
+        && under_settings_base(base, common).is_none()
+        && let Some(relative) = under_settings_base(absolute, common)
+    {
+        return Ok(anchored_settings_path("@programdata", &relative));
+    }
+    if let Some(relative) = relative_settings_path(absolute, base) {
+        return Ok(relative.to_string_lossy().into_owned());
+    }
+    if let Some(relative) = under_settings_base(absolute, app) {
+        return Ok(anchored_settings_path("@app", &relative));
+    }
+    if let Some(common) = common
+        && let Some(relative) = under_settings_base(absolute, common)
+    {
+        return Ok(anchored_settings_path("@programdata", &relative));
+    }
+    Err(crate::wire::invalid(
+        "settings resource is on another volume; copy it beside the configuration before saving",
+    ))
+}
+
+fn transform_settings_paths(
+    value: &mut serde_json::Value,
+    base: &Path,
+    app: &Path,
+    common: Option<&Path>,
+    saving: bool,
+) -> io::Result<()> {
+    match value {
+        serde_json::Value::Object(fields) => {
+            for (name, value) in fields {
+                if is_settings_path_field(name)
+                    && let Some(text) = value.as_str()
+                    && !text.is_empty()
+                {
+                    let absolute = resolve_settings_path(text, base, app, common)?;
+                    *value = serde_json::Value::String(if saving {
+                        portable_settings_path(name, &absolute, base, app, common)?
+                    } else {
+                        absolute.to_string_lossy().into_owned()
+                    });
+                } else {
+                    transform_settings_paths(value, base, app, common, saving)?;
+                }
+            }
+        }
+        serde_json::Value::Array(values) => {
+            for value in values {
+                transform_settings_paths(value, base, app, common, saving)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn document_settings_paths(
+    path: &Path,
+    value: &mut serde_json::Value,
+    saving: bool,
+) -> io::Result<()> {
+    let absolute = std::path::absolute(path)?;
+    let base = normalized_absolute(
+        absolute
+            .parent()
+            .ok_or_else(|| crate::wire::invalid("settings directory is missing"))?,
+    )?;
+    let executable = std::env::current_exe()?;
+    let app = normalized_absolute(
+        executable
+            .parent()
+            .ok_or_else(|| crate::wire::invalid("application directory is missing"))?,
+    )?;
+    let common = std::env::var_os("PROGRAMDATA")
+        .map(PathBuf::from)
+        .map(|path| normalized_absolute(&path))
+        .transpose()?;
+    transform_settings_paths(value, &base, &app, common.as_deref(), saving)
+}
+
+/// Resolve only filesystem references against the document that supplied them.
+/// This also supports callers constructing a settings document in memory.
+pub fn resolve_paths_for_document(path: &Path, value: &mut serde_json::Value) -> io::Result<()> {
+    document_settings_paths(path, value, false)
+}
+
 pub fn read<T: DeserializeOwned>(path: &Path) -> io::Result<T> {
     let file = File::open(path)?;
     let mut data = Vec::new();
@@ -14,10 +283,14 @@ pub fn read<T: DeserializeOwned>(path: &Path) -> io::Result<T> {
         return Err(crate::wire::invalid("settings file exceeds 1 MiB"));
     }
     let data = data.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&data);
-    serde_json::from_slice(data).map_err(io::Error::other)
+    let mut value = serde_json::from_slice(data).map_err(io::Error::other)?;
+    resolve_paths_for_document(path, &mut value)?;
+    serde_json::from_value(value).map_err(io::Error::other)
 }
 pub fn save<T: Serialize>(path: &Path, value: &T) -> io::Result<()> {
-    let mut data = serde_json::to_vec_pretty(value).map_err(io::Error::other)?;
+    let mut value = serde_json::to_value(value).map_err(io::Error::other)?;
+    document_settings_paths(path, &mut value, true)?;
+    let mut data = serde_json::to_vec_pretty(&value).map_err(io::Error::other)?;
     data.push(b'\n');
     if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
         fs::create_dir_all(parent)?;
@@ -701,5 +974,238 @@ mod tests {
             serde_json::from_str::<ClientSettings>(r#"{"version":1,"server":"","deivces":[]}"#)
                 .is_err()
         );
+    }
+}
+
+#[cfg(test)]
+mod relative_paths {
+    use super::*;
+    use serde_json::json;
+
+    fn text(path: impl AsRef<Path>) -> String {
+        normalized_absolute(path.as_ref())
+            .unwrap()
+            .to_string_lossy()
+            .into_owned()
+    }
+
+    fn bases() -> (PathBuf, PathBuf, PathBuf) {
+        let root = std::env::temp_dir().join("USB Bridge тест paths");
+        (
+            root.join("app/data/Client"),
+            root.join("app"),
+            root.join("ProgramData"),
+        )
+    }
+
+    #[test]
+    fn resolves_only_filesystem_fields_against_the_config_directory() {
+        let (base, app, common) = bases();
+        let moniker = r"@device:sw:{860BB310-5D01-11D0-BD3B-00A0C911CE86}\{test}";
+        let mut value = json!({"key_file":"keys/video.key","path":r"\\?\usb#camera","camera":moniker,"serial":"UBC-stable","servers":[{"proxy":{"credential_file":"proxy-credentials/password.credential"}}]});
+        transform_settings_paths(&mut value, &base, &app, Some(&common), false).unwrap();
+        assert_eq!(value["key_file"], text(base.join("keys/video.key")));
+        assert_eq!(
+            value["servers"][0]["proxy"]["credential_file"],
+            text(base.join("proxy-credentials/password.credential"))
+        );
+        assert_eq!(value["path"], r"\\?\usb#camera");
+        assert_eq!(value["camera"], moniker);
+        assert_eq!(value["serial"], "UBC-stable");
+        let document =
+            std::env::temp_dir().join(format!("bridge-document-{}.json", uuid::Uuid::new_v4()));
+        struct Cleanup(PathBuf);
+        impl Drop for Cleanup {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_file(&self.0);
+            }
+        }
+        let _cleanup = Cleanup(document.clone());
+        save(&document, &json!({"key_file":"video.key","camera":moniker})).unwrap();
+        let raw: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&document).unwrap()).unwrap();
+        assert_eq!(raw["key_file"], "video.key");
+        let loaded: serde_json::Value = read(&document).unwrap();
+        assert_eq!(
+            loaded["key_file"],
+            text(document.parent().unwrap().join("video.key"))
+        );
+        assert_eq!(loaded["camera"], moniker);
+    }
+
+    #[test]
+    fn saves_runtime_as_app_anchor_and_other_resources_config_relative() {
+        let (base, app, common) = bases();
+        let mut value = json!({"runtime":app,"profile":base.join("server.local.psd1"),"key_file":base.join("video-credentials/key.credential"),"proxy":{"credential_file":base.join("proxy-credentials/auth.credential")}});
+        transform_settings_paths(&mut value, &base, &app, Some(&common), false).unwrap();
+        let original = value.clone();
+        transform_settings_paths(&mut value, &base, &app, Some(&common), true).unwrap();
+        assert_eq!(value["runtime"], "@app");
+        assert_eq!(value["profile"], "server.local.psd1");
+        assert!(!Path::new(value["key_file"].as_str().unwrap()).is_absolute());
+        transform_settings_paths(&mut value, &base, &app, Some(&common), false).unwrap();
+        assert_eq!(value, original);
+    }
+
+    #[test]
+    fn copied_unicode_folder_rebases_camera_and_proxy_keys_without_changing_identity() {
+        let temporary =
+            std::env::temp_dir().join(format!("bridge-relative-{}", uuid::Uuid::new_v4()));
+        struct Cleanup(PathBuf);
+        impl Drop for Cleanup {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.0);
+            }
+        }
+        let _cleanup = Cleanup(temporary.clone());
+        let old = temporary.join("Исходная папка");
+        let new = temporary.join("Новая папка с пробелами");
+        let app = old.join("app");
+        let base = app.join("data/Client");
+        std::fs::create_dir_all(&base).unwrap();
+        let mut value = json!({"runtime":app,"profile":base.join("server.local.psd1"),"key_file":base.join("video.key"),"servers":[{"proxy":{"credential_file":base.join("proxy-credentials/secret.credential")}}],"server_id":"server-unchanged","camera":{"serial":"UBC-keep-this","name":"2k web camera"}});
+        transform_settings_paths(&mut value, &base, &app, None, true).unwrap();
+        std::fs::write(
+            base.join("settings.json"),
+            serde_json::to_vec(&value).unwrap(),
+        )
+        .unwrap();
+        std::fs::rename(&old, &new).unwrap();
+        let new_app = new.join("app");
+        let new_base = new_app.join("data/Client");
+        let mut moved: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(new_base.join("settings.json")).unwrap())
+                .unwrap();
+        transform_settings_paths(&mut moved, &new_base, &new_app, None, false).unwrap();
+        assert_eq!(moved["runtime"], text(new_app));
+        assert_eq!(moved["key_file"], text(new_base.join("video.key")));
+        assert_eq!(
+            moved["servers"][0]["proxy"]["credential_file"],
+            text(new_base.join("proxy-credentials/secret.credential"))
+        );
+        assert_eq!(moved["server_id"], "server-unchanged");
+        assert_eq!(moved["camera"]["serial"], "UBC-keep-this");
+    }
+
+    #[test]
+    fn imported_video_document_resolves_then_rebases_to_its_destination() {
+        let (base, app, _) = bases();
+        let source = app.parent().unwrap().join("import/другая папка");
+        let mut value = json!({"key_file":"connection.key"});
+        transform_settings_paths(&mut value, &source, &app, None, false).unwrap();
+        let key = source.join("connection.key");
+        assert_eq!(value["key_file"], text(&key));
+        transform_settings_paths(&mut value, &base, &app, None, true).unwrap();
+        assert!(!Path::new(value["key_file"].as_str().unwrap()).is_absolute());
+        transform_settings_paths(&mut value, &base, &app, None, false).unwrap();
+        assert_eq!(value["key_file"], text(&key));
+    }
+
+    #[test]
+    fn accepts_absolute_legacy_paths_and_explicit_programdata_anchor() {
+        let (base, app, common) = bases();
+        let legacy = base.join("old.key");
+        let mut value = json!({"key_file":legacy,"runtime":"@app/tools","profile":"@programdata/USB to Network Bridge/Server/server.local.psd1"});
+        transform_settings_paths(&mut value, &base, &app, Some(&common), false).unwrap();
+        assert_eq!(value["key_file"], text(legacy));
+        assert_eq!(value["runtime"], text(app.join("tools")));
+        assert_eq!(
+            value["profile"],
+            text(common.join("USB to Network Bridge/Server/server.local.psd1"))
+        );
+    }
+
+    #[test]
+    fn rejects_ambiguous_and_unknown_paths_but_keeps_empty_paths_invalid() {
+        let (base, app, common) = bases();
+        let mut empty = json!({"key_file":"","proxy":{"credential_file":null}});
+        transform_settings_paths(&mut empty, &base, &app, None, false).unwrap();
+        assert_eq!(empty["key_file"], "");
+        assert!(empty["proxy"]["credential_file"].is_null());
+        assert!(resolve_settings_path("@unknown/file", &base, &app, None).is_err());
+        assert!(resolve_settings_path("@programdata/file", &base, &app, None).is_err());
+        for escaped in [
+            "@app/../outside.json",
+            "@app/tools/../../outside.json",
+            "@programdata/../outside.json",
+        ] {
+            assert!(resolve_settings_path(escaped, &base, &app, Some(&common)).is_err());
+        }
+        assert_eq!(
+            resolve_settings_path("../sibling.key", &base, &app, Some(&common)).unwrap(),
+            normalized_absolute(&base.join("../sibling.key")).unwrap()
+        );
+        #[cfg(windows)]
+        for invalid in [r"C:foo", r"\foo", r"@app/C:\foo", r"@app/\foo"] {
+            assert!(
+                resolve_settings_path(invalid, &base, &app, None).is_err(),
+                "{invalid}"
+            );
+        }
+    }
+
+    #[test]
+    fn distinguishes_volumes_and_handles_sibling_paths() {
+        let (base, app, common) = bases();
+        assert_eq!(
+            portable_settings_path(
+                "profile",
+                &app.join("data/server.psd1"),
+                &common.join("Server"),
+                &app,
+                Some(&common)
+            )
+            .unwrap(),
+            "@app/data/server.psd1"
+        );
+        assert_eq!(
+            portable_settings_path(
+                "key_file",
+                &common.join("Server/video.key"),
+                &base,
+                &app,
+                Some(&common)
+            )
+            .unwrap(),
+            "@programdata/Server/video.key"
+        );
+        let sibling = base.parent().unwrap().join("Server/server.local.psd1");
+        let relative = relative_settings_path(&sibling, &base).unwrap();
+        assert_eq!(normalized_absolute(&base.join(relative)).unwrap(), sibling);
+        #[cfg(windows)]
+        {
+            let base = Path::new(r"C:\Bridge\app\data");
+            let app = Path::new(r"C:\Bridge\app");
+            assert!(
+                portable_settings_path(
+                    "key_file",
+                    Path::new(r"D:\private\video.key"),
+                    base,
+                    app,
+                    None
+                )
+                .is_err()
+            );
+            assert_eq!(
+                portable_settings_path(
+                    "profile",
+                    Path::new(r"D:\ProgramData\Server\server.psd1"),
+                    base,
+                    app,
+                    Some(Path::new(r"D:\ProgramData"))
+                )
+                .unwrap(),
+                "@programdata/Server/server.psd1"
+            );
+            assert_eq!(
+                relative_settings_path(Path::new(r"c:\bridge\app\data\key"), base).unwrap(),
+                Path::new("key")
+            );
+            assert_eq!(
+                under_settings_base(Path::new(r"C:\ПРОЕКТ\app"), Path::new(r"c:\проект\app"))
+                    .unwrap(),
+                Path::new(".")
+            );
+        }
     }
 }

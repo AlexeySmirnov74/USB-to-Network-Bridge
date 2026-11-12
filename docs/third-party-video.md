@@ -50,13 +50,15 @@ The sender runs at user logon; the receiver runs at startup. Independent schedul
 
 ## Command-line integration without changing the key or destination
 
-After the first GUI setup, enumerate the available client sources:
+After the first GUI setup, enumerate the available client sources. The packaged
+CLI and helpers are in `app`; pass the actual configuration used by the client
+launcher/startup task (a fresh portable client stores it under `app\data\Client`):
 
 ```powershell
-Set-Location C:\USBBridge
-.\usbbridge.exe --config .\client.local.json client cameras
-.\usbbridge.exe --config .\client.local.json client video settings
-.\usbbridge.exe --config .\client.local.json client video status
+Set-Location C:\USBBridge\app
+.\usbbridge.exe --config C:\path\client.local.json client cameras
+.\usbbridge.exe --config C:\path\client.local.json client video settings
+.\usbbridge.exe --config C:\path\client.local.json client video status
 ```
 
 Use the exact `path` (or an unambiguous USB identity) returned by `client cameras`. Names can be duplicated; do not automatically select the first camera. Older Bridge versions could expose Unity Capture's literal `foo:bar` registration placeholder. Version 0.2.5 uses each slot's unique DirectShow moniker instead. Keep the exact enumerated path; do not copy the placeholder into a new configuration. For separate client and server sources, see the [dual-camera setup](dual-camera.md).
@@ -64,10 +66,11 @@ Use the exact `path` (or an unambiguous USB identity) returned by `client camera
 This example updates an **already configured** sender. It preserves `server` and `key_file` and never reads or prints the key. Replace the source placeholder with an enumerated path:
 
 ```powershell
-$runtime = 'C:\USBBridge'
-$config = Join-Path $runtime 'client.local.json'
-$settings = Join-Path $runtime 'client.video-send.local.json'
-$request = Join-Path $runtime ('video-request-' + [guid]::NewGuid().ToString('N') + '.local.json')
+$runtime = 'C:\USBBridge\app'
+$config = 'C:\path\client.local.json'
+$data = Split-Path -Parent $config
+$settings = Join-Path $data 'client.video-send.local.json'
+$request = Join-Path $data ('video-request-' + [guid]::NewGuid().ToString('N') + '.local.json')
 $sender = Get-Content -LiteralPath $settings -Raw -Encoding UTF8 | ConvertFrom-Json
 $sender.enabled = $true
 $sender.camera = '<EXACT_PATH_FROM_CLIENT_CAMERAS>'
@@ -90,7 +93,8 @@ The current sender accepts **enumerated DirectShow cameras or `test-pattern`**. 
 On the server run:
 
 ```powershell
-.\usbbridge.exe --config .\host.local.json server video status
+Set-Location C:\USBBridge\app
+.\usbbridge.exe --config C:\path\host.local.json server video status
 ```
 
 Check `fresh`, `running`, `device_attached`, `name_applied` and `source_connected`. `received_frames` should increase and `source_fps` should follow the producer. `camera_fps` measures delivery to an application with the camera open and can be zero without a consumer. Sender status includes per-second timing in microseconds for resize, JPEG encoding, socket writes and decoded-callback-to-write completion, plus skipped source frames and buffer sizes. These are **local processing measurements**, not exposure-to-screen or one-way network latency.

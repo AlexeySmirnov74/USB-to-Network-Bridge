@@ -15,12 +15,14 @@ const CAMERA_PREVIEW: usize = 309;
 const DEVICE_CAMERA_PREVIEW: usize = 310;
 const FORGET: usize = 311;
 const VIDEO_SETTINGS: usize = 312;
+const SERVER_EXIT_APPLICATION: usize = 313;
 enum Event {
     Snapshot(u64, Result<Dashboard, String>),
     Finished(Result<(), String>, String, bool),
 }
 struct ServerUi {
     modal_camera: ModalCamera,
+    quitting: Cell<bool>,
     images: RefCell<Option<crate::device_icons::Images>>,
     path: PathBuf,
     window: Cell<HWND>,
@@ -64,6 +66,7 @@ impl ServerWindow {
             register("USBBridge.Server.2", Some(procedure))?;
             let context = Box::new(ServerUi {
                 modal_camera: ModalCamera::default(),
+                quitting: Cell::new(false),
                 images: RefCell::new(None),
                 path: path.into(),
                 window: Cell::new(null_mut()),
@@ -101,6 +104,13 @@ impl ServerWindow {
                 MF_STRING,
                 SERVER_HIDE,
                 wide(crate::i18n::t("Свернуть в трей")).as_ptr(),
+            );
+            AppendMenuW(file, MF_SEPARATOR, 0, null());
+            AppendMenuW(
+                file,
+                MF_STRING,
+                SERVER_EXIT_APPLICATION,
+                wide(crate::i18n::t("Exit application")).as_ptr(),
             );
             AppendMenuW(
                 server,
@@ -416,6 +426,31 @@ impl ServerWindow {
         self.context.refresh(false);
         theme::redraw(self.window, true);
     }
+    pub(crate) fn can_quit(&self) -> bool {
+        !self.context.working.load(Ordering::Acquire)
+            && !self.context.dirty.get()
+            && (unsafe { GetWindowLongPtrW(self.window, GWL_STYLE) as u32 & WS_DISABLED == 0 }
+                || self.context.modal_camera.allows_quit(self.window))
+    }
+    pub(crate) fn set_quitting(&self, quitting: bool) {
+        self.context.quitting.set(quitting);
+        self.context.working.store(quitting, Ordering::Release);
+        unsafe {
+            EnableWindow(
+                self.window,
+                i32::from(!quitting && !self.context.modal_camera.active()),
+            );
+        }
+        self.context
+            .feedback
+            .borrow_mut()
+            .set(crate::i18n::t(if quitting {
+                "Exiting application... Stopping USB connections and background tasks."
+            } else {
+                "Application exit failed or was canceled."
+            }));
+        self.context.paint_status();
+    }
     pub fn can_reload(&self) -> bool {
         !self.context.working.load(Ordering::Acquire)
             && !self.context.dirty.get()
@@ -705,7 +740,9 @@ impl ServerUi {
                 .is_ok_and(|n| (1..=36500).contains(&n))
         });
         if let Some(state) = &*self.snapshot.borrow() {
-            let title = if busy {
+            let title = if self.quitting.get() {
+                crate::i18n::t("Exiting application...")
+            } else if busy {
                 crate::i18n::t("Изменение состояния…")
             } else if state.running && state.enabled {
                 crate::i18n::t("СЕРВЕР РАБОТАЕТ")
@@ -771,7 +808,15 @@ impl ServerUi {
                 EnableWindow(inputs[6], i32::from(!busy && enabled));
                 EnableWindow(self.labels.borrow()[6], i32::from(!busy && enabled));
             }
-            for id in [TOGGLE, RELOAD, SETTINGS, APPLY, PUBLISH, CAMERA_PREVIEW] {
+            for id in [
+                TOGGLE,
+                RELOAD,
+                SETTINGS,
+                APPLY,
+                PUBLISH,
+                CAMERA_PREVIEW,
+                SERVER_EXIT_APPLICATION,
+            ] {
                 EnableMenuItem(
                     GetMenu(self.window.get()),
                     id as u32,
@@ -792,7 +837,11 @@ impl ServerUi {
         let snapshot = self.snapshot.borrow();
         set_text(
             self.footer.get(),
-            if self.dirty.get() && !ports_valid {
+            if self.quitting.get() {
+                crate::i18n::t(
+                    "Exiting application... Stopping USB connections and background tasks.",
+                )
+            } else if self.dirty.get() && !ports_valid {
                 crate::i18n::t("Укажите порты от 1 до 65535")
             } else if self.dirty.get() && !retention_valid {
                 crate::i18n::t("Days must be in 1..36500")
@@ -1011,6 +1060,9 @@ impl ServerUi {
         self.paint_status();
     }
     fn command(&self, id: usize) {
+        if self.quitting.get() {
+            return;
+        }
         if self.working.load(Ordering::Acquire) && !matches!(id, SERVER_ABOUT | SERVER_HIDE) {
             return;
         }
@@ -1029,9 +1081,14 @@ impl ServerUi {
         }
         crate::diagnostics::event(
             "ui.server.action",
-            serde_json::json!({"id":id,"action":match id{TOGGLE=>"toggle",APPLY=>"apply_settings",RELOAD=>"refresh",SETTINGS=>"settings_tab",SERVER_ABOUT=>"about",SERVER_HIDE=>"hide",PUBLISH=>"publish_device",FORGET=>"forget_device",CAMERA_PREVIEW=>"camera_preview",DEVICE_CAMERA_PREVIEW=>"camera_test_device",_=>"other"},"device":self.selected_row()}),
+            serde_json::json!({"id":id,"action":match id{TOGGLE=>"toggle",APPLY=>"apply_settings",RELOAD=>"refresh",SETTINGS=>"settings_tab",SERVER_ABOUT=>"about",SERVER_HIDE=>"hide",SERVER_EXIT_APPLICATION=>"exit_application",PUBLISH=>"publish_device",FORGET=>"forget_device",CAMERA_PREVIEW=>"camera_preview",DEVICE_CAMERA_PREVIEW=>"camera_test_device",_=>"other"},"device":self.selected_row()}),
         );
         match id {
+            SERVER_EXIT_APPLICATION => {
+                if let Err(error) = crate::tray::request_quit(Role::Server) {
+                    information(self.window.get(), &error.to_string());
+                }
+            }
             VIDEO_SETTINGS => video_settings(self.window.get(), &self.path, Role::Server),
             FORGET => {
                 if let Some(row) = self.selected_row().filter(|r| !r.present)
@@ -1449,6 +1506,19 @@ unsafe extern "system" fn procedure(
             ui.modal_camera.begin(window, wparam as HWND, Role::Server);
             0
         }
+        WM_MENUSELECT => {
+            if wparam & 0xffff == SERVER_EXIT_APPLICATION && !ui.quitting.get() {
+                set_text(
+                    ui.footer.get(),
+                    crate::i18n::t(
+                        "Exit stops USB connections and background work. Windows startup settings are kept.",
+                    ),
+                );
+            } else {
+                ui.paint_status();
+            }
+            0
+        }
         WM_CONTEXTMENU if wparam as HWND == ui.list.get() => {
             ui.popup(lparam);
             0
@@ -1521,6 +1591,11 @@ unsafe extern "system" fn procedure(
         }
         WM_TIMER if wparam == 4 => {
             ui.modal_camera.tick(window);
+            if ui.quitting.get() {
+                unsafe {
+                    EnableWindow(window, 0);
+                }
+            }
             0
         }
         WM_TIMER if wparam == 3 => {

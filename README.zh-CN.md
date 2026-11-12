@@ -11,7 +11,9 @@
 
 面向 Windows 11 x64 的开源 USB over IP（USB/IP）重定向工具。通过局域网或 VPN 在 Windows 计算机间共享真实 USB 设备，包括摄像头和 Android 手机的 ADB 接口/存储。Rust 服务器导出选定设备，Windows 客户端通过虚拟 USB 控制器导入。无需激活，没有试用倒计时，也没有许可证规定的设备数量限制。
 
-**v0.2.6：Windows 11 x64。** 使用 Rust 编写的 USB 服务器和客户端，提供图形界面、命令行、自动发现与重连、MSI 安装包及便携 ZIP。[下载最新版本](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest)。
+**v0.2.11：Windows 11 x64。** 使用 Rust 编写的 USB 服务器和客户端，提供图形界面、命令行、自动发现与重连、MSI 安装包及便携 ZIP。[下载最新版本](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest)。
+
+**离线安装：** 便携 ZIP 和 MSI 均包含服务器和客户端的已签名驱动安装程序。将两个 EXE 和整个 `app` 文件夹复制到另一台 Windows 11 x64 电脑；首次安装仅使用本地文件。[安装说明](docs/installation.md) · [驱动许可证及源代码](docs/driver-sources.md)。
 
 **v0.2.1 代理健康检查：**服务器和客户端控制器分别由监控程序管理。退出的控制器会自动重启；心跳停止两分钟后会被检测到。独立的 Windows 任务每分钟还会检查并恢复监控程序。过期状态不再显示设备已连接。诊断命令：`usbbridge --config FILE server health` 或 `client health`。[更新记录](CHANGELOG.md)。
 
@@ -81,43 +83,25 @@ Native 让我们能够直接优化 USB/网络路径。例如，在捕获前初�
 
 需要两台 Windows 11 x64 计算机、安装/配置所需的管理员权限，以及可信局域网或 VPN。可以保持 Secure Boot 开启；官方驱动无需测试签名模式。捕获鼠标、键盘或磁盘会暂时使服务器无法在本地使用该设备。
 
-从成功的 [GitHub Actions 工作流](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/actions/workflows/ci.yml)下载 `usbbridge-windows-x64` 构件（可能需要登录 GitHub），或按下文从源码构建。在两台计算机上将应用 ZIP 解压至 `C:\USBBridge`。请将 `.ps1` 与 EXE 保存在同一目录。
+从 [Releases](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest) 下载 MSI 或完整的便携 ZIP。将整个压缩包解压到例如 `C:\USBBridge`。根目录只有两个启动程序和组件文件夹：
 
-完成配置后，在服务器上双击 **`USB-to-Network-Bridge-Server.exe`**，在客户端上双击 **`USB-to-Network-Bridge-Client.exe`**。它们会使用已保存的设置打开相应 GUI，不显示控制台窗口。请将这些 EXE 保留在完整的应用目录中。MSI 的开始菜单快捷方式也使用这两个启动器；`usbbridge.exe` 仍用于命令行管理。
-
-[下载服务器 EXE](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Server.exe) · [下载客户端 EXE](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Client.exe)。单独下载的 EXE 应放在上述完整的应用目录中。
-
-在连接物理设备的**服务器**上，以**管理员身份运行 Windows PowerShell**：
-
-```powershell
-Set-Location C:\USBBridge
-.\Install-ProductionDrivers.ps1 -Role Server -AllowedPeer 192.0.2.10
-Copy-Item .\server.example.psd1 .\server.local.psd1
-notepad .\server.local.psd1
+```text
+USB-to-Network-Bridge-Server.exe
+USB-to-Network-Bridge-Client.exe
+app/
 ```
 
-在命令和配置的 `AllowedPeers` 中，将示例 IP 改为真实客户端地址。首次启动保留 `Export = @()`。如果安装程序要求重启，请先手动重启 Windows。脚本不会覆盖现有驱动安装；请通过 `Inspect-Host.ps1` 及相应上游安装程序管理现有驱动。
+在服务器运行 **`USB-to-Network-Bridge-Server.exe`**，在客户端运行 **`USB-to-Network-Bridge-Client.exe`**。MSI 开始菜单快捷方式也使用这两个程序。请保留旁边的 `app` 文件夹，其中包含内部 EXE、PowerShell 辅助脚本、文档和许可证。命令行程序位于 `app\usbbridge.exe`；单独下载的启动程序需要同版本的完整应用包。
 
-```powershell
-.\Switch-Backend.ps1 -Backend Native -RuntimeDirectory C:\USBBridge
-.\Set-Autostart.ps1 -Role Server -RuntimeDirectory C:\USBBridge `
-    -Config C:\USBBridge\host.local.json -Profile C:\USBBridge\server.local.psd1
-.\USB-to-Network-Bridge-Server.exe
-```
+启动时会检查所选角色所需的驱动。缺少的驱动从 `app\tools\driver-installers` 中经过验证的本地安装程序安装；安装和修复不会下载任何文件。复制到新电脑时请保留整个文件夹及 `app`。需要管理员权限时确认 UAC；如要求重启 Windows，请手动重启。Secure Boot、驱动签名、现有驱动和角色设置保持不变。
 
-右键设备选择 **Share**，或双击尚未共享的设备行。可在设置中切换到标准模块，或运行 `Switch-Backend.ps1 -Backend Usbipd`。切换模块会使活动设备重新连接。
+新**服务器**默认停用、仅允许回环地址且不共享任何设备。在 **Settings** 中填写客户端真实的 LAN/VPN IP，启用服务器，然后右键选择 **Share** 或双击尚未共享的设备。可在设置中选择 Native/usbipd-win；切换模块会重新连接活动设备。
 
-在远程**客户端**上，以**管理员身份运行 Windows PowerShell**：
+将已配置的便携**客户端**复制到另一台电脑时，可选择保留服务器连接或使用全新设置；取消不会更改任何内容。保留会保存服务器、设备选择和偏好，但必须重新输入与原 Windows 绑定的凭据，并重新配置本地摄像头。服务器移动到另一台电脑后会进行新的本机设置。[迁移详情](docs/installation.md#moving-a-portable-copy-to-another-pc)。
 
-```powershell
-Set-Location C:\USBBridge
-.\Install-ProductionDrivers.ps1 -Role Client
-Copy-Item .\client.example.json .\client.local.json
-# 若安装程序要求重启，请先手动重启 Windows。
-.\Set-Autostart.ps1 -Role Client -RuntimeDirectory C:\USBBridge `
-    -Config C:\USBBridge\client.local.json
-.\USB-to-Network-Bridge-Client.exe
-```
+设置中的路径相对于对应的 JSON 文件；`@app` 表示当前应用目录。在同一 Windows 系统中移动安装时，请先关闭应用，将两个启动程序和完整的 `app` 文件夹一起移动，然后打开所需的启动程序。首次启动时的一次 UAC 授权会更新属于该安装的启动任务、防火墙规则和快捷方式，并保留设置、摄像头标识和密钥。Windows 系统登记需要完整路径，程序会自动更新。
+
+选择**文件 → 退出应用程序**或**托盘图标 → 退出应用程序**可完全停止当前角色，包括其 USB 连接和视频进程。健康检查会等待重新打开应用或重启 Windows，自动启动设置保持不变。仅关闭窗口时，后台进程继续运行。
 
 点击 **Find servers**，选择服务器和已共享设备，然后点击 **Connect**。若无法自动发现，请使用 **Add server** 输入 LAN/VPN 地址。设备选择会被保存；**Disconnect** 取消对应的自动重连。在服务器节点上可暂停该服务器的全部设备，而不影响其他服务器。
 
@@ -143,10 +127,11 @@ Copy-Item .\client.example.json .\client.local.json
 git clone https://github.com/AlexeySmirnov74/USB-to-Network-Bridge.git
 Set-Location USB-to-Network-Bridge
 .\Build.ps1
+.\Download-Drivers.ps1 -Role Both
 .\Package.ps1
 ```
 
-`dist` 中的 ZIP 包含 EXE、运行所需脚本、示例和依赖许可证。驱动单独下载，并根据 `driver-installers.json` 中固定的 SHA-256 和 Authenticode 验证。CI 不安装驱动，也不能替代硬件测试。可选的 `Bootstrap.ps1` 安装 Rust；`-InstallBuildTools` 还会安装 Microsoft 构建工具。
+`dist` 中的 ZIP 包含两个未修改的已签名驱动安装程序、EXE、运行脚本、示例和许可证。开发者在打包前联网运行一次 `Download-Drivers.ps1 -Role Both`。SHA-256 和 Authenticode 根据 `driver-installers.json` 离线验证。CI 仅在构建时下载固定版本依赖，不安装驱动，也不能替代硬件测试。可选的 `Bootstrap.ps1` 安装 Rust；`-InstallBuildTools` 还会安装 Microsoft 构建工具。
 
 **需要 Windows PowerShell 5.1 及运行用 `.ps1` 文件**，它们负责共享、捕获、模块切换和自动启动。已安装的计算机无需构建脚本。项目 EXE 和 MSI 不进行 Authenticode 签名；USB 驱动保留官方生产签名。MSI 支持安装、修复、升级、回滚和卸载。参见[安装](docs/installation.md)和[构建与发布](docs/production-readiness.md)。
 

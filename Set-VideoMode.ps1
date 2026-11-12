@@ -1,5 +1,6 @@
 ﻿# Configure only this runtime's video endpoint. Physical USB sessions are untouched.
 param([Parameter(Mandatory=$true)][ValidateSet('Receive','Send','LocalSend')][string]$Role,[Parameter(Mandatory=$true)][string]$Config,[Parameter(Mandatory=$true)][string]$RequestFile,[string]$InteractiveUser,[switch]$Elevate)
+. (Join-Path $PSScriptRoot 'Portable-Paths.ps1')
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 $Config=[IO.Path]::GetFullPath($Config);$RequestFile=[IO.Path]::GetFullPath($RequestFile)
 $resultPath=[IO.Path]::ChangeExtension($Config,'operation.local.json')
@@ -16,7 +17,7 @@ if(-not $admin){
 $runtime=$PSScriptRoot;$exe=Join-Path $runtime 'usbbridge-camera.exe';$mode=if($Role-eq 'Receive'){'receive'}else{'send'};$healthMode=if($Role-eq 'LocalSend'){'local-send'}else{$mode};$taskName='USBBridge.Video.'+$Role;$taskPath='\USBBridge\'
 $hash=[Security.Cryptography.SHA256]::Create();try{$suffix=([BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($Config.ToLowerInvariant())))).Replace('-','').Substring(0,16)}finally{$hash.Dispose()}
 $ruleName='USBBridge-Video-'+$suffix
-$oldTask=$null;$oldXml=$null;$oldBytes=$null;$oldConfig=$null;$changed=$false;$oldRunning=$false;$oldRule=$null;$operationLock=$null;$healthTask=$null;$oldHealthXml=$null;$healthName='USBBridge.Video.Health.'+$Role
+$oldTask=$null;$oldXml=$null;$oldBytes=$null;$oldConfig=$null;$changed=$false;$taskStateChanged=$false;$oldRunning=$false;$oldRule=$null;$operationLock=$null;$healthTask=$null;$oldHealthXml=$null;$healthName='USBBridge.Video.Health.'+$Role
 function Stop-OwnedVideo {
  foreach($item in @(Get-CimInstance Win32_Process -Filter "Name='usbbridge-camera.exe'")){
   $selected='(?:^|\s)--config\s+(?:"'+[regex]::Escape($Config)+'"|'+[regex]::Escape($Config)+'(?:\s|$))'
@@ -30,9 +31,11 @@ try {
  $operationLock=[IO.File]::Open([IO.Path]::ChangeExtension($Config,'operation-video.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
  if(-not(Test-Path -LiteralPath $exe -PathType Leaf)){throw 'Install the complete application package before configuring video.'}
  $request=Get-Content -LiteralPath $RequestFile -Raw -Encoding UTF8|ConvertFrom-Json
+ # Each JSON file owns its relative paths. Resolve the input before saving it
+ # beside a different destination; Rust validates the same original input.
+ $request=Resolve-BridgeConfigPaths $request $RequestFile $runtime
  & $exe validate $mode $RequestFile|Out-Null
  if($LASTEXITCODE-ne 0){throw 'Video settings validation failed.'}
- if($Role-eq 'Receive'-and $request.enabled){& $exe driver-ready|Out-Null;if($LASTEXITCODE-ne 0){throw 'Install the signed USBIP-WIN2 client driver on this receiver; its installation may require a manual Windows restart.'}}
  if($Role-ne 'Receive'-and $request.enabled-and -not $InteractiveUser){throw 'An interactive Windows user is required for OBS/Unity video capture.'}
  $oldTask=Get-ScheduledTask -TaskPath $taskPath -TaskName $taskName -ErrorAction SilentlyContinue
  $expected=$mode+' --config "'+$Config+'"'
@@ -42,13 +45,25 @@ try {
  if(Test-Path -LiteralPath $Config){$oldBytes=[IO.File]::ReadAllBytes($Config);$oldConfig=Get-Content -LiteralPath $Config -Raw -Encoding UTF8|ConvertFrom-Json}
  $rule=Get-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue
  if($rule){$app=$rule|Get-NetFirewallApplicationFilter;if($app.Program-ne $exe){throw 'The video firewall rule belongs to another application.'};$port=$rule|Get-NetFirewallPortFilter;$address=$rule|Get-NetFirewallAddressFilter;$oldRule=[ordered]@{port=$port.LocalPort;remote=$address.RemoteAddress}}
+ # A server-only PC also needs the signed client controller for its generated
+ # camera. Verify task/firewall ownership before any local driver setup, and do
+ # not stop a working endpoint if setup requires a manual Windows restart.
+ if($Role-eq 'Receive'-and $request.enabled){
+  $driver=@(& (Join-Path $runtime 'Ensure-ProductionDrivers.ps1') -Role Client -RuntimeDirectory $runtime)
+  if(-not $?-or $driver.Count-ne 1){throw 'Bundled camera controller setup failed.'}
+  if($driver[0].RestartRequired-or -not $driver[0].Ready){throw 'The signed camera controller requires a manual Windows restart before enabling this camera. The existing video configuration was preserved.'}
+  & $exe driver-ready|Out-Null
+  if($LASTEXITCODE-ne 0){throw 'The signed camera controller is not ready. The existing video configuration was preserved; restart Windows manually if required.'}
+ }
+ $taskStateChanged=$true
  if($healthTask){$healthTask|Disable-ScheduledTask|Out-Null;$healthTask|Stop-ScheduledTask -ErrorAction SilentlyContinue}
  if($oldTask){$oldTask|Disable-ScheduledTask|Out-Null}
  if($Role-eq 'Receive'-and $oldConfig){& $exe detach-local ('127.0.0.1:'+$oldConfig.usb_port)|Out-Null;if($LASTEXITCODE-ne 0){throw 'Could not release the owned virtual USB camera.'}}
  if($oldTask){$oldTask|Stop-ScheduledTask -ErrorAction SilentlyContinue}
  Stop-OwnedVideo
  $changed=$true
- [IO.File]::WriteAllText($Config,($request|ConvertTo-Json -Depth 10),[Text.UTF8Encoding]::new($false))
+ $portableRequest=ConvertTo-BridgePortableConfig $request $Config $runtime
+ [IO.File]::WriteAllText($Config,($portableRequest|ConvertTo-Json -Depth 10),[Text.UTF8Encoding]::new($false))
  if($rule){$rule|Remove-NetFirewallRule}
  if($request.enabled){
   if($Role-eq 'Receive'){
@@ -78,9 +93,11 @@ try {
  $failure=$_.Exception.Message
  try {
   if($changed){$current=Get-ScheduledTask -TaskPath $taskPath -TaskName $taskName -ErrorAction SilentlyContinue;if($current){$current|Disable-ScheduledTask|Out-Null;$current|Stop-ScheduledTask};Stop-OwnedVideo;if($oldBytes){[IO.File]::WriteAllBytes($Config,$oldBytes)}elseif(Test-Path -LiteralPath $Config){Remove-Item -LiteralPath $Config -Force}}
-  if($oldHealthXml){Register-ScheduledTask -TaskPath $taskPath -TaskName $healthName -Xml $oldHealthXml -Force|Out-Null}elseif($changed){Unregister-ScheduledTask -TaskPath $taskPath -TaskName $healthName -Confirm:$false -ErrorAction SilentlyContinue}
-  if($oldXml){Register-ScheduledTask -TaskPath $taskPath -TaskName $taskName -Xml $oldXml -Force|Out-Null;if($oldRunning){Start-ScheduledTask -TaskPath $taskPath -TaskName $taskName}}
-  elseif($changed){Unregister-ScheduledTask -TaskPath $taskPath -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue}
+  if($taskStateChanged-or $changed){
+   if($oldHealthXml){Register-ScheduledTask -TaskPath $taskPath -TaskName $healthName -Xml $oldHealthXml -Force|Out-Null}elseif($changed){Unregister-ScheduledTask -TaskPath $taskPath -TaskName $healthName -Confirm:$false -ErrorAction SilentlyContinue}
+   if($oldXml){Register-ScheduledTask -TaskPath $taskPath -TaskName $taskName -Xml $oldXml -Force|Out-Null;if($oldRunning){Start-ScheduledTask -TaskPath $taskPath -TaskName $taskName}}
+   elseif($changed){Unregister-ScheduledTask -TaskPath $taskPath -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue}
+  }
   if($changed){$current=Get-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue;if($current-and ($current|Get-NetFirewallApplicationFilter).Program-eq $exe){$current|Remove-NetFirewallRule};if($oldRule){New-NetFirewallRule -Name $ruleName -DisplayName 'USB to Network Bridge: incoming video' -Direction Inbound -Action Allow -Program $exe -Protocol TCP -LocalPort $oldRule.port -RemoteAddress $oldRule.remote -Profile Any|Out-Null}}
  }catch{$failure+='; rollback: '+$_.Exception.Message}
  [ordered]@{success=$false;role=$Role;request_file=$RequestFile;error=$failure}|ConvertTo-Json|Set-Content -LiteralPath $resultPath -Encoding utf8

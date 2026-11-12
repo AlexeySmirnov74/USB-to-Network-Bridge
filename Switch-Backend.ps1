@@ -2,6 +2,30 @@ param(
     [Parameter(Mandatory=$true)][ValidateSet('Native','Usbipd')][string]$Backend,
     [string]$RuntimeDirectory, [string]$Profile, [switch]$Elevate, [switch]$Stop
 )
+function Get-BridgeBackendExitState([string]$Cli,[string]$Config) {
+    $text=& $Cli --config $Config server application-state status
+    if($LASTEXITCODE-ne 0){throw 'Cannot inspect the managed server exit state.'}
+    $state=($text|Out-String)|ConvertFrom-Json
+    if($state.stopped-isnot [bool]){throw 'The managed server exit state is invalid.'}
+    [bool]$state.stopped
+}
+function Test-BridgeManagedBackendExit([string]$Runtime,[string]$Profile) {
+    $identity=Join-Path $Runtime 'FirstRun-Identity.ps1'
+    $markerPath=Join-Path $Runtime 'machine-server.local.json'
+    # Standalone transport/developer profiles have no managed role marker.
+    if(-not(Test-Path -LiteralPath $identity -PathType Leaf)-or -not(Test-Path -LiteralPath $markerPath -PathType Leaf)){return $false}
+    . $identity
+    $marker=Get-BridgeMachineMarker -Role Server -Runtime $Runtime
+    if(-not $marker-or $marker.schema-notin @(1,2)-or $marker.role-ne 'Server'-or -not $marker.initialized-or $marker.machine_id-ne (Get-BridgeMachineIdentity)-or -not $marker.config){throw 'The managed server installation identity is invalid.'}
+    $settings=Read-BridgeJson $marker.config
+    if(-not $settings){throw 'The managed server configuration is missing.'}
+    $settings=Resolve-BridgeConfigPaths $settings $marker.config $Runtime
+    # A separately supplied standalone profile must keep its previous CLI behavior.
+    if(-not(Test-BridgeSamePath $settings.runtime $Runtime)-or -not(Test-BridgeSamePath $settings.profile $Profile)){return $false}
+    $hold=[IO.Path]::ChangeExtension([string]$marker.config,'application-stop.local.json')
+    if(-not(Test-Path -LiteralPath $hold -PathType Leaf)){return $false}
+    Get-BridgeBackendExitState (Join-Path $Runtime 'usbbridge.exe') ([string]$marker.config)
+}
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
 if(-not $RuntimeDirectory){$RuntimeDirectory=if(Test-Path (Join-Path $PSScriptRoot 'usbbridge-server.exe')){$PSScriptRoot}else{Join-Path $PSScriptRoot 'production'}}
@@ -29,10 +53,18 @@ if(-not $admin){
     exit 0
 }
 . (Join-Path $PSScriptRoot 'New-BackendMutex.ps1')
+. (Join-Path $PSScriptRoot 'Set-BackendProcessAccess.ps1')
 $mutex=New-BridgeBackendMutex $runtime
 $owned=$false
 try{$owned=$mutex.WaitOne(45000)}catch [Threading.AbandonedMutexException]{$owned=$true}
 if(-not $owned){$mutex.Dispose();throw 'Another backend change is still in progress.'}
+# A controller child can outlive its parent while waiting for this mutex.
+# Recheck the boot-scoped role hold here, before any state/driver mutation.
+if(-not $Stop){
+    try{$applicationHeld=Test-BridgeManagedBackendExit $runtime $profilePath}
+    catch{$mutex.ReleaseMutex();$mutex.Dispose();throw}
+    if($applicationHeld){$mutex.ReleaseMutex();$mutex.Dispose();return}
+}
 function Write-JsonFile($Path,$Value){
     $temporary=$Path+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
     ConvertTo-Json -InputObject $Value -Depth 8|Set-Content -LiteralPath $temporary -Encoding utf8
@@ -237,6 +269,9 @@ try {
         $native=Start-Process -FilePath $server -ArgumentList $arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtime 'native-server.log') -RedirectStandardError (Join-Path $runtime 'native-server-errors.log')
         $state.NativePid=$native.Id;$state.NativeStartedUtc=$native.StartTime.ToUniversalTime().ToString('o')
         $state.NativeCreatedFileTime=$native.StartTime.ToFileTimeUtc().ToString()
+        # Keep exact PID/image/creation verification available to the limited GUI,
+        # including when this backend was launched by the SYSTEM controller task.
+        Grant-BridgeBackendProcessQuery -ProcessId $native.Id -ExpectedExecutable $server -ExpectedFileTime ([UInt64]$state.NativeCreatedFileTime)|Out-Null
         Start-Sleep -Milliseconds 500
         if($native.HasExited){throw 'Native exited at startup; see native-server-errors.log.'}
         $state.Backend='Native'

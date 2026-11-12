@@ -1,3 +1,4 @@
+﻿# Developer/build-only fetch. Runtime setup uses Verify-DriverInstaller.ps1.
 param(
     [ValidateSet('Server', 'Client', 'Both')][string]$Role = 'Both',
     [string]$Destination = (Join-Path $PSScriptRoot 'tools\driver-installers')
@@ -21,9 +22,7 @@ foreach ($selected in $roles) {
     if ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $package.sha256) {
         throw ('Installer hash mismatch: ' + $file)
     }
-    $signature = Get-AuthenticodeSignature -LiteralPath $file
-    if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch [regex]::Escape($package.signer)) {
-        throw ('Installer Authenticode verification failed: ' + $file)
-    }
+    $null = & (Join-Path $PSScriptRoot 'Verify-DriverInstaller.ps1') -Role $selected -InstallerDirectory $Destination
+    if (-not $?) { throw ('Offline installer signature verification failed: ' + $selected) }
     Write-Output ($selected + ' ' + $package.version + ' verified: ' + (Resolve-Path -LiteralPath $file).Path)
 }

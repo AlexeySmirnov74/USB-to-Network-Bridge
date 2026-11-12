@@ -97,6 +97,7 @@ the error includes the DirectShow HRESULT for diagnosis.
 ## Command line
 
 ```powershell
+Set-Location C:\USBBridge\app
 .\usbbridge.exe client cameras
 .\usbbridge.exe client camera-modes 'USB\VID_1BCF&PID_0B40\CAMERA_SERIAL'
 .\usbbridge.exe client preview

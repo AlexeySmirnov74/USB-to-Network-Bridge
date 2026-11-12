@@ -8,5 +8,11 @@ $p=Start-Process msiexec.exe -ArgumentList ('/a "'+$Msi+'" /qn /norestart REBOOT
 if($p.ExitCode-ne 0){throw ('MSI administrative extraction failed: '+$p.ExitCode+'; '+$log)}
 $manifests=@(Get-ChildItem -LiteralPath $stage -Filter SHA256.json -File -Recurse)
 if($manifests.Count-ne 1){throw 'MSI did not contain exactly one application hash manifest.'}
-& py -3 (Join-Path $PSScriptRoot 'Verify-ReleaseArtifacts.py') --portable $Portable --source $Source --root $PSScriptRoot --commit $Commit --installed $manifests[0].DirectoryName
+if($manifests[0].Directory.Name-ne 'app'){throw 'The application hash manifest must be inside app.'}
+$installedRoot=$manifests[0].Directory.Parent.FullName
+# Trust the reviewed verifier and pins, never a helper/manifest supplied inside
+# the candidate archive. The Python gate below also checks both exact hashes.
+& (Join-Path $PSScriptRoot 'Verify-DriverInstaller.ps1') -Role Both -InstallerDirectory (Join-Path $installedRoot 'app\tools\driver-installers') -ManifestPath (Join-Path $PSScriptRoot 'driver-installers.json')|Out-Null
+if(-not $?){throw 'Extracted MSI offline driver signatures failed verification.'}
+& py -3 (Join-Path $PSScriptRoot 'Verify-ReleaseArtifacts.py') --portable $Portable --source $Source --root $PSScriptRoot --commit $Commit --installed $installedRoot
 if($LASTEXITCODE-ne 0){throw 'Release archive verification failed.'}

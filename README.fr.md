@@ -11,7 +11,9 @@
 
 Un redirecteur USB over IP (USB/IP) open source pour Windows 11 x64. Partagez de vrais périphériques USB sur un LAN ou un VPN, dont webcams et interfaces ADB/stockage de téléphones Android. Le serveur Rust exporte les appareils sélectionnés ; le client Windows les importe via un contrôleur USB virtuel. Sans activation, expiration d'essai ni quota de périphériques lié à une licence.
 
-**v0.2.6 — Windows 11 x64.** Serveur et client USB en Rust avec interface graphique, ligne de commande, découverte et reconnexion automatiques, installateur MSI et ZIP portable. [Télécharger la dernière version](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+**v0.2.11 — Windows 11 x64.** Serveur et client USB en Rust avec interface graphique, ligne de commande, découverte et reconnexion automatiques, installateur MSI et ZIP portable. [Télécharger la dernière version](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+
+**Installation hors ligne :** le ZIP portable et le MSI incluent les installateurs signés des pilotes serveur et client. Copiez les deux EXE et tout le dossier `app` vers un autre PC Windows 11 x64 ; la première installation utilise uniquement les fichiers locaux. [Installation](docs/installation.md) · [Licences et sources des pilotes](docs/driver-sources.md).
 
 **État des agents dans la v0.2.1 :** les contrôleurs serveur et client ont des superviseurs distincts. Un contrôleur arrêté redémarre automatiquement ; un signal de vie figé est détecté après deux minutes. Des tâches indépendantes vérifient aussi les superviseurs chaque minute. Les anciens rapports ne déclarent plus un périphérique connecté. Diagnostic : `usbbridge --config FILE server health` ou `client health`. [Modifications](CHANGELOG.md).
 
@@ -81,43 +83,25 @@ Présentation et cas d'utilisation : [FAQ du projet en anglais](docs/project-ove
 
 Prérequis : deux PC Windows 11 x64, droits administrateur pour les pilotes et la configuration, réseau de confiance/VPN. Secure Boot reste activé ; les pilotes officiels ne nécessitent pas de signature de test. Capturer une souris, un clavier ou un disque supprime temporairement son accès local.
 
-Téléchargez l’artefact `usbbridge-windows-x64` d’une exécution réussie de [GitHub Actions](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/actions/workflows/ci.yml) (connexion GitHub éventuellement nécessaire), ou compilez ci-dessous. Extrayez le ZIP de l’application dans `C:\USBBridge` sur les deux PC. Conservez les `.ps1` avec les EXE.
+Téléchargez le MSI ou le ZIP portable complet depuis [Releases](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest). Extrayez toute l’archive, par exemple dans `C:\USBBridge`. La racine contient uniquement deux lanceurs et le dossier des composants :
 
-Après la configuration, double-cliquez sur **`USB-to-Network-Bridge-Server.exe`** côté serveur ou **`USB-to-Network-Bridge-Client.exe`** côté client. Ils ouvrent la bonne interface sans console et réutilisent les paramètres enregistrés. Conservez-les dans le dossier complet de l’application. Les raccourcis du MSI utilisent aussi ces lanceurs ; `usbbridge.exe` reste l’outil en ligne de commande.
-
-[Télécharger l’EXE serveur](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Server.exe) · [Télécharger l’EXE client](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest/download/USB-to-Network-Bridge-Client.exe). Placez les EXE téléchargés séparément dans le dossier complet de l’application décrit ci-dessus.
-
-Sur le **serveur**, dans Windows PowerShell **en administrateur** :
-
-```powershell
-Set-Location C:\USBBridge
-.\Install-ProductionDrivers.ps1 -Role Server -AllowedPeer 192.0.2.10
-Copy-Item .\server.example.psd1 .\server.local.psd1
-notepad .\server.local.psd1
+```text
+USB-to-Network-Bridge-Server.exe
+USB-to-Network-Bridge-Client.exe
+app/
 ```
 
-Remplacez l’adresse d’exemple par l’IP réelle du client, dans la commande et dans `AllowedPeers`. Gardez `Export = @()` au premier démarrage. Si l’installateur le demande, redémarrez manuellement avant de continuer. Les installations de pilotes existantes ne sont pas écrasées : utilisez `Inspect-Host.ps1` et l’installateur du projet concerné.
+Ouvrez **`USB-to-Network-Bridge-Server.exe`** sur le serveur ou **`USB-to-Network-Bridge-Client.exe`** sur le client. Les raccourcis MSI du menu Démarrer utilisent ces mêmes lanceurs. Gardez le dossier `app` à côté : il contient les EXE internes, les scripts PowerShell, la documentation et les licences. L’outil en ligne de commande est `app\usbbridge.exe`. Les lanceurs téléchargés séparément nécessitent le paquet complet de la même version.
 
-```powershell
-.\Switch-Backend.ps1 -Backend Native -RuntimeDirectory C:\USBBridge
-.\Set-Autostart.ps1 -Role Server -RuntimeDirectory C:\USBBridge `
-    -Config C:\USBBridge\host.local.json -Profile C:\USBBridge\server.local.psd1
-.\USB-to-Network-Bridge-Server.exe
-```
+Le lancement vérifie les pilotes du rôle choisi. Les pilotes manquants sont installés depuis les fichiers locaux vérifiés dans `app\tools\driver-installers` ; installation et réparation ne téléchargent rien. Copiez le dossier complet, y compris `app`, vers le nouveau PC. Acceptez UAC si nécessaire et redémarrez Windows manuellement si demandé. Secure Boot, les signatures, les pilotes existants et les réglages du rôle sont conservés.
 
-Clic droit sur un appareil → **Share**, ou double-clic sur une ligne non partagée. Pour le service standard, sélectionnez-le dans les paramètres ou utilisez `Switch-Backend.ps1 -Backend Usbipd`. Le changement de module reconnecte les appareils actifs.
+Un nouveau **serveur** est désactivé, n’autorise que la boucle locale et ne partage aucun appareil. Dans **Settings**, indiquez les véritables IP LAN/VPN des clients, activez le serveur, puis utilisez le clic droit **Share** ou double-cliquez sur une ligne non partagée. Choisissez Native/usbipd-win dans les paramètres ; changer de module reconnecte les appareils actifs.
 
-Sur le **client**, dans Windows PowerShell **en administrateur** :
+Lorsqu’un **client** portable configuré est copié vers un autre PC, choisissez de conserver les connexions aux serveurs ou de repartir avec de nouveaux réglages. Annuler ne change rien. Conserver garde les serveurs, les appareils choisis et les préférences ; les secrets liés à l’ancien Windows et la caméra locale doivent être reconfigurés. Un serveur sur un autre PC reçoit une nouvelle configuration propre à cette machine. [Détails du transfert](docs/installation.md#moving-a-portable-copy-to-another-pc).
 
-```powershell
-Set-Location C:\USBBridge
-.\Install-ProductionDrivers.ps1 -Role Client
-Copy-Item .\client.example.json .\client.local.json
-# Redémarrez manuellement d’abord si l’installateur le demande.
-.\Set-Autostart.ps1 -Role Client -RuntimeDirectory C:\USBBridge `
-    -Config C:\USBBridge\client.local.json
-.\USB-to-Network-Bridge-Client.exe
-```
+Les chemins des réglages sont relatifs à leur fichier JSON ; `@app` désigne le dossier actuel de l'application. Pour déplacer une installation sur le même Windows, fermez les applications, déplacez les deux lanceurs avec le dossier `app` complet, puis ouvrez le lanceur souhaité. Une demande UAC unique met à jour les tâches de démarrage, règles de pare-feu et raccourcis associés, tout en conservant les réglages, identités des caméras et clés. Les chemins complets des enregistrements Windows sont mis à jour automatiquement.
+
+Choisissez **Fichier → Quitter l’application** ou **icône de notification → Quitter l’application** pour arrêter complètement le rôle sélectionné, y compris ses connexions USB et processus vidéo. La surveillance attend la réouverture ou le redémarrage de Windows ; le réglage de démarrage automatique est conservé. Fermer la fenêtre laisse les processus d’arrière-plan actifs.
 
 Cliquez sur **Find servers**, choisissez un serveur puis un appareil partagé et **Connect**. Utilisez **Add server** avec son adresse LAN/VPN si nécessaire. Les choix sont mémorisés ; **Disconnect** annule la reconnexion correspondante. Sur le nœud serveur, vous pouvez suspendre tous ses appareils sans affecter les autres serveurs.
 
@@ -143,10 +127,11 @@ Compilation : Rust stable MSVC avec `rustfmt`/`clippy`, MSVC C++ Build Tools et 
 git clone https://github.com/AlexeySmirnov74/USB-to-Network-Bridge.git
 Set-Location USB-to-Network-Bridge
 .\Build.ps1
+.\Download-Drivers.ps1 -Role Both
 .\Package.ps1
 ```
 
-Le ZIP dans `dist` contient les EXE, scripts nécessaires, exemples et licences. Les pilotes sont téléchargés séparément avec vérification SHA-256 et Authenticode (`driver-installers.json`). La CI n’installe pas de pilotes et ne remplace pas les essais matériels. `Bootstrap.ps1` installe facultativement Rust ; `-InstallBuildTools` ajoute les outils Microsoft.
+Le ZIP dans `dist` contient les deux installateurs de pilotes originaux signés, les EXE, scripts, exemples et licences. Le développeur exécute une fois `Download-Drivers.ps1 -Role Both` avec accès internet avant de créer le paquet. SHA-256 et Authenticode sont vérifiés hors ligne selon `driver-installers.json`. La CI récupère les dépendances pendant la compilation sans installer de pilotes et ne remplace pas les essais matériels. `Bootstrap.ps1` installe facultativement Rust ; `-InstallBuildTools` ajoute les outils Microsoft.
 
 **Windows PowerShell 5.1 et les scripts `.ps1` d’exécution sont nécessaires** pour le partage, la capture, les modules et le démarrage. Les scripts de compilation ne sont pas requis sur le PC installé. Les EXE et le MSI du projet ne sont pas signés Authenticode ; les pilotes USB conservent leurs signatures officielles. Le MSI prend en charge installation, réparation, mise à niveau, restauration et désinstallation. [Installation](docs/installation.md) · [Compilation et publication](docs/production-readiness.md).
 

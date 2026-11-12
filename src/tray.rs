@@ -9,6 +9,7 @@ use std::{
     io,
     path::{Path, PathBuf},
     ptr::{null, null_mut},
+    sync::{Arc, Mutex},
 };
 use windows_sys::Win32::{
     Foundation::{HWND, LPARAM, LRESULT, WPARAM},
@@ -29,7 +30,125 @@ struct Context {
     client: Option<ClientWindow>,
     server: Option<ServerWindow>,
     reload: Cell<bool>,
+    quitting: Cell<bool>,
+    quit_result: Arc<Mutex<Option<Result<(), String>>>>,
 }
+const QUIT_REQUEST: u32 = WM_APP + 22;
+const QUIT_FINISHED: u32 = WM_APP + 23;
+const TRAY_EXIT: u32 = 7;
+
+/// Request a full role shutdown through the same UI coordinator as the tray.
+pub fn request_quit(role: Role) -> io::Result<()> {
+    unsafe {
+        let window = FindWindowW(
+            wide("USBBridge.Notification.2").as_ptr(),
+            wide(notification_title(role)).as_ptr(),
+        );
+        if window.is_null() {
+            return Err(io::Error::other(crate::i18n::t(
+                "The application interface is not available.",
+            )));
+        }
+        if PostMessageW(window, QUIT_REQUEST, 0, 0) == 0 {
+            return Err(io::Error::last_os_error());
+        }
+    }
+    Ok(())
+}
+
+fn can_quit(context: &Context) -> bool {
+    !context.quitting.get()
+        && context.client.as_ref().is_none_or(ClientWindow::can_quit)
+        && context.server.as_ref().is_none_or(ServerWindow::can_quit)
+}
+
+fn set_quitting(context: &Context, quitting: bool) {
+    context.quitting.set(quitting);
+    if let Some(client) = &context.client {
+        client.set_quitting(quitting);
+    }
+    if let Some(server) = &context.server {
+        server.set_quitting(quitting);
+    }
+}
+
+fn finish_quit(context: &Context, window: HWND) -> bool {
+    let outcome = context.quit_result.lock().unwrap().take();
+    let Some(outcome) = outcome else {
+        return false;
+    };
+    match outcome {
+        Ok(()) => {
+            crate::diagnostics::event(
+                "ui.application.exit.complete",
+                serde_json::json!({"role":context.role.label()}),
+            );
+            unsafe {
+                DestroyWindow(window);
+            }
+            true
+        }
+        Err(error) => {
+            set_quitting(context, false);
+            crate::diagnostics::event(
+                "ui.application.exit.failed",
+                serde_json::json!({"role":context.role.label(),"error":error}),
+            );
+            if let Some(client) = &context.client {
+                client.show(false);
+            }
+            if let Some(server) = &context.server {
+                server.show(false);
+            }
+            desktop::information(
+                window,
+                &crate::i18n::format(
+                    "Application exit failed or was canceled.\n\n{error}",
+                    &[("error", error)],
+                ),
+            );
+            false
+        }
+    }
+}
+
+fn begin_quit(context: &Context, window: HWND) {
+    if context.quitting.get() {
+        return;
+    }
+    if !can_quit(context) {
+        desktop::information(
+            window,
+            crate::i18n::t(
+                "Save pending settings, close dialogs, and wait for the current operation before exiting.",
+            ),
+        );
+        return;
+    }
+    set_quitting(context, true);
+    crate::diagnostics::event(
+        "ui.application.exit.request",
+        serde_json::json!({"role":context.role.label()}),
+    );
+    let config = context.config.clone();
+    let role = context.role;
+    let result = context.quit_result.clone();
+    let notification = window as usize;
+    let worker = std::thread::Builder::new()
+        .name("application-exit".into())
+        .spawn(move || {
+            let outcome = crate::lifecycle::quit(&config, role).map_err(|error| error.to_string());
+            *result.lock().unwrap() = Some(outcome);
+            unsafe {
+                PostMessageW(notification as HWND, QUIT_FINISHED, 0, 0);
+            }
+        });
+    if let Err(error) = worker {
+        *context.quit_result.lock().unwrap() = Some(Err(error.to_string()));
+        finish_quit(context, window);
+    }
+}
+
 fn notification_title(role: Role) -> &'static str {
     match role {
         Role::Server => "USBBridge.Notification.Server",
@@ -191,6 +310,15 @@ unsafe extern "system" fn procedure(
         return 0;
     }
     match message {
+        QUIT_REQUEST => {
+            begin_quit(context, window);
+            0
+        }
+        QUIT_FINISHED => {
+            finish_quit(context, window);
+            0
+        }
+        WM_CLOSE if context.quitting.get() => 0,
         value if value == WM_APP + 20 => {
             if let Some(client) = &context.client {
                 client.show(false);
@@ -200,6 +328,9 @@ unsafe extern "system" fn procedure(
             0
         }
         WM_TIMER => {
+            if finish_quit(context, window) {
+                return 0;
+            }
             if crate::i18n::preferred(&context.config) != crate::i18n::language()
                 && can_reload(context)
             {
@@ -286,6 +417,25 @@ unsafe extern "system" fn procedure(
                         6,
                         wide(crate::i18n::t("Закрыть интерфейс")).as_ptr(),
                     );
+                    AppendMenuW(
+                        menu,
+                        MF_STRING
+                            | if can_quit(context) {
+                                MF_ENABLED
+                            } else {
+                                MF_GRAYED
+                            },
+                        TRAY_EXIT as usize,
+                        wide(crate::i18n::t("Exit application")).as_ptr(),
+                    );
+                    if context.quitting.get() {
+                        for id in 1..=TRAY_EXIT {
+                            EnableMenuItem(menu, id, MF_BYCOMMAND | MF_GRAYED);
+                        }
+                        for id in 600..605 {
+                            EnableMenuItem(menu, id, MF_BYCOMMAND | MF_GRAYED);
+                        }
+                    }
                     let mut point = std::mem::zeroed();
                     GetCursorPos(&mut point);
                     SetForegroundWindow(window);
@@ -305,7 +455,8 @@ unsafe extern "system" fn procedure(
                         "ui.tray.action",
                         serde_json::json!({"role":context.role.label(),"id":action}),
                     );
-                    match action {
+                    match action as u32 {
+                        TRAY_EXIT => begin_quit(context, window),
                         1 | 2 => {
                             if let Some(client) = &context.client {
                                 client.show(action == 2);
@@ -331,7 +482,7 @@ unsafe extern "system" fn procedure(
                             }
                         }
                         5 => desktop::about(window),
-                        6 => {
+                        6 if !context.quitting.get() => {
                             DestroyWindow(window);
                         }
                         id => {
@@ -435,6 +586,8 @@ fn run_window(config: &Path, role: Role, show: bool) -> io::Result<bool> {
             icon: std::mem::zeroed(),
             taskbar_message: RegisterWindowMessageW(wide("TaskbarCreated").as_ptr()),
             reload: Cell::new(false),
+            quitting: Cell::new(false),
+            quit_result: Arc::new(Mutex::new(None)),
             client: if role == Role::Client {
                 Some(ClientWindow::create(config)?)
             } else {

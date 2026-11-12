@@ -1,5 +1,6 @@
 ﻿# Change only the selected USB identity; leave the transport and its other sessions intact.
 param([Parameter(Mandatory=$true)][string]$Config,[Parameter(Mandatory=$true)][string]$RequestFile,[switch]$Elevate)
+. (Join-Path $PSScriptRoot 'Portable-Paths.ps1')
 $ErrorActionPreference='Stop'
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
 $Config=[IO.Path]::GetFullPath($Config);$RequestFile=[IO.Path]::GetFullPath($RequestFile);$resultFile=$RequestFile+'.result.json'
@@ -14,7 +15,7 @@ if(-not $admin){
 $owned=$false;$mutex=$null;$changed=$false;$bindingChanged=$false;$temporaryFiles=@();$backups=@{}
 try{
     $hostData=Get-Content -LiteralPath $Config -Raw|ConvertFrom-Json
-    $runtime=(Resolve-Path -LiteralPath $hostData.runtime).Path;$profile=(Resolve-Path -LiteralPath $hostData.profile).Path
+    $runtime=(Resolve-Path -LiteralPath (Resolve-BridgeConfigPath $hostData.runtime $Config)).Path;$profile=(Resolve-Path -LiteralPath (Resolve-BridgeConfigPath $hostData.profile $Config)).Path
     . (Join-Path $PSScriptRoot 'Write-DebugEvent.ps1')
     $request=Get-Content -LiteralPath $RequestFile -Raw|ConvertFrom-Json
     if($request.publish-isnot [bool]-or $request.identity-notlike 'USB\*'){throw 'Select an explicit USB identity and publication state.'}

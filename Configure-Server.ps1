@@ -1,5 +1,6 @@
 ﻿# Apply desktop settings through UAC. Never changes boot security or driver signing.
 param([Parameter(Mandatory=$true)][string]$Config,[Parameter(Mandatory=$true)][string]$RequestFile,[switch]$Elevate)
+. (Join-Path $PSScriptRoot 'Portable-Paths.ps1')
 $ErrorActionPreference='Stop'
 $Config=[IO.Path]::GetFullPath($Config)
 $RequestFile=[IO.Path]::GetFullPath($RequestFile)
@@ -21,8 +22,9 @@ $oldProfile=$null;$oldHost=$null;$configurationChanged=$false
 try{
     $hostData=Get-Content -LiteralPath $Config -Raw|ConvertFrom-Json
     $keepStopped=($hostData.PSObject.Properties.Name-contains 'enabled')-and -not [bool]$hostData.enabled
-    $runtime=(Resolve-Path -LiteralPath $hostData.runtime).Path
-    $profile=(Resolve-Path -LiteralPath $hostData.profile).Path
+    $runtime=(Resolve-Path -LiteralPath (Resolve-BridgeConfigPath $hostData.runtime $Config)).Path
+    $profile=(Resolve-Path -LiteralPath (Resolve-BridgeConfigPath $hostData.profile $Config)).Path
+    $hostData=ConvertTo-BridgePortableConfig $hostData $Config $runtime
     $request=Get-Content -LiteralPath $RequestFile -Raw|ConvertFrom-Json
     $autoRemove=if($hostData.PSObject.Properties.Name-contains 'auto_remove_unplugged'){[bool]$hostData.auto_remove_unplugged}else{$true}
     $days=if($hostData.PSObject.Properties.Name-contains 'unplugged_retention_days'){[uint32]$hostData.unplugged_retention_days}else{1}

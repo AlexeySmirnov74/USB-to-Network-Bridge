@@ -1916,5 +1916,61 @@
     "de": "Quelle nicht verfügbar",
     "fr": "Source indisponible",
     "zh": "视频源不可用"
+  },
+  "Exit application": {
+    "en": "Exit application",
+    "ru": "Выйти из приложения",
+    "de": "Anwendung beenden",
+    "fr": "Quitter l’application",
+    "zh": "退出应用程序"
+  },
+  "Exiting application...": {
+    "en": "Exiting application...",
+    "ru": "Завершение работы...",
+    "de": "Anwendung wird beendet...",
+    "fr": "Fermeture de l’application...",
+    "zh": "正在退出应用程序..."
+  },
+  "Exiting application... Stopping USB connections and background tasks.": {
+    "en": "Exiting application... Stopping USB connections and background tasks.",
+    "ru": "Завершение работы... Отключение USB-соединений и фоновых задач.",
+    "de": "Anwendung wird beendet... USB-Verbindungen und Hintergrundaufgaben werden gestoppt.",
+    "fr": "Fermeture de l’application... Arrêt des connexions USB et des tâches en arrière-plan.",
+    "zh": "正在退出应用程序... 正在停止 USB 连接和后台任务。"
+  },
+  "Application exit failed or was canceled.": {
+    "en": "Application exit failed or was canceled.",
+    "ru": "Выход из приложения не выполнен или отменён.",
+    "de": "Das Beenden der Anwendung ist fehlgeschlagen oder wurde abgebrochen.",
+    "fr": "La fermeture de l’application a échoué ou a été annulée.",
+    "zh": "退出应用程序失败或已取消。"
+  },
+  "Application exit failed or was canceled.\n\n{error}": {
+    "en": "Application exit failed or was canceled.\n\n{error}",
+    "ru": "Выход из приложения не выполнен или отменён.\n\n{error}",
+    "de": "Das Beenden der Anwendung ist fehlgeschlagen oder wurde abgebrochen.\n\n{error}",
+    "fr": "La fermeture de l’application a échoué ou a été annulée.\n\n{error}",
+    "zh": "退出应用程序失败或已取消。\n\n{error}"
+  },
+  "Save pending settings, close dialogs, and wait for the current operation before exiting.": {
+    "en": "Save pending settings, close dialogs, and wait for the current operation before exiting.",
+    "ru": "Перед выходом сохраните настройки, закройте диалоги и дождитесь завершения текущей операции.",
+    "de": "Speichern Sie ausstehende Einstellungen, schließen Sie Dialoge und warten Sie vor dem Beenden auf den Abschluss des aktuellen Vorgangs.",
+    "fr": "Enregistrez les paramètres en attente, fermez les boîtes de dialogue et attendez la fin de l’opération avant de quitter.",
+    "zh": "退出前请保存待处理的设置、关闭对话框并等待当前操作完成。"
+  },
+  "The application interface is not available.": {
+    "en": "The application interface is not available.",
+    "ru": "Интерфейс приложения недоступен.",
+    "de": "Die Anwendungsoberfläche ist nicht verfügbar.",
+    "fr": "L’interface de l’application n’est pas disponible.",
+    "zh": "应用程序界面不可用。"
+  },
+  "Exit stops USB connections and background work. Windows startup settings are kept.": {
+    "en": "Exit stops USB connections and background work. Windows startup settings are kept.",
+    "ru": "Выход отключает USB-соединения и фоновую работу. Настройки автозагрузки Windows сохраняются.",
+    "de": "Beenden stoppt USB-Verbindungen und Hintergrundaufgaben. Die Windows-Autostarteinstellungen bleiben erhalten.",
+    "fr": "Quitter arrête les connexions USB et les tâches en arrière-plan. Les paramètres de démarrage Windows sont conservés.",
+    "zh": "退出将停止 USB 连接和后台运行，并保留 Windows 启动设置。"
   }
 }

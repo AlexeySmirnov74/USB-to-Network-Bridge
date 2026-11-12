@@ -55,6 +55,9 @@ fn run() -> io::Result<()> {
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
+            if usbbridge::lifecycle::video_exit_requested(&config)? {
+                return Ok(());
+            }
             let role = if command == "check-receive" {
                 "Receive"
             } else if command == "check-local-send" {
@@ -183,6 +186,9 @@ fn run() -> io::Result<()> {
         }
         #[cfg(windows)]
         {
+            if usbbridge::lifecycle::video_exit_requested(&path)? {
+                return Ok(());
+            }
             return if command == "receive" {
                 usbbridge::video::receive(&usbbridge::settings::read(&path)?, &path)
             } else {

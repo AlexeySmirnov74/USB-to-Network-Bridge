@@ -52,3 +52,7 @@ Read docs/dual-camera.md. Client local-camera settings create a separate loopbac
 Keep audio work independent of video, bound ISO queues/packet counts, preserve original ISO offsets when compacting USB/IP replies, and coordinate completion handoff with unlink/alternate shutdown. Audio pacing uses an absolute deadline: do not reset it for ordinary late Windows timer wakeups, which otherwise slow audio to roughly 64% of the declared rate. Only genuine idle or bounded excessive lag rebases the clock.
 
 For changes here use the focused silent_microphone tests and bounded capture of the verified generated microphone/container. Check zero samples, sustained frame delivery, and video progress; never record or probe a physical/default microphone. Preserve unrelated transport processes and device selections.
+
+## Offline deployment
+
+The release MSI and portable ZIP must contain both exact, production-signed installers from `driver-installers.json` under `app/tools/driver-installers`. Setup, repair and receive-mode prerequisites use local-only verification/installation; never add a runtime HTTP fallback or certificate/revocation fetch. Only the explicit build-time `Download-Drivers.ps1` may fetch those files. Preserve pinned SHA-256 and exact signer validation, include upstream notices, and publish matching corresponding-source archives alongside redistributed driver installers. Permit installer binaries only at their exact manifest-checked paths; keep all other runtime/private binary exclusions.

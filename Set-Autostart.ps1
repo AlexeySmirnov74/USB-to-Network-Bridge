@@ -3,6 +3,7 @@
     [string]$RuntimeDirectory, [string]$Config, [string]$Profile,
     [switch]$Disable, [switch]$Elevate, [switch]$NoTray
 )
+. (Join-Path $PSScriptRoot 'Portable-Paths.ps1')
 $ErrorActionPreference='Stop'
 if(-not $RuntimeDirectory){$RuntimeDirectory=if(Test-Path (Join-Path $PSScriptRoot 'usbbridge-agent.exe')){$PSScriptRoot}else{Join-Path $PSScriptRoot 'production'}}
 $runtime=(Resolve-Path -LiteralPath $RuntimeDirectory).Path
@@ -23,6 +24,8 @@ if(-not $admin){
 }
 $agent=Join-Path $runtime 'usbbridge-agent.exe'
 if(-not(Test-Path -LiteralPath $agent)){throw 'Copy the release application files into the runtime directory first.'}
+$launchRoot=if((Split-Path -Leaf $runtime)-eq 'app'){Split-Path -Parent $runtime}else{$runtime}
+$launcher=Join-Path $launchRoot ('USB-to-Network-Bridge-'+$Role+'.exe')
 $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
 $taskPath='\USBBridge\'
 $taskName='USBBridge.'+$Role
@@ -54,7 +57,7 @@ try {
         foreach($linkPath in @($shortcut,$legacyShortcut)){
             if(Test-Path -LiteralPath $linkPath){
                 $shell=New-Object -ComObject WScript.Shell
-                if($shell.CreateShortcut($linkPath).TargetPath-eq $agent){Remove-Item -LiteralPath $linkPath -Force}
+                if($shell.CreateShortcut($linkPath).TargetPath-in @($agent,$launcher)){Remove-Item -LiteralPath $linkPath -Force}
             }
         }
         [ordered]@{Success=$true;Enabled=$false;Role=$Role;Config=$Config}|ConvertTo-Json|Set-Content -LiteralPath $statusPath -Encoding utf8
@@ -81,7 +84,8 @@ try {
         if($old-and $old.PSObject.Properties.Name-contains 'auto_remove_unplugged'){$autoRemove=[bool]$old.auto_remove_unplugged}
         if($old-and $old.PSObject.Properties.Name-contains 'unplugged_retention_days'){$retentionDays=[int]$old.unplugged_retention_days}
         if($retentionDays-lt 1-or $retentionDays-gt 36500){throw 'Unplugged retention must be in 1..36500 days.'}
-        [ordered]@{version=1;enabled=$serverEnabled;server_id=$id;name=$serverName;runtime=$runtime;profile=$Profile;allowed_ips=@($profileData.AllowedPeers);probe_address=$probe;discovery_port=$discoveryPort;auto_remove_unplugged=$autoRemove;unplugged_retention_days=$retentionDays}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath $Config -Encoding utf8
+        $hostSettings=[ordered]@{version=1;enabled=$serverEnabled;server_id=$id;name=$serverName;runtime=$runtime;profile=$Profile;allowed_ips=@($profileData.AllowedPeers);probe_address=$probe;discovery_port=$discoveryPort;auto_remove_unplugged=$autoRemove;unplugged_retention_days=$retentionDays}
+        ConvertTo-BridgePortableConfig $hostSettings $Config $runtime|ConvertTo-Json -Depth 5|Set-Content -LiteralPath $Config -Encoding utf8
         $rule=Get-NetFirewallRule -Name 'USBBridge-Discovery' -ErrorAction SilentlyContinue
         if($rule){
             if(($rule|Get-NetFirewallApplicationFilter).Program-ne $agent){throw 'The discovery firewall rule belongs to another installation.'}
@@ -119,11 +123,14 @@ try {
         $trayPrincipal=New-ScheduledTaskPrincipal -UserId $identity.Name -LogonType Interactive -RunLevel Limited
         Register-ScheduledTask -TaskName $trayName -TaskPath $taskPath -Action $trayAction -Trigger (New-ScheduledTaskTrigger -AtLogOn -User $identity.Name) -Settings $settings -Principal $trayPrincipal -Description 'USBBridge status notification icon.' -Force|Out-Null
         $shell=New-Object -ComObject WScript.Shell
-        $link=$shell.CreateShortcut($shortcut);$link.TargetPath=$agent;$link.Arguments='--gui --role '+$Role.ToLowerInvariant()+' --config "'+$Config+'"';$link.WorkingDirectory=$runtime;$link.IconLocation=$agent+',0';$link.Save()
+        $link=$shell.CreateShortcut($shortcut)
+        if(Test-Path -LiteralPath $launcher -PathType Leaf){$link.TargetPath=$launcher;$link.Arguments='--config "'+$Config+'"';$link.WorkingDirectory=$launchRoot}
+        else{$link.TargetPath=$agent;$link.Arguments='--gui --role '+$Role.ToLowerInvariant()+' --config "'+$Config+'"';$link.WorkingDirectory=$runtime}
+        $link.IconLocation=$agent+',0';$link.Save()
         if(Test-Path -LiteralPath $legacyShortcut){if($shell.CreateShortcut($legacyShortcut).TargetPath-eq $agent){Remove-Item -LiteralPath $legacyShortcut -Force}}
         Start-ScheduledTask -TaskName $trayName -TaskPath $taskPath -ErrorAction SilentlyContinue
     }
-    [ordered]@{Success=$true;Enabled=$true;Role=$Role;Task=($taskPath+$taskName);Config=$Config;RebootIssued=$false}|ConvertTo-Json|Set-Content -LiteralPath $statusPath -Encoding utf8
+    [ordered]@{Success=$true;Enabled=$true;Role=$Role;Task=($taskPath+$taskName);Config=(ConvertTo-BridgePortablePath $Config $statusPath $runtime);RebootIssued=$false}|ConvertTo-Json|Set-Content -LiteralPath $statusPath -Encoding utf8
 }catch{
     [ordered]@{Success=$false;Role=$Role;Error=$_.Exception.Message}|ConvertTo-Json|Set-Content -LiteralPath $statusPath -Encoding utf8
     exit 1

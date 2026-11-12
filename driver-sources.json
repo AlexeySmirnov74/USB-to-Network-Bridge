@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "sources": [
+    {
+      "component": "VirtualBox",
+      "version": "7.2.2",
+      "file": "VirtualBox-7.2.2.tar.bz2",
+      "url": "https://download.virtualbox.org/virtualbox/7.2.2/VirtualBox-7.2.2.tar.bz2",
+      "sha256": "b0e63bfb855327aecf1122cda33390c33734e5ffed72f123f5edf786a8ce1393",
+      "license": "GPL-3.0-only",
+      "used_by": "VBoxUSB and VBoxUSBMon in usbipd-win 5.3.0"
+    },
+    {
+      "component": "usbipd-win",
+      "version": "5.3.0",
+      "file": "usbipd-win-5.3.0-source.zip",
+      "url": "https://codeload.github.com/dorssel/usbipd-win/zip/refs/tags/v5.3.0",
+      "sha256": "ba590c5f73a209683e8285a6fe6ff852f696bd433893cd6081e6d4223c893da4",
+      "license": "GPL-3.0-only",
+      "used_by": "usbipd-win_5.3.0_x64.msi"
+    },
+    {
+      "component": "usbip-win2",
+      "version": "0.9.8.1",
+      "file": "usbip-win2-0.9.8.1-source.zip",
+      "url": "https://codeload.github.com/vadimgrn/usbip-win2/zip/refs/tags/v.0.9.8.1",
+      "sha256": "39fdc6d115e77897c042994ddf8b5843ad5bcc77469a786ebf41688949c8fe4b",
+      "license": "BSD-2-Clause",
+      "used_by": "USBip-0.9.8.1-x64.exe"
+    }
+  ]
+}

@@ -7,6 +7,11 @@ available for both roles. See [Camera preview and FPS](camera-preview.md).
 compensation for the test (`off` by default). It may reduce the actual FPS when
 enabled. The original hardware setting is restored after the test finishes.
 
+The packaged command-line tool is `app\usbbridge.exe`; the root has only the two
+desktop launchers. For the examples below, first run `Set-Location C:\USBBridge\app`
+(adjust the installation path). In a source checkout, binaries remain under
+`target\release`; the repository layout is unchanged.
+
 `usbbridge.exe` administers both roles without opening the GUI. Run `usbbridge --help`
 for the complete command list. The existing `usbbridge-client.exe` transport and
 diagnostic commands remain available. `usbbridge-server.exe` remains the USB transport.
@@ -14,6 +19,10 @@ diagnostic commands remain available. `usbbridge-server.exe` remains the USB tra
 Use `--config FILE` **before** the role. The server defaults to `host.local.json`
 beside the executable. The client uses `client.local.json` beside the executable
 when present, otherwise its existing application-data configuration.
+For a configured MSI/portable deployment, explicitly pass the configuration used
+by its GUI/startup task: a fresh portable client uses `app\data\Client`, a fresh
+server and MSI roles use ProgramData. This avoids accidentally controlling an
+unconfigured default file. See [installation paths](installation.md).
 
 ```powershell
 .\usbbridge.exe server status
@@ -132,3 +141,7 @@ format parameters in all five languages.
 ## Video to a USB/UVC camera
 
 Both roles accept `video settings`, `video status`, `video on`, `video off`, and `video configure FILE`. Server commands manage reception into the local USB/UVC camera; client commands manage a source sending to that receiver. Configuration uses the same elevated helper and protected-key handling as the GUI. See [video settings and examples](virtual-camera.md).
+
+## Fully exiting a role
+
+`usbbridge --config FILE server quit` and `client quit` match File/Tray **Exit application**. They stop the selected role, detach its imports/exports and stop its own video endpoints. They leave other roles and startup preferences intact. Health checks honor this manual exit for the current Windows boot. Reopen the role EXE (or use `gui`) to resume its enabled background tasks. Elevation may be required to control SYSTEM processes. `hide` and `close-ui` continue to control only the interface.

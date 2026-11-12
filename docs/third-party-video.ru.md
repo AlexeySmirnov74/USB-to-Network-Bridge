@@ -48,13 +48,15 @@ flowchart LR
 
 ## Управление из командной строки
 
-После первичной настройки через GUI посмотрите камеры и состояние клиента:
+После первичной настройки через GUI посмотрите камеры и состояние клиента.
+Рабочие EXE и сценарии находятся в `app`; укажите фактический путь конфигурации
+GUI/задания клиента. Новый portable-клиент хранит её в `app\data\Client`:
 
 ```powershell
-Set-Location C:\USBBridge
-.\usbbridge.exe --config .\client.local.json client cameras
-.\usbbridge.exe --config .\client.local.json client video settings
-.\usbbridge.exe --config .\client.local.json client video status
+Set-Location C:\USBBridge\app
+.\usbbridge.exe --config C:\path\client.local.json client cameras
+.\usbbridge.exe --config C:\path\client.local.json client video settings
+.\usbbridge.exe --config C:\path\client.local.json client video status
 ```
 
 Выбирайте точный `path` или однозначный USB-идентификатор из результата `client cameras`, а не первую камеру с похожим именем. Некоторые версии Unity Capture возвращают буквально `foo:bar`: это [значение регистрации стороннего фильтра](https://github.com/schellingb/UnityCapture/blob/master/Source/UnityCaptureFilter.cpp), а не адрес сети, пароль или обязательный шаблон. Используйте то, что перечислено на данном ПК. Если несколько источников возвращают одинаковый идентификатор, сначала устраните неоднозначность.
@@ -62,10 +64,11 @@ Set-Location C:\USBBridge
 Пример меняет источник **уже настроенного** отправителя. Адрес `server` и путь `key_file` сохраняются; содержимое ключа не читается и не печатается. Подставьте фактический путь камеры:
 
 ```powershell
-$runtime = 'C:\USBBridge'
-$config = Join-Path $runtime 'client.local.json'
-$settings = Join-Path $runtime 'client.video-send.local.json'
-$request = Join-Path $runtime ('video-request-' + [guid]::NewGuid().ToString('N') + '.local.json')
+$runtime = 'C:\USBBridge\app'
+$config = 'C:\path\client.local.json'
+$data = Split-Path -Parent $config
+$settings = Join-Path $data 'client.video-send.local.json'
+$request = Join-Path $data ('video-request-' + [guid]::NewGuid().ToString('N') + '.local.json')
 $sender = Get-Content -LiteralPath $settings -Raw -Encoding UTF8 | ConvertFrom-Json
 $sender.enabled = $true
 $sender.camera = '<EXACT_PATH_FROM_CLIENT_CAMERAS>'
@@ -88,7 +91,8 @@ try {
 На сервере:
 
 ```powershell
-.\usbbridge.exe --config .\host.local.json server video status
+Set-Location C:\USBBridge\app
+.\usbbridge.exe --config C:\path\host.local.json server video status
 ```
 
 Проверьте `fresh`, `running`, `device_attached`, `name_applied`, `source_connected`. Счётчик `received_frames` должен расти, `source_fps` — соответствовать источнику. `camera_fps` показывает выдачу кадров открытому приложению и может быть нулевым без потребителя. Статус отправителя содержит усреднённое/максимальное время масштабирования, JPEG, записи в сокет и путь от декодированного кадра до завершения записи, в микросекундах; также видны пропущенные кадры источника и размеры буферов. Это **локальные измерения**, а не задержка от экспозиции до экрана или односторонняя задержка сети.

@@ -27,7 +27,7 @@ DeepLive writes to the selected slot. The two Bridge senders are independent and
 
 This integration is optional. USB to Network Bridge does not bundle the upstream Unity Capture DLL. If it is already installed, use its existing permanent x64 DLL location. Follow the [upstream Unity Capture setup](https://github.com/schellingb/UnityCapture) if the filter is not installed.
 
-Stop Live and close applications holding these Unity Capture sources before registering the additional slot. Open **64-bit Windows PowerShell as Administrator** in the complete Bridge application directory:
+Stop Live and close applications holding these Unity Capture sources before registering the additional slot. Open **64-bit Windows PowerShell as Administrator** in the packaged `app` directory (for example `C:\USBBridge\app`):
 
 ```powershell
 .\Configure-UnityCapture.ps1 -FilterDll 'C:\YourPermanentUnityCaptureDirectory\UnityCaptureFilter64.dll'
@@ -38,7 +38,7 @@ Replace the example path with the existing absolute path. The helper registers t
 Verify the sources from the same interactive Windows user/session that runs DeepLive:
 
 ```powershell
-.\usbbridge.exe --config .\client.local.json client cameras
+.\usbbridge.exe --config C:\path\client.local.json client cameras
 ```
 
 There must be one unambiguous source with each exact name. The local-camera setup resolves **Unity Capture Client** to its enumerated path; it does not substitute another camera if that source is missing or duplicated.
@@ -53,7 +53,7 @@ There must be one unambiguous source with each exact name. The local-camera setu
 
 The client-local receiver and its sender use loopback, so no incoming network-video firewall rule is needed for this camera. Bridge creates a private local connection key automatically; it is separate from the server connection key. Changing the local port or key through the local-camera control updates both local endpoints together.
 
-The receiving PC requires the existing production-signed **USBIP-WIN2** virtual controller. A client already importing USB devices normally has it. If it is absent, install it with `Install-ProductionDrivers.ps1 -Role Client` from the complete package in an elevated PowerShell window, following any request for a manual Windows restart. No Test Signing or modified kernel driver is required; Secure Boot can remain enabled.
+The receiving PC requires the existing production-signed **USBIP-WIN2** virtual controller. A client already importing USB devices normally has it. The launcher checks driver readiness automatically. For explicit setup, run `Install-ProductionDrivers.ps1 -Role Client` from the package's `app` directory in an elevated PowerShell window, following any request for a manual Windows restart. No Test Signing or modified kernel driver is required; Secure Boot can remain enabled. Use the client configuration path actually used by the launcher for CLI examples; a fresh portable client keeps it under `app\data\Client`.
 
 The camera appears under **Cameras** in Device Manager and in Windows camera applications. Windows uses its inbox `usbvideo.sys`. This is an emulated USB/UVC device: the virtual controller remains visible in the device tree. Its appearance does not establish that physical USB hardware is connected.
 

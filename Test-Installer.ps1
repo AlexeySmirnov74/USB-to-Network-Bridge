@@ -32,11 +32,14 @@ function Assert-Application{
   if($link.TargetPath-ne $target-or $link.Arguments){throw ('Invalid desktop launcher shortcut: '+$role)}
  }
  foreach($file in @('usbbridge.exe','usbbridge-server.exe','usbbridge-client.exe','usbbridge-agent.exe', 'usbbridge-camera.exe', 'USB-to-Network-Bridge-Server.exe', 'USB-to-Network-Bridge-Client.exe')){
-  if((Get-FileHash -LiteralPath (Join-Path $installed $file)).Hash-ne (Get-FileHash -LiteralPath (Join-Path $root ('target\release\'+$file))).Hash){throw ('Installed binary differs from candidate: '+$file)}
+  $relative=if($file-like 'USB-to-Network-Bridge-*.exe'){$file}else{'app\'+$file}
+  if((Get-FileHash -LiteralPath (Join-Path $installed $relative)).Hash-ne (Get-FileHash -LiteralPath (Join-Path $root ('target\release\'+$file))).Hash){throw ('Installed binary differs from candidate: '+$relative)}
  }
- foreach($file in @('Open-Installation.ps1','Configure-Installation.ps1','Maintain-Installation.ps1','Set-VideoMode.ps1','Restart-VideoEndpoint.ps1')){
-  if((Get-FileHash -LiteralPath (Join-Path $installed $file)).Hash-ne (Get-FileHash -LiteralPath (Join-Path $root $file)).Hash){throw ('Installed setup helper differs from candidate: '+$file)}
+ foreach($file in @('Open-Installation.ps1','Configure-Installation.ps1','FirstRun-Identity.ps1','Migrate-PortableLayout.ps1','Maintain-Installation.ps1','Set-VideoMode.ps1','Restart-VideoEndpoint.ps1','Configure-UnityCapture.ps1')){
+  if((Get-FileHash -LiteralPath (Join-Path $installed ('app\'+$file))).Hash-ne (Get-FileHash -LiteralPath (Join-Path $root $file)).Hash){throw ('Installed setup helper differs from candidate: '+$file)}
  }
+ $visible=@(Get-ChildItem -LiteralPath $installed -File)
+ if($visible.Count-ne 2-or @($visible|Where-Object Name -notin @('USB-to-Network-Bridge-Server.exe','USB-to-Network-Bridge-Client.exe')).Count){throw 'Installer root contains extra files.'}
 }
 try{
  Msi 'fresh-install' ('/i "'+(Join-Path $root 'dist\installer-smoke-v020.msi')+'"')
@@ -45,7 +48,7 @@ try{
  $saved=Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'USB to Network Bridge\InstallerQualification\preserve.local.json'
  New-Item -ItemType Directory -Path (Split-Path -Parent $saved) -Force|Out-Null
  [IO.File]::WriteAllText($saved,'{"retain":true}');$savedHash=(Get-FileHash $saved).Hash
- [IO.File]::WriteAllText((Join-Path $installed 'usbbridge.exe'),'repair fixture')
+ [IO.File]::WriteAllText((Join-Path $installed 'app\usbbridge.exe'),'repair fixture')
  Msi 'repair' ('/fa '+$meta0.product_code)
  Assert-Application
  Msi 'upgrade' ('/i "'+(Join-Path $root 'dist\installer-smoke-v021.msi')+'"')
@@ -55,7 +58,7 @@ try{
  Msi 'downgrade-refused' ('/i "'+(Join-Path $root 'dist\installer-smoke-v020.msi')+'"') 1603
  Assert-Application
  Msi 'uninstall' ('/x '+$meta1.product_code)
- foreach($file in @('usbbridge-agent.exe','USB-to-Network-Bridge-Server.exe','USB-to-Network-Bridge-Client.exe')){
+ foreach($file in @('app\usbbridge-agent.exe','USB-to-Network-Bridge-Server.exe','USB-to-Network-Bridge-Client.exe')){
   if(Test-Path -LiteralPath (Join-Path $installed $file)){throw ('Application executable remained after uninstall: '+$file)}
  }
  if((Get-FileHash $saved).Hash-ne $savedHash){throw 'User data was modified.'}

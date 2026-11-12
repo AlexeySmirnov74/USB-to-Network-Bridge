@@ -1,4 +1,4 @@
-# Called by the independent scheduled health check; operate only on the registered role.
+﻿# Called by the independent scheduled health check; operate only on the registered role.
 param([Parameter(Mandatory=$true)][ValidateSet('Server','Client')][string]$Role,[Parameter(Mandatory=$true)][string]$Config)
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 $Config=[IO.Path]::GetFullPath($Config)
@@ -55,5 +55,10 @@ do {
  Start-Sleep -Milliseconds 100
 }while([DateTime]::UtcNow-lt $deadline)
 if($task.State-eq 'Running'){throw 'The supervisor task is still stopping; retry recovery on the next health check.'}
+$application=& (Join-Path $PSScriptRoot 'usbbridge.exe') --config $Config ($Role.ToLowerInvariant()) application-state status|Out-String
+if($LASTEXITCODE-ne 0){throw 'Cannot confirm whether this application was manually stopped.'}
+$application=$application|ConvertFrom-Json
+if($application.stopped-isnot [bool]){throw 'The application stop state is invalid.'}
+if($application.stopped){[ordered]@{action='manually_stopped'}|ConvertTo-Json -Compress;exit 0}
 $task|Start-ScheduledTask
 [ordered]@{action='restart_requested';previous_state=$before;task=$task.TaskName}|ConvertTo-Json -Compress

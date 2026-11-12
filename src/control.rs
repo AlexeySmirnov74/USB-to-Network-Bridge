@@ -23,6 +23,7 @@ usbbridge [--config FILE] [--language en|ru|de|fr|zh] server|client COMMAND
 Both roles:
   gui                                  Open the interface
   hide | close-ui                      Hide window / close tray interface
+  quit                                 Exit application and stop this role's background work
   language [en|ru|de|fr|zh]              Read/save interface language (default en)
   autostart status|on|off                Background recovery and tray at Windows startup
   health                                Check supervisor and controller heartbeats
@@ -458,10 +459,27 @@ pub fn run(mut args: Vec<String>) -> io::Result<()> {
             print(&json!({"language":i18n::preferred(&config).code()}))
         }
         "health" if args.is_empty() => print(&crate::supervisor::status(&config, role)?),
+        "quit" if args.is_empty() => {
+            crate::lifecycle::quit(&config, role)?;
+            print(&json!({"success":true,"exited":true}))
+        }
+        "application-state" if args.len() == 1 => {
+            if args[0] == "status-video" {
+                return print(&json!({"stopped":crate::lifecycle::video_exit_requested(&config)?}));
+            }
+            match args[0].as_str() {
+                "hold" => crate::lifecycle::mark_exit(&config, role)?,
+                "resume" => crate::lifecycle::clear_exit(&config)?,
+                "status" => {}
+                _ => return Err(invalid("application-state requires hold|resume|status")),
+            }
+            print(&json!({"stopped":crate::lifecycle::is_exit_requested(&config,role)?}))
+        }
         "logs" if args.is_empty() => print(
             &json!({"directory":config.parent().unwrap_or(Path::new(".")).join("logs"),"controller":config.with_extension("agent.log")}),
         ),
         "gui" if args.is_empty() => {
+            crate::lifecycle::resume(&config, role)?;
             Command::new(runtime.join("usbbridge-agent.exe"))
                 .args([
                     "--gui",
@@ -896,7 +914,9 @@ fn set_proxy(path: &Path, config: &ClientSettings, args: &[String]) -> io::Resul
                         "provide a non-empty username and password, at most 255 bytes each, on two stdin lines",
                     ));
                 }
-                let file = crate::credentials::save(&auth)?;
+                let credential_root =
+                    std::path::absolute(path)?.with_file_name("proxy-credentials");
+                let file = crate::credentials::save_at(&credential_root, &auth)?;
                 created = Some(file.clone());
                 proxy.credential_file = Some(file);
             }

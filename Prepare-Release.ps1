@@ -38,8 +38,8 @@ $git=Join-Path $root 'tools\mingit\cmd\git.exe';if(-not(Test-Path $git)){$git=(G
 $status=& $git -C $root status --porcelain
 if($status){throw 'Commit the reviewed source first; releases require a clean working tree.'}
 $commit=(& $git -C $root rev-parse HEAD).Trim()
-$files=@(Get-ChildItem -LiteralPath $CandidateDirectory -File|Where-Object {$_.Name-like 'USB-to-Network-Bridge-*-windows-x64.msi'-or $_.Name-like 'USB-to-Network-Bridge-*-windows-x64.zip'-or $_.Name-like 'USB-to-Network-Bridge-*-source.zip'})
-if($files.Count-ne 3){throw 'The candidate directory must contain exactly one MSI, portable ZIP and source ZIP.'}
+$files=@(Get-ChildItem -LiteralPath $CandidateDirectory -File|Where-Object {$_.Name-like 'USB-to-Network-Bridge-*-windows-x64.msi'-or $_.Name-like 'USB-to-Network-Bridge-*-windows-x64.zip'-or $_.Name-like 'USB-to-Network-Bridge-*-source.zip'-or $_.Name-like 'USB-to-Network-Bridge-*-driver-sources.zip'})
+if($files.Count-ne 4){throw 'The candidate directory must contain exactly one MSI, portable ZIP, application source ZIP and corresponding driver-source ZIP.'}
 $portable=@($files|Where-Object Extension -eq '.zip'|Where-Object Name -like '*-windows-x64.zip')[0].FullName
 $source=@($files|Where-Object Name -like '*-source.zip')[0].FullName
 $msi=@($files|Where-Object Extension -eq '.msi')[0].FullName
@@ -50,6 +50,12 @@ foreach($launcher in @('USB-to-Network-Bridge-Server.exe','USB-to-Network-Bridge
  if((Get-FileHash -LiteralPath $artifact.FullName).Hash-ne (Get-FileHash -LiteralPath (Join-Path $root ('target\release\'+$launcher))).Hash){throw ('Launcher differs from the built candidate: '+$launcher)}
  $files+=@($artifact)
 }
+# Both standalone upstream assets accompany the application release. They must
+# match the exact reviewed pins and production signer, not just a local cache.
+& (Join-Path $root 'Verify-DriverInstaller.ps1') -Role Both -InstallerDirectory $CandidateDirectory -ManifestPath (Join-Path $root 'driver-installers.json')|Out-Null
+if(-not $?){throw 'Standalone release driver installers failed verification.'}
+$driverPins=Get-Content -LiteralPath (Join-Path $root 'driver-installers.json') -Raw|ConvertFrom-Json
+foreach($role in @('Server','Client')){$files+=@(Get-Item -LiteralPath (Join-Path $CandidateDirectory $driverPins.$role.file))}
 $review=[ordered]@{schema=1;source_commit=$commit;application_signing='unsigned';validation_profile=$ValidationProfile;observation_passed=$true;full_qualification_passed=($ValidationProfile-eq 'Full');full_soak_hours_required=$policy.minimum_soak_hours;not_performed_checks=$pending;observations=$observations;created_utc=[DateTime]::UtcNow.ToString('o');artifacts=@($files|ForEach-Object {[ordered]@{file=$_.Name;bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName).Hash}})}
 New-Item -ItemType Directory -Path (Join-Path $root 'logs') -Force|Out-Null
 $review|ConvertTo-Json -Depth 8|Set-Content -LiteralPath (Join-Path $root 'logs\release-review.local.json') -Encoding utf8

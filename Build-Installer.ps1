@@ -21,20 +21,35 @@ try{
  }
 }finally{$archive.Dispose()}
 Expand-Archive -LiteralPath $PayloadZip -DestinationPath $payload
-$hashes=Get-Content -LiteralPath (Join-Path $payload 'SHA256.json') -Raw|ConvertFrom-Json
+$launchers=@('USB-to-Network-Bridge-Server.exe','USB-to-Network-Bridge-Client.exe')
+$visibleFiles=@(Get-ChildItem -LiteralPath $payload -File)
+$visibleFolders=@(Get-ChildItem -LiteralPath $payload -Directory)
+if($visibleFiles.Count-ne 2-or @($visibleFiles|Where-Object Name -notin $launchers).Count-or $visibleFolders.Count-ne 1-or $visibleFolders[0].Name-cne 'app'){throw 'The package root must contain only the two desktop EXEs and app.'}
+$hashes=Get-Content -LiteralPath (Join-Path $payload 'app\SHA256.json') -Raw|ConvertFrom-Json
 $expected=@{}
 foreach($item in $hashes){
  $target=[IO.Path]::GetFullPath((Join-Path $payload $item.File))
- if(-not $target.StartsWith($payload+'\',[StringComparison]::OrdinalIgnoreCase)-or $expected.ContainsKey($item.File)){throw 'Invalid package hash manifest.'}
+ if(-not $target.StartsWith($payload+'\',[StringComparison]::OrdinalIgnoreCase)-or $expected.ContainsKey($item.File)-or $item.File-eq 'app/SHA256.json'){throw 'Invalid package hash manifest.'}
  if((Get-FileHash -LiteralPath $target).Hash-ne $item.SHA256-or (Get-Item -LiteralPath $target).Length-ne $item.Bytes){throw ('Payload hash mismatch: '+$item.File)}
  $expected[$item.File]=$true
 }
+$driverManifestPath=Join-Path $root 'driver-installers.json'
+$driverManifest=Get-Content -LiteralPath $driverManifestPath -Raw|ConvertFrom-Json
+if((Get-FileHash -LiteralPath (Join-Path $payload 'app\driver-installers.json')).Hash-ne (Get-FileHash -LiteralPath $driverManifestPath).Hash){throw 'The packaged driver pins differ from the reviewed manifest.'}
+$driverPaths=@{}
+foreach($role in @('Server','Client')){$driverPaths['app/tools/driver-installers/'+$driverManifest.$role.file]=[string]$driverManifest.$role.sha256}
+& (Join-Path $root 'Verify-DriverInstaller.ps1') -Role Both -InstallerDirectory (Join-Path $payload 'app\tools\driver-installers') -ManifestPath $driverManifestPath|Out-Null
+if(-not $?){throw 'MSI payload has invalid offline driver installers.'}
+$applicationExecutables=@('USB-to-Network-Bridge-Server.exe','USB-to-Network-Bridge-Client.exe','app/usbbridge.exe','app/usbbridge-client.exe','app/usbbridge-server.exe','app/usbbridge-agent.exe','app/usbbridge-camera.exe')
 foreach($item in @(Get-ChildItem -LiteralPath $payload -File -Recurse)){
  $relative=$item.FullName.Substring($payload.Length+1).Replace('\','/')
- if($relative-ne 'SHA256.json'-and -not $expected.ContainsKey($relative)){throw ('Unlisted payload file: '+$relative)}
- if($relative.Contains('.local.')-or $item.Extension-in @('.pfx','.key','.credential','.sys','.cat','.msi')){throw ('Private/runtime/driver file in package: '+$relative)}
+ if($relative-ne 'app/SHA256.json'-and -not $expected.ContainsKey($relative)){throw ('Unlisted payload file: '+$relative)}
+ $pinnedDriver=$driverPaths.ContainsKey($relative)
+ if($pinnedDriver-and (Get-FileHash -LiteralPath $item.FullName).Hash-ne $driverPaths[$relative]){throw ('Pinned driver payload hash mismatch: '+$relative)}
+ $privateName=$relative.ToLowerInvariant()
+ if($privateName.Contains('.local.')-or $privateName-match '\.(status\.json|preferences\.json|agent\.lock|edit\.lock|tray\.lock)$'-or $item.Extension-in @('.pfx','.key','.pem','.credential','.sys','.cat','.jsonl','.log')-or ($item.Extension-in @('.exe','.dll','.msi')-and $relative-cnotin $applicationExecutables-and -not $pinnedDriver)){throw ('Private/runtime/unreviewed binary in package: '+$relative)}
 }
-foreach($helper in @('Open-Installation.ps1','Configure-Installation.ps1','Maintain-Installation.ps1')){if(-not(Test-Path -LiteralPath (Join-Path $payload $helper))){throw ('Rebuild Package.ps1: missing '+$helper)}}
+foreach($helper in @('Open-Installation.ps1','Configure-Installation.ps1','FirstRun-Identity.ps1','Migrate-PortableLayout.ps1','Maintain-Installation.ps1','Verify-DriverInstaller.ps1','Ensure-ProductionDrivers.ps1')){if(-not(Test-Path -LiteralPath (Join-Path $payload ('app\'+$helper)))){throw ('Rebuild Package.ps1: missing app/'+$helper)}}
 function Com-Call($Object,$Name,$Arguments){
  switch($Name){
   'OpenDatabase' {$Object.OpenDatabase([string]$Arguments[0],[int]$Arguments[1])}
@@ -94,7 +109,7 @@ Table Icon '`Name` CHAR(72) NOT NULL, `Data` OBJECT NOT NULL PRIMARY KEY `Name`'
 Table RemoveFile '`FileKey` CHAR(72) NOT NULL, `Component_` CHAR(72) NOT NULL, `FileName` CHAR(255) LOCALIZABLE, `DirProperty` CHAR(72) NOT NULL, `InstallMode` SHORT NOT NULL PRIMARY KEY `FileKey`'
 Table Upgrade '`UpgradeCode` CHAR(38) NOT NULL, `VersionMin` CHAR(20), `VersionMax` CHAR(20), `Language` CHAR(255), `Attributes` LONG NOT NULL, `Remove` CHAR(255), `ActionProperty` CHAR(72) NOT NULL PRIMARY KEY `UpgradeCode`, `VersionMin`, `VersionMax`, `Language`, `Attributes`'
 Table LaunchCondition '`Condition` CHAR(255) NOT NULL, `Description` CHAR(255) NOT NULL LOCALIZABLE PRIMARY KEY `Condition`'
-Table CustomAction '`Action` CHAR(72) NOT NULL, `Type` SHORT NOT NULL, `Source` CHAR(72), `Target` CHAR(255) PRIMARY KEY `Action`'
+Table CustomAction '`Action` CHAR(72) NOT NULL, `Type` SHORT NOT NULL, `Source` CHAR(72), `Target` CHAR(0) PRIMARY KEY `Action`'
 foreach($name in @('InstallExecuteSequence','InstallUISequence','AdminExecuteSequence')){Table $name '`Action` CHAR(72) NOT NULL, `Condition` CHAR(255), `Sequence` SHORT PRIMARY KEY `Action`'}
 $upgrade=Guid-For $(if($TestFixture){'SmokeUpgrade'}else{'ProductionUpgrade'})
 $product=Guid-For (([string]$upgrade)+$msiVersion)
@@ -151,12 +166,21 @@ $execute=@(@('MigrateFeatureStates',1200),@('InstallValidate',1400),@('InstallIn
 foreach($item in $execute){Insert InstallExecuteSequence @($item[0],$null,$item[1])}
 Insert CustomAction @('SetPowerShell',51,'MAINTENANCE_EXE','[System64Folder]WindowsPowerShell\v1.0\powershell.exe')
 Insert InstallExecuteSequence @('SetPowerShell',$null,1450)
-$actionBase='-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "[INSTALLDIR]Maintain-Installation.ps1" -RuntimeDirectory "[INSTALLDIR]." -Operation '
-Insert CustomAction @('RollbackResume',3378,'MAINTENANCE_EXE',($actionBase+'Resume'))
+$actionBase='-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "[INSTALLDIR]app\Maintain-Installation.ps1" -RuntimeDirectory "[INSTALLDIR]app" -PreviousRuntimeDirectory "[INSTALLDIR]." -Operation '
+# Directory-source EXE actions run in INSTALLDIR. The encoded dispatcher reads
+# that working directory as data instead of interpolating an install path into
+# PowerShell code. Before InstallFiles, a 0.2.6 upgrade still has only the flat
+# helper; repair/removal/rollback of the new layout uses the helper under app.
+function Maintenance-Dispatch([ValidateSet('Stop','Resume','Remove')][string]$Operation){
+ $code='$ErrorActionPreference=''Stop'';$r=[Environment]::CurrentDirectory;$a=Join-Path $r ''app'';$h=Join-Path $a ''Maintain-Installation.ps1'';if(Test-Path -LiteralPath $h){$runtime=$a}else{$runtime=$r;$h=Join-Path $r ''Maintain-Installation.ps1''};if(Test-Path -LiteralPath $h){& $h -Operation ''OPERATION'' -RuntimeDirectory $runtime;if(-not $?){exit 1}};exit 0'
+ $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($code.Replace('OPERATION',$Operation)))
+ return '"[System64Folder]WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand '+$encoded
+}
+Insert CustomAction @('RollbackResume',3362,'INSTALLDIR',(Maintenance-Dispatch 'Resume'))
 Insert InstallExecuteSequence @('RollbackResume','Installed OR OLDPRODUCTS',1510)
-Insert CustomAction @('StopOwned',3122,'MAINTENANCE_EXE',($actionBase+'Stop'))
+Insert CustomAction @('StopOwned',3106,'INSTALLDIR',(Maintenance-Dispatch 'Stop'))
 Insert InstallExecuteSequence @('StopOwned','Installed OR OLDPRODUCTS',1520)
-Insert CustomAction @('RemoveOwned',3122,'MAINTENANCE_EXE',($actionBase+'Remove'))
+Insert CustomAction @('RemoveOwned',3106,'INSTALLDIR',(Maintenance-Dispatch 'Remove'))
 Insert InstallExecuteSequence @('RemoveOwned','REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE',3300)
 Insert CustomAction @('ResumeOwned',3122,'MAINTENANCE_EXE',($actionBase+'Resume -AfterInstall'))
 Insert InstallExecuteSequence @('ResumeOwned','NOT REMOVE="ALL"',6570)

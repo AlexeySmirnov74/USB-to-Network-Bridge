@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.2.11
+
+- Recognize a correctly staged VBoxUSB package on a fresh server before any device has been captured; avoid repeated repair/reboot prompts.
+- Bundle the unchanged production-signed usbipd-win and USBIP-WIN2 installers in the portable ZIP and MSI for offline first-run setup and repair.
+- Require local SHA-256, exact publisher and cache-only Windows Authenticode verification; missing or corrupt installers produce a local error instead of a network request.
+- Install USBIP-WIN2's embedded Visual C++ runtime explicitly and ensure the local receiver driver before enabling a generated USB camera.
+- Verify the complete offline payload during packaging and folder relocation; include upstream licenses and matching driver-source archives in the release.
+
+## 0.2.10
+
+- Remove the fixed five-second full-exit grace period for video and other workers that cannot observe it.
+- React to an explicit exit during supervisor waits and hand shutdown to the coordinator after USB operations drain; block delayed helpers from restarting an exited backend.
+- Use the direct Task Scheduler API with fresh ownership checks and stop only running owned tasks, preserving saved startup preferences.
+- Launch the privileged lifecycle helper directly through normal Windows elevation and log shutdown phase durations.
+
+## 0.2.9
+
+- Add File and tray menu commands to fully exit each role, release its USB connections and stop its owned video/background processes.
+- Honor explicit exit in controllers, supervisors and health checks until manual reopening or the next Windows boot, while preserving startup preferences.
+- Add matching command-line `quit` and restore owned enabled tasks when reopening an exited application.
+
+## 0.2.8
+
+- Store configuration file paths relative to their owning JSON; resolve the application directory with `@app` independently of the working directory.
+- Preserve identities and credentials during same-PC folder moves, and rebind owned Windows startup tasks, firewall rules and shortcuts on launch.
+- Keep legacy absolute settings readable and migrate active settings without resetting server/device selections.
+
+## 0.2.7
+
+- Fix false server-stopped status in a limited GUI when the Native backend runs under SYSTEM; allow only metadata queries on the verified backend process.
+- Keep only the Client and Server launchers at the portable folder root; store runtime files under `app/`.
+- Detect settings copied from another Windows installation. Create safe new server defaults and let clients keep server connections or start fresh.
+- Check signed driver readiness at startup and run the pinned upstream installers through normal UAC when drivers are missing; never restart Windows automatically.
+- Migrate owned startup, recovery and video tasks to the new layout while preserving camera identities and existing connections.
+
 ## 0.2.6
 
 - Add an optional silent USB Audio Class microphone to each generated USB/UVC camera.

@@ -75,6 +75,21 @@ struct ModalCamera {
     restore_enabled: Cell<bool>,
 }
 impl ModalCamera {
+    fn active(&self) -> bool {
+        let preview = self.preview.get();
+        !preview.is_null() && unsafe { IsWindow(preview) != 0 }
+    }
+    fn allows_quit(&self, parent: HWND) -> bool {
+        if !self.active() {
+            return false;
+        }
+        let preview = self.preview.get();
+        unsafe {
+            GetLastActivePopup(parent) == preview
+                && GetLastActivePopup(preview) == preview
+                && windows_sys::Win32::UI::Input::KeyboardAndMouse::IsWindowEnabled(preview) != 0
+        }
+    }
     fn begin(&self, parent: HWND, preview: HWND, role: Role) {
         if preview.is_null() || self.preview.get() == preview {
             return;
@@ -1523,6 +1538,7 @@ const ADD_SERVER: usize = 104;
 const PORTS: usize = 105;
 const ABOUT: usize = 106;
 const HIDE: usize = 107;
+const EXIT_APPLICATION: usize = 113;
 const REMOVE_SERVER: usize = 108;
 const SELECT_SERVER: usize = 109;
 const PROXY: usize = 110;
@@ -1683,6 +1699,7 @@ impl Model {
 }
 struct ClientUi {
     modal_camera: ModalCamera,
+    quitting: Cell<bool>,
     path: PathBuf,
     window: Cell<HWND>,
     tree: Cell<HWND>,
@@ -1716,6 +1733,7 @@ impl ClientWindow {
             register("USBBridge.Client.2", Some(client_procedure))?;
             let context = Box::new(ClientUi {
                 modal_camera: ModalCamera::default(),
+                quitting: Cell::new(false),
                 path: path.to_path_buf(),
                 window: Cell::new(null_mut()),
                 tree: Cell::new(null_mut()),
@@ -1749,6 +1767,13 @@ impl ClientWindow {
             ] {
                 AppendMenuW(file, MF_STRING, id, wide(text).as_ptr());
             }
+            AppendMenuW(file, MF_SEPARATOR, 0, null());
+            AppendMenuW(
+                file,
+                MF_STRING,
+                EXIT_APPLICATION,
+                wide(crate::i18n::t("Exit application")).as_ptr(),
+            );
             for (id, text) in [
                 (CONNECT, crate::i18n::t("Подключить устройство")),
                 (DISCONNECT, crate::i18n::t("Отключить устройство")),
@@ -1889,6 +1914,30 @@ impl ClientWindow {
     pub fn settings(&self) {
         self.show(false);
         self.context.connection_form(false);
+    }
+    pub(crate) fn can_quit(&self) -> bool {
+        !self.context.working.load(Ordering::Acquire)
+            && (unsafe { GetWindowLongPtrW(self.window, GWL_STYLE) as u32 & WS_DISABLED == 0 }
+                || self.context.modal_camera.allows_quit(self.window))
+    }
+    pub(crate) fn set_quitting(&self, quitting: bool) {
+        self.context.quitting.set(quitting);
+        self.context.working.store(quitting, Ordering::Release);
+        unsafe {
+            EnableWindow(
+                self.window,
+                i32::from(!quitting && !self.context.modal_camera.active()),
+            );
+        }
+        self.context
+            .feedback
+            .borrow_mut()
+            .set(crate::i18n::t(if quitting {
+                "Exiting application... Stopping USB connections and background tasks."
+            } else {
+                "Application exit failed or was canceled."
+            }));
+        self.context.details();
     }
     pub fn can_reload(&self) -> bool {
         !self.context.working.load(Ordering::Acquire)
@@ -2261,6 +2310,7 @@ impl ClientUi {
                 SELECT_SERVER,
                 REMOVE_SERVER,
                 CAMERA_PREVIEW,
+                EXIT_APPLICATION,
             ] {
                 let enabled = !working
                     && (id != SEARCH || !refreshing)
@@ -2301,7 +2351,12 @@ impl ClientUi {
         }
         set_text(
             self.footer.get(),
-            &if feedback.text.is_empty() {
+            &if self.quitting.get() {
+                crate::i18n::t(
+                    "Exiting application... Stopping USB connections and background tasks.",
+                )
+                .into()
+            } else if feedback.text.is_empty() {
                 text
             } else {
                 format!("{}\r\n{}", feedback.text, text.replace("\r\n", " · "))
@@ -2557,6 +2612,9 @@ impl ClientUi {
         });
     }
     fn command(&self, id: usize) {
+        if self.quitting.get() {
+            return;
+        }
         if self.working.load(Ordering::Acquire) && !matches!(id, ABOUT | HIDE) {
             return;
         }
@@ -2576,10 +2634,15 @@ impl ClientUi {
         let selection = self.model.borrow().selected.clone();
         crate::diagnostics::event(
             "ui.action",
-            serde_json::json!({"id":id,"action":match id{CONNECT=>"connect",DISCONNECT=>"disconnect",SEARCH=>"search",ADD_SERVER=>"add_server",PORTS=>"ports",PROXY=>"proxy",ABOUT=>"about",HIDE=>"hide",REMOVE_SERVER=>"remove_server",SELECT_SERVER=>"select_server",CAMERA_PREVIEW=>"camera_preview",DEVICE_CAMERA_PREVIEW=>"camera_test_device",_=>"other"},"selection":selection}),
+            serde_json::json!({"id":id,"action":match id{CONNECT=>"connect",DISCONNECT=>"disconnect",SEARCH=>"search",ADD_SERVER=>"add_server",PORTS=>"ports",PROXY=>"proxy",ABOUT=>"about",HIDE=>"hide",EXIT_APPLICATION=>"exit_application",REMOVE_SERVER=>"remove_server",SELECT_SERVER=>"select_server",CAMERA_PREVIEW=>"camera_preview",DEVICE_CAMERA_PREVIEW=>"camera_test_device",_=>"other"},"selection":selection}),
         );
         let owner = self.window.get();
         match id {
+            EXIT_APPLICATION => {
+                if let Err(error) = crate::tray::request_quit(Role::Client) {
+                    information(owner, &error.to_string());
+                }
+            }
             VIDEO_SETTINGS => video_settings(owner, &self.path, Role::Client),
             LOCAL_CAMERA_SETTINGS => local_camera_settings(owner, &self.path),
             CAMERA_PREVIEW | DEVICE_CAMERA_PREVIEW => {
@@ -2767,10 +2830,15 @@ impl ClientUi {
                         "Укажите логин и пароль прокси",
                     )));
                 }
-                Some(crate::credentials::save(&crate::proxy::Credentials {
-                    username: values[3].clone(),
-                    password,
-                })?)
+                let credential_root =
+                    std::path::absolute(&self.path)?.with_file_name("proxy-credentials");
+                Some(crate::credentials::save_at(
+                    &credential_root,
+                    &crate::proxy::Credentials {
+                        username: values[3].clone(),
+                        password,
+                    },
+                )?)
             } else {
                 None
             };
@@ -3184,6 +3252,19 @@ unsafe extern "system" fn client_procedure(
                 .begin(window, wparam as HWND, Role::Client);
             0
         }
+        WM_MENUSELECT => {
+            if wparam & 0xffff == EXIT_APPLICATION && !context.quitting.get() {
+                set_text(
+                    context.footer.get(),
+                    crate::i18n::t(
+                        "Exit stops USB connections and background work. Windows startup settings are kept.",
+                    ),
+                );
+            } else {
+                context.details();
+            }
+            0
+        }
         WM_CONTEXTMENU if wparam as HWND == context.tree.get() => {
             context.popup(lparam);
             0
@@ -3210,6 +3291,11 @@ unsafe extern "system" fn client_procedure(
         }
         WM_TIMER if wparam == 4 => {
             context.modal_camera.tick(window);
+            if context.quitting.get() {
+                unsafe {
+                    EnableWindow(window, 0);
+                }
+            }
             0
         }
         WM_TIMER if wparam == 2 => {

@@ -1,4 +1,4 @@
-# Run from an elevated Windows PowerShell session after Download-Drivers.ps1.
+﻿# Install only the signed installers bundled with this release; no downloads.
 param(
     [Parameter(Mandatory = $true)][ValidateSet('Server', 'Client')][string]$Role,
     [string]$InstallerDirectory = (Join-Path $PSScriptRoot 'tools\driver-installers'),
@@ -17,10 +17,9 @@ if ($Role -eq 'Server') {
 } elseif (Get-Service usbip2_ude, usbip2_filter -ErrorAction SilentlyContinue) {
     throw 'USBIP-WIN2 drivers are already installed. Use Inspect-Host.ps1 and the upstream installer to manage them.'
 }
-& (Join-Path $PSScriptRoot 'Download-Drivers.ps1') -Role $Role -Destination $InstallerDirectory
-if (-not $?) { throw 'Installer verification failed.' }
-$manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'driver-installers.json') -Raw | ConvertFrom-Json
-$installer = (Resolve-Path -LiteralPath (Join-Path $InstallerDirectory $manifest.$Role.file)).Path
+$verified = @(& (Join-Path $PSScriptRoot 'Verify-DriverInstaller.ps1') -Role $Role -InstallerDirectory $InstallerDirectory)
+if (-not $? -or $verified.Count -ne 1 -or -not $verified[0].OfflineVerified) { throw 'Bundled installer verification failed. No download was attempted.' }
+$installer = [string]$verified[0].Path
 $logs = Join-Path $PSScriptRoot 'logs'
 New-Item -ItemType Directory -Path $logs -Force | Out-Null
 if ($Role -eq 'Server') {
@@ -31,7 +30,7 @@ if ($Role -eq 'Server') {
 } else {
     $operation = Start-Process $installer -ArgumentList @(
         '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/RESTARTEXITCODE=3010',
-        '/SP-', '/NOICONS', '/TYPE=custom', '/COMPONENTS=main,client',
+        '/SP-', '/NOICONS', '/TYPE=custom', '/COMPONENTS=main,client', '/TASKS=vcredist',
         ('/DIR="' + $ClientDirectory + '"'), ('/LOG="' + (Join-Path $logs 'client-install.log') + '"')
     ) -WindowStyle Hidden -Wait -PassThru
 }

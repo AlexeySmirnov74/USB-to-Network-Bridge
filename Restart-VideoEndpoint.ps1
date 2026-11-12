@@ -28,6 +28,11 @@ try {
  $deadline=[DateTime]::UtcNow.AddSeconds(10)
  do {$task=Get-ScheduledTask -TaskPath $taskPath -TaskName $taskName;if($task.State-eq 'Disabled'){[ordered]@{action='disabled_during_recovery'}|ConvertTo-Json -Compress;exit 0};if($task.State-ne 'Running'){break};Start-Sleep -Milliseconds 100}while([DateTime]::UtcNow-lt $deadline)
  if($task.State-eq 'Running'){throw 'The video task is still stopping.'}
+ $application=& (Join-Path $PSScriptRoot 'usbbridge.exe') --config $Config client application-state status-video|Out-String
+ if($LASTEXITCODE-ne 0){throw 'Cannot confirm whether this video endpoint was manually stopped.'}
+ $application=$application|ConvertFrom-Json
+ if($application.stopped-isnot [bool]){throw 'The application stop state is invalid.'}
+ if($application.stopped){[ordered]@{action='manually_stopped'}|ConvertTo-Json -Compress;exit 0}
  $task|Start-ScheduledTask
  [ordered]@{action='restart_requested';role=$Role;previous_pids=@($processes|Select-Object -ExpandProperty ProcessId)}|ConvertTo-Json -Compress
 }finally{if($lease){$lease.Dispose()}}

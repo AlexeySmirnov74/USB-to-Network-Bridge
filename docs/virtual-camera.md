@@ -15,7 +15,7 @@ For a third-party producer running on the client PC, see the [OBS/Unity Capture 
 
 ## Quick start
 
-1. Install the complete application package on both Windows 11 x64 PCs. The receiving server also needs the signed **USBIP-WIN2 client driver**, because it hosts the virtual USB controller. If this PC only has the physical-sharing server driver, run `Install-ProductionDrivers.ps1 -Role Client` from the complete application directory in an elevated PowerShell window. This installs the receiving USB controller without configuring another application role. Keep Secure Boot enabled; follow an upstream installer's request for a manual restart when needed.
+1. Install the complete application package on both Windows 11 x64 PCs. The receiving server also needs the signed **USBIP-WIN2 client driver**, because it hosts the virtual USB controller. If this PC only has the physical-sharing server driver, run `app\Install-ProductionDrivers.ps1 -Role Client` from the package root in an elevated PowerShell window. This installs the receiving USB controller without configuring another application role. Keep Secure Boot enabled; follow an upstream installer's request for a manual restart when needed.
 2. On the server, open **Server → USB camera — receive video**. Enable the mode, set a name such as `4k web camera`, choose a resolution, and set the incoming video TCP port (default **13251**). Enter a connection key of 16–128 characters. The receiver uses the server's allowed client IP addresses when saving this dialog.
 3. On the client, open **Device → Send video**. Enable the mode, select a source, enter `SERVER_IP:13251`, and enter the same connection key. The test pattern provides a source without opening a physical camera. For OBS, start **Virtual Camera** in OBS first; for Unity Capture, install its DirectShow filter and start the Unity producer.
 4. On the server, select the configured camera name in Camera Test or the target video application. Confirm that the application has Windows camera permission. Camera Test reports frames actually received and decoded.
@@ -34,7 +34,9 @@ The GUI stores connection keys using Windows DPAPI in protected files. A blank k
 
 ## Command line
 
-Use the normal host/client configuration paths for the control commands:
+The packaged CLI and PowerShell helpers are in `app`. First use
+`Set-Location C:\USBBridge\app` (adjust for your installation), then pass the actual
+host/client configuration paths used by the launcher or its startup tasks:
 
 ```powershell
 .\usbbridge.exe --config C:\path\host.local.json server video settings
