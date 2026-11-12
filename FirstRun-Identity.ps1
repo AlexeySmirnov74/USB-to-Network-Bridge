@@ -102,6 +102,32 @@ function ConvertTo-BridgePortableClientSettings($Settings) {
  }
  $copy
 }
+function Get-BridgeExistingLongPath([string]$Path) {
+ if(-not('BridgeFirstRunPaths.Native'-as [type])){
+  Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+namespace BridgeFirstRunPaths {
+ public static class Native {
+  [DllImport("kernel32.dll",CharSet=CharSet.Unicode,ExactSpelling=true,SetLastError=true)]
+  private static extern uint GetLongPathNameW(string path,StringBuilder result,uint capacity);
+  public static string ExistingLongPath(string path) {
+   var full=Path.GetFullPath(path);
+   var result=new StringBuilder(32768);
+   uint length=GetLongPathNameW(full,result,(uint)result.Capacity);
+   if(length==0)throw new Win32Exception(Marshal.GetLastWin32Error(),"Cannot identify an existing first-run backup file.");
+   if(length>=result.Capacity)throw new PathTooLongException("The first-run backup path exceeds the supported size.");
+   return result.ToString();
+  }
+ }
+}
+'@
+ }
+ [BridgeFirstRunPaths.Native]::ExistingLongPath($Path)
+}
 function Get-BridgeRoleLocalFiles([string]$Role,[string]$Runtime,[string]$Config,[switch]$KeepPreferences) {
  $directory=Split-Path -Parent $Config
  $stem=[IO.Path]::GetFileNameWithoutExtension($Config)
@@ -149,7 +175,17 @@ function Get-BridgeRoleLocalFiles([string]$Role,[string]$Runtime,[string]$Config
   $paths+=(Join-Path $directory 'server.local.psd1')
   foreach($file in @('backend-state.json','native-publication.local.json','native-sessions.local.json','native-hid-guards.local.json','device-locations.local.json','devices.inventory','backend-switch-status.json')){$paths+=(Join-Path $Runtime $file)}
  }
- @($paths|Select-Object -Unique|Where-Object {Test-Path -LiteralPath $_ -PathType Leaf})
+ # A copied key can be found by several spellings of the same path. In
+ # particular, Windows TEMP may use an 8.3 alias while path resolution expands
+ # it. Expand existing names and normalize separators before deduplication so
+ # backup moves each file exactly once, preserving link objects as link paths.
+ $seen=New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+ foreach($path in $paths){
+  if(Test-Path -LiteralPath $path -PathType Leaf){
+   $canonical=Get-BridgeExistingLongPath $path
+   if($seen.Add($canonical)){$canonical}
+  }
+ }
 }
 function Backup-BridgeRoleState([string]$Role,[string]$Runtime,[string]$Config,[switch]$KeepPreferences) {
  $files=@(Get-BridgeRoleLocalFiles $Role $Runtime $Config -KeepPreferences:$KeepPreferences)

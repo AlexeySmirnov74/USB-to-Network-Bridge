@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.12
+
+- Normalize Windows short and long path aliases before first-run backups so a copied key is archived once on a new PC.
+- Isolate watchdog tests from prebuilt runtime files and verify explicit-exit holds without starting real tasks.
+- Run push CI once on the main branch instead of duplicating the same build for its release tag.
+
 ## 0.2.11
 
 - Recognize a correctly staged VBoxUSB package on a fresh server before any device has been captured; avoid repeated repair/reboot prompts.

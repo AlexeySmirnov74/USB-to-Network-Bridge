@@ -11,7 +11,7 @@
 
 面向 Windows 11 x64 的开源 USB over IP（USB/IP）重定向工具。通过局域网或 VPN 在 Windows 计算机间共享真实 USB 设备，包括摄像头和 Android 手机的 ADB 接口/存储。Rust 服务器导出选定设备，Windows 客户端通过虚拟 USB 控制器导入。无需激活，没有试用倒计时，也没有许可证规定的设备数量限制。
 
-**v0.2.11：Windows 11 x64。** 使用 Rust 编写的 USB 服务器和客户端，提供图形界面、命令行、自动发现与重连、MSI 安装包及便携 ZIP。[下载最新版本](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest)。
+**v0.2.12：Windows 11 x64。** 使用 Rust 编写的 USB 服务器和客户端，提供图形界面、命令行、自动发现与重连、MSI 安装包及便携 ZIP。[下载最新版本](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest)。
 
 **离线安装：** 便携 ZIP 和 MSI 均包含服务器和客户端的已签名驱动安装程序。将两个 EXE 和整个 `app` 文件夹复制到另一台 Windows 11 x64 电脑；首次安装仅使用本地文件。[安装说明](docs/installation.md) · [驱动许可证及源代码](docs/driver-sources.md)。
 

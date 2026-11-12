@@ -11,7 +11,7 @@
 
 An open-source USB over IP (USB/IP) redirector for Windows 11 x64. Share real USB devices between Windows computers over a LAN or VPN, including webcams and Android phone ADB/storage. A Rust server exports selected devices; a Windows client imports them through a virtual USB controller. No activation, trial timer or license-based device limit.
 
-**v0.2.11 — Windows 11 x64.** A Rust USB server and client with a desktop GUI, command-line control, automatic discovery and reconnect, plus an MSI installer and portable ZIP. [Download the latest release](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+**v0.2.12 — Windows 11 x64.** A Rust USB server and client with a desktop GUI, command-line control, automatic discovery and reconnect, plus an MSI installer and portable ZIP. [Download the latest release](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
 
 **Offline setup:** the portable ZIP and MSI include the signed server and client driver installers. Copy both launchers and the entire `app` folder to another Windows 11 x64 PC; first-run installation uses only local files. [Installation](docs/installation.md) · [Driver licenses and source](docs/driver-sources.md).
 
@@ -145,7 +145,7 @@ Set-Location USB-to-Network-Bridge
 .\Package.ps1
 ```
 
-`Build.ps1` checks formatting, runs Clippy and tests, and builds seven release executables. Developers run `Download-Drivers.ps1 -Role Both` once with internet access before packaging. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.11-windows-x64.zip` including both original signed driver installers, runtime helpers, examples, docs and dependency licenses. SHA-256 and offline Authenticode checks use `driver-installers.json`. CI downloads the pinned inputs at build time and packages them without installing USB drivers; hardware tests remain separate.
+`Build.ps1` checks formatting, runs Clippy and tests, and builds seven release executables. Developers run `Download-Drivers.ps1 -Role Both` once with internet access before packaging. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.12-windows-x64.zip` including both original signed driver installers, runtime helpers, examples, docs and dependency licenses. SHA-256 and offline Authenticode checks use `driver-installers.json`. CI downloads the pinned inputs at build time and packages them without installing USB drivers; hardware tests remain separate.
 
 ## Installation and runtime
 

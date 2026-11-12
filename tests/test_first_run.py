@@ -55,6 +55,12 @@ class FirstRunPolicyTests(unittest.TestCase):
         self.assertIsNone(value['otherAuth'])
         self.assertIsNotNone(value['original'])
 
+    def test_backup_deduplicates_case_separator_and_short_path_aliases(self):
+        value = self.run_policy("$long=Join-Path $testRoot 'Long folder name for backup alias regression'; New-Item -ItemType Directory -Path $long | Out-Null; $fso=New-Object -ComObject Scripting.FileSystemObject; $alias=[string]$fso.GetFolder($long).ShortPath; $config=Join-Path $alias 'host.local.json'; Write-BridgeJson $config @{enabled=$true}; $key=Join-Path $long 'camera.key'; [IO.File]::WriteAllText($key,'fixture-not-secret'); Write-BridgeJson (Join-Path $alias 'host.video-receive.local.json') @{key_file=$key.ToUpperInvariant().Replace('\\','/');enabled=$true}; $files=@(Get-BridgeRoleLocalFiles Server $alias $config); $keys=@($files|Where-Object {[IO.Path]::GetFileName($_)-ieq 'camera.key'}); $backup=Backup-BridgeRoleState Server $alias $config; @{keyCount=$keys.Count;backupKeys=@(Get-ChildItem -LiteralPath $backup -Filter '*-camera.key').Count;keyExists=(Test-Path -LiteralPath $key);shortAlias=($alias-ne $long)}|ConvertTo-Json")
+        self.assertEqual(value['keyCount'], 1)
+        self.assertEqual(value['backupKeys'], 1)
+        self.assertFalse(value['keyExists'])
+
     def test_driver_service_record_alone_does_not_mean_ready(self):
         value = self.run_policy("$script:driverMode='Manual'; function Get-CimInstance {param($ClassName,$Filter,$ErrorAction) [pscustomobject]@{PathName=(Join-Path $testRoot 'driver.sys');StartMode=$script:driverMode}}; function Get-Service {param($Name,$ErrorAction) [pscustomobject]@{Name='usbipd'}}; $missing=Get-BridgeDriverReadiness Server; [IO.File]::WriteAllText((Join-Path $testRoot 'driver.sys'),'fixture'); $ready=Get-BridgeDriverReadiness Server; $script:driverMode='Disabled'; $disabled=Get-BridgeDriverReadiness Server; @{missing=$missing.Ready;ready=$ready.Ready;disabled=$disabled.Ready}|ConvertTo-Json")
         self.assertEqual(value, {'missing': False, 'ready': True, 'disabled': False})

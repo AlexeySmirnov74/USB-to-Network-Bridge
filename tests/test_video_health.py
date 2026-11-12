@@ -15,6 +15,15 @@ class VideoHealthTests(unittest.TestCase):
 $ErrorActionPreference='Stop'
 $testRole='ROLE';$testMode=if($testRole-eq 'Receive'){'receive'}else{'send'};$testCase='CASE';$runtime='RUNTIME';$config='CONFIG';$script:stopped=$false
 $exe=Join-Path $runtime 'usbbridge-camera.exe'
+# Intercept the exact application-state command without requiring build output
+# or querying an installed application's state on the test machine.
+Set-Item -LiteralPath ('Function:'+(Join-Path $runtime 'usbbridge.exe')) -Value {
+ if($args.Count-ne 5-or $args[0]-cne '--config'-or $args[1]-cne $config-or $args[2]-cne 'client'-or $args[3]-cne 'application-state'-or $args[4]-cne 'status-video'){throw 'Unexpected video lifecycle CLI arguments.'}
+ Write-Host '__LIFECYCLE_PROBE__'
+ $global:LASTEXITCODE=if($testCase-eq 'lifecycle_error'){1}else{0}
+ if($global:LASTEXITCODE-ne 0){return}
+ [ordered]@{stopped=($testCase-eq 'manually_stopped')}|ConvertTo-Json -Compress
+}
 function Get-ScheduledTask {
  [CmdletBinding()]param($TaskPath,$TaskName)
  if($testCase-eq 'missing'){return $null}
@@ -25,13 +34,13 @@ function Get-ScheduledTask {
 function Get-Content {
  [CmdletBinding()]param($LiteralPath,[switch]$Raw,$Encoding)
  if($LiteralPath-like '*.status.json'){
-  $age=if($testCase-in @('hung','startup')){180000}else{0}
+  $age=if($testCase-in @('hung','startup','manually_stopped','lifecycle_error')){180000}else{0}
   [ordered]@{running=$true;process_id=222;updated_unix_ms=([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()-$age)}|ConvertTo-Json -Compress
  }else{[ordered]@{enabled=($testCase-ne 'settings_off')}|ConvertTo-Json -Compress}
 }
 function Get-CimInstance {
  [CmdletBinding()]param($ClassName,$Filter)
- if($testCase-eq 'exited'){return @()}
+ if($testCase-in @('exited','manually_stopped','lifecycle_error')){return @()}
  $age=if($testCase-eq 'startup'){0}else{180}
  [pscustomobject]@{ProcessId=222;ExecutablePath=$exe;CommandLine=('"'+$exe+'" '+$testMode+' --config "'+$config+'"');CreationDate=[DateTime]::UtcNow.AddSeconds(-$age)}
 }
@@ -106,3 +115,19 @@ function Start-ScheduledTask {
         self.assertNotEqual(result.returncode,0)
         self.assertNotIn("__START__",result.stdout)
         self.assertNotIn("__PROCESS_STOP__",result.stdout)
+
+    def test_explicitly_exited_role_does_not_restart_video(self):
+        for role in ("Receive", "Send", "LocalSend"):
+            with self.subTest(role=role):
+                result=self.run_helper("manually_stopped", role)
+                self.assertEqual(result.returncode,0,result.stderr)
+                self.assertIn("__LIFECYCLE_PROBE__",result.stdout)
+                self.assertIn("manually_stopped",result.stdout)
+                self.assertNotIn("__START__",result.stdout)
+                self.assertNotIn("__PROCESS_STOP__",result.stdout)
+
+    def test_failed_lifecycle_probe_never_restarts_video(self):
+        result=self.run_helper("lifecycle_error")
+        self.assertNotEqual(result.returncode,0)
+        self.assertIn("__LIFECYCLE_PROBE__",result.stdout)
+        self.assertNotIn("__START__",result.stdout)
