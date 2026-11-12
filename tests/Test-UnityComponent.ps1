@@ -109,7 +109,9 @@ try{
  [IO.File]::WriteAllText($config,'{}',[Text.UTF8Encoding]::new($false))
  $output=@(& $control --config $config client cameras)
  if($LASTEXITCODE-ne 0){throw ('DirectShow enumeration failed: '+$LASTEXITCODE)}
- $cameras=@(($output-join [Environment]::NewLine)|ConvertFrom-Json)
+ # WinPS 5 keeps a JSON array as one pipeline object; unwrap before filtering.
+ $decoded=($output-join [Environment]::NewLine)|ConvertFrom-Json
+ $cameras=@($decoded)
  $selected=@()
  foreach($slot in @(Get-BridgeUnitySlots)){
   $matching=@($cameras|Where-Object {$_.name-ceq $slot.Name})
