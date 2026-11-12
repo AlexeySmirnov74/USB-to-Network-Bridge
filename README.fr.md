@@ -11,7 +11,7 @@
 
 Un redirecteur USB over IP (USB/IP) open source pour Windows 11 x64. Partagez de vrais périphériques USB sur un LAN ou un VPN, dont webcams et interfaces ADB/stockage de téléphones Android. Le serveur Rust exporte les appareils sélectionnés ; le client Windows les importe via un contrôleur USB virtuel. Sans activation, expiration d'essai ni quota de périphériques lié à une licence.
 
-**v0.2.12 — Windows 11 x64.** Serveur et client USB en Rust avec interface graphique, ligne de commande, découverte et reconnexion automatiques, installateur MSI et ZIP portable. [Télécharger la dernière version](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+**v0.2.13 — Windows 11 x64.** Serveur et client USB en Rust avec interface graphique, ligne de commande, découverte et reconnexion automatiques, installateur MSI et ZIP portable. [Télécharger la dernière version](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
 
 **Installation hors ligne :** le ZIP portable et le MSI incluent les installateurs signés des pilotes serveur et client. Copiez les deux EXE et tout le dossier `app` vers un autre PC Windows 11 x64 ; la première installation utilise uniquement les fichiers locaux. [Installation](docs/installation.md) · [Licences et sources des pilotes](docs/driver-sources.md).
 

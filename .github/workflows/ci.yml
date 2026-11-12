@@ -32,6 +32,8 @@ jobs:
         run: |
           ./tests/Test-OfflineDrivers.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./tests/Test-OfflineIntermediate.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./tests/Test-StagedServerDriver.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./Verify-DriverInstaller.ps1 -Role Both

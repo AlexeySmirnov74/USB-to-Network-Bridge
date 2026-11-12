@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.13
+
+- Include the missing pinned GlobalSign issuing CA certificate for offline client-installer verification on a clean Windows PC.
+- Cache only that non-root intermediate under the current user; retain Windows root trust and full cache-only Authenticode verification of the unchanged installer.
+- Add read-only, network-free developer diagnostics for driver certificate chains.
+
 ## 0.2.12
 
 - Normalize Windows short and long path aliases before first-run backups so a copied key is archived once on a new PC.
