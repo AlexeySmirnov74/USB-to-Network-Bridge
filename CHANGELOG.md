@@ -2,6 +2,8 @@
 
 ## 0.2.13
 
+- Add a Russian architecture diagram and replace resolution-like example camera names in both diagrams with descriptive virtual USB camera labels.
+
 - Refresh the English architecture diagram for both video destinations, silent USB microphones and offline deployment.
 
 - Include the missing pinned GlobalSign issuing CA certificate for offline client-installer verification on a clean Windows PC.

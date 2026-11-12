@@ -90,7 +90,7 @@
   <rect x="724" y="490" width="432" height="180" rx="12" fill="#272a43" stroke="#79699b"/>
   <text x="746" y="517" class="label purple">SERVER PC · USB/UVC CAMERA</text>
   <use href="#camera" x="746" y="532" width="33" height="33" color="#cebeff"/>
-  <text x="791" y="560" font-size="27" font-weight="600">4k web camera</text>
+  <text x="791" y="560" font-size="27" font-weight="600">Virtual USB camera</text>
   <text x="746" y="594" class="body">Receiver → USB camera → server video apps</text>
   <text x="746" y="624" class="body purple">Local USB/IP · 127.0.0.1:13250</text>
   <text x="746" y="652" font-size="17" class="muted">Signed USBIP-WIN2 + inbox usbvideo.sys</text>
@@ -118,7 +118,7 @@
   <rect x="724" y="794" width="432" height="154" rx="12" fill="#183a35" stroke="#4f8974"/>
   <text x="746" y="821" class="label green">CLIENT PC · LOCAL USB/UVC CAMERA</text>
   <use href="#camera" x="746" y="831" width="33" height="33" color="#86edc4"/>
-  <text x="791" y="858" font-size="27" font-weight="600">2k web camera</text>
+  <text x="791" y="858" font-size="27" font-weight="600">Virtual USB camera</text>
   <text x="746" y="891" class="body">Receiver → USB camera → client video apps</text>
   <text x="746" y="924" class="body green">Local USB/IP · 127.0.0.1:13250</text>
   <text x="44" y="971" class="small muted">Each producer output feeds its selected destination; the two routes keep independent senders, keys and settings.</text>
@@ -126,7 +126,7 @@
   <!-- Shared camera behavior, including receiver-local silent audio. -->
   <rect x="24" y="1004" width="1152" height="102" rx="14" fill="#152439" stroke="#3c536c"/>
   <text x="44" y="1034" font-size="20" font-weight="600">Both USB/UVC cameras</text>
-  <text x="44" y="1062" class="small muted">Editable names · stable serials · inbox camera driver</text>
+  <text x="44" y="1062" class="small muted">Editable names · Windows USB/UVC devices · stable serials</text>
   <text x="44" y="1089" font-size="15" class="muted">No frames for 2 s → black; the camera stays connected</text>
   <path d="M594 1022V1088" stroke="#3c536c"/>
   <use href="#microphone" x="615" y="1014" width="24" height="24" color="#f1ce91"/>

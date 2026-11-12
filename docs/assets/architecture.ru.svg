@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1424" viewBox="0 0 1200 1424" role="img" aria-labelledby="title desc" lang="ru" xml:lang="ru">
+  <title id="title">USB to Network Bridge v0.2.13 — USB по сети и два направления видео</title>
+  <desc id="desc">Windows 11 x64. Три независимых маршрута: физические USB-устройства с сервера к клиентам по USB/IP TCP 3240; видео с клиента через Unity Capture Server, слот 0, или другой выбранный источник в виртуальную USB/UVC-камеру сервера по TCP 13251; Unity Capture Client, слот 1, в отдельную виртуальную камеру того же клиента через 127.0.0.1:13251. На каждом принимающем ПК камера подключается локально по USB/IP TCP 13250 через подписанный контроллер USBIP-WIN2 и штатный драйвер камеры Windows. Windows распознаёт программную камеру как USB/UVC-устройство; виртуальный контроллер остаётся виден в дереве устройств. Имена камер можно менять, серийные номера постоянны. Дополнительный микрофон создаёт только локальную тишину. Native — сервер на Rust в пользовательском режиме Windows, использующий тот же исходный подписанный драйвер VBoxUSB, что и usbipd-win. Полные MSI и переносимый ZIP содержат установщики подписанных драйверов для установки без интернета. Порты настраиваются. Используйте доверенную сеть или VPN.</desc>
+  <defs>
+    <linearGradient id="background" x2="1" y2="1"><stop stop-color="#0b1220" /><stop offset="1" stop-color="#14273a" /></linearGradient>
+    <marker id="usb-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#4cdae8" /></marker>
+    <marker id="video-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#bdacff" /></marker>
+    <marker id="local-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#72e2b6" /></marker>
+    <style>
+      text{font-family:Segoe UI,Arial,sans-serif;fill:#edf4fc}
+      .heading{font-size:23px;font-weight:700}.body{font-size:18px}.small{font-size:16px}
+      .label{font-size:16px;font-weight:700;letter-spacing:.7px}.muted{fill:#b5c7dc}
+      .cyan{fill:#72e6ef}.purple{fill:#cebeff}.green{fill:#86edc4}
+      .card{fill:#18283b;stroke:#3b506b;stroke-width:1.2}
+      .icon{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+      .usb{fill:none;stroke:#4cdae8;stroke-width:3;marker-end:url(#usb-arrow)}
+      .video{fill:none;stroke:#bdacff;stroke-width:3;marker-end:url(#video-arrow)}
+      .local{fill:none;stroke:#72e2b6;stroke-width:3;marker-end:url(#local-arrow)}
+    </style>
+    <symbol id="camera" viewBox="0 0 32 32"><g class="icon"><rect x="4" y="7" width="24" height="18" rx="5" /><circle cx="16" cy="16" r="5" /><path d="M11 29h10M16 25v4M8 11h1" /></g></symbol>
+    <symbol id="phone" viewBox="0 0 32 32"><g class="icon"><rect x="8" y="2" width="16" height="28" rx="3" /><path d="M13 6h6M14 26h4" /></g></symbol>
+    <symbol id="usb" viewBox="0 0 32 32"><g class="icon"><path d="M16 28V4m-4 4 4-4 4 4M16 18l-7-5v-3M16 23l7-5v-5" /><circle cx="9" cy="8" r="2" /><path d="M21 9h4v4h-4Z" /><circle cx="16" cy="28" r="2" /></g></symbol>
+    <symbol id="computer" viewBox="0 0 32 32"><g class="icon"><rect x="3" y="4" width="26" height="19" rx="3" /><path d="M11 29h10M16 23v6M3 19h26" /></g></symbol>
+    <symbol id="microphone" viewBox="0 0 32 32"><g class="icon"><rect x="11" y="3" width="10" height="17" rx="5" /><path d="M7 14v2a9 9 0 0 0 18 0v-2M16 25v5M11 30h10" /></g></symbol>
+  </defs>
+
+  <rect width="1200" height="1424" rx="24" fill="url(#background)" />
+  <text x="40" y="49" font-size="32" font-weight="700">USB to Network Bridge</text>
+  <text x="40" y="81" class="body muted">Физические USB по сети и два независимых направления видео</text>
+  <rect x="1024" y="22" width="136" height="36" rx="18" fill="#223b53" stroke="#47637d" />
+  <text x="1092" y="46" text-anchor="middle" font-size="18" font-weight="600">v0.2.13</text>
+  <text x="1160" y="81" text-anchor="end" class="small muted">Windows 11 x64</text>
+
+  <!-- Path 1: real USB devices, with full-duplex USB/IP traffic. -->
+  <rect x="24" y="112" width="1152" height="288" rx="18" fill="#101f30" stroke="#30556a" />
+  <circle cx="59" cy="147" r="17" fill="#174c59" />
+  <text x="59" y="153" text-anchor="middle" font-size="18" font-weight="700" class="cyan">1</text>
+  <text x="91" y="155" class="heading">Передача физических USB-устройств</text>
+  <text x="1152" y="153" text-anchor="end" class="label cyan">СЕРВЕР → КЛИЕНТ</text>
+
+  <rect x="44" y="178" width="208" height="176" rx="12" class="card" />
+  <text x="62" y="208" font-size="19" font-weight="600">USB-оборудование</text>
+  <g color="#91c8e2"><use href="#camera" x="62" y="225" width="25" height="25" /><use href="#phone" x="62" y="266" width="25" height="25" /><use href="#usb" x="62" y="307" width="25" height="25" /></g>
+  <text x="97" y="244" class="body">Камера / микр.</text>
+  <text x="97" y="285" class="body">Телефон / диск</text>
+  <text x="97" y="326" class="body">HID / Bluetooth</text>
+  <path d="M258 269H273" class="usb" />
+
+  <rect x="280" y="178" width="300" height="176" rx="12" class="card" />
+  <use href="#computer" x="298" y="192" width="27" height="27" color="#72e6ef" />
+  <text x="336" y="213" font-size="22" font-weight="700">Сервер Windows</text>
+  <text x="298" y="250" class="body">Подписанный VBoxUSB</text>
+  <rect x="298" y="265" width="264" height="36" rx="7" fill="#1c4352" />
+  <text x="430" y="289" text-anchor="middle" font-size="18" font-weight="600" class="cyan">Rust Native или usbipd-win</text>
+  <text x="298" y="333" class="small muted">Один клиент на устройство</text>
+
+  <text x="720" y="227" text-anchor="middle" font-size="19" font-weight="600" class="cyan">Сеть / VPN</text>
+  <path d="M608 269H832" class="usb" marker-start="url(#usb-arrow)" />
+  <text x="720" y="304" text-anchor="middle" class="body">USB/IP · TCP 3240</text>
+  <text x="720" y="331" text-anchor="middle" class="small muted">Двунаправленный USB</text>
+
+  <rect x="860" y="178" width="296" height="176" rx="12" class="card" />
+  <use href="#computer" x="878" y="192" width="27" height="27" color="#72e6ef" />
+  <text x="916" y="213" font-size="22" font-weight="700">Клиенты Windows</text>
+  <text x="878" y="250" class="body">USBIP-WIN2 с подписью</text>
+  <text x="878" y="286" class="body">Драйверы классов Windows</text>
+  <text x="878" y="322" class="small muted">USB → обычные программы</text>
+  <text x="44" y="382" class="small muted">Поиск: UDP 3241 · Каталог: TCP 3241 · Прямой IP / сохранённые серверы · Несколько клиентов и серверов</text>
+
+  <!-- Path 2: the producer is on the client; the resulting USB camera is on the server. -->
+  <rect x="24" y="424" width="1152" height="280" rx="18" fill="#1a2035" stroke="#55496f" />
+  <circle cx="59" cy="459" r="17" fill="#40345f" />
+  <text x="59" y="465" text-anchor="middle" font-size="18" font-weight="700" class="purple">2</text>
+  <text x="91" y="467" class="heading">Видео с клиента на сервер</text>
+  <text x="1152" y="465" text-anchor="end" class="label purple">КЛИЕНТ → СЕРВЕР</text>
+
+  <rect x="44" y="490" width="400" height="180" rx="12" class="card" />
+  <text x="64" y="517" class="label purple">КЛИЕНТ · ИСТОЧНИК ВИДЕО</text>
+  <text x="64" y="554" font-size="21" font-weight="600">Unity Capture Server · слот 0</text>
+  <text x="64" y="586" class="body muted">DeepLive / OBS / источник DirectShow</text>
+  <text x="64" y="623" class="body">Захват → MJPEG → отправитель</text>
+  <text x="64" y="652" font-size="15" class="muted">Источник и отправитель — в одном сеансе Windows</text>
+
+  <text x="578" y="525" text-anchor="middle" class="small purple">Сеть / VPN</text>
+  <text x="578" y="563" text-anchor="middle" font-size="20" font-weight="600">TCP 13251</text>
+  <path d="M470 590H688" class="video" />
+  <text x="578" y="625" text-anchor="middle" font-size="17">MJPEG + аутентификация</text>
+  <text x="578" y="651" text-anchor="middle" font-size="15" class="muted">Без шифрования кадров</text>
+
+  <rect x="724" y="490" width="432" height="180" rx="12" fill="#272a43" stroke="#79699b" />
+  <text x="746" y="517" class="label purple">СЕРВЕР · USB/UVC-КАМЕРА</text>
+  <use href="#camera" x="746" y="532" width="33" height="33" color="#cebeff" />
+  <text x="791" y="560" font-size="27" font-weight="600">Виртуальная USB-камера</text>
+  <text x="746" y="594" class="body">Приёмник → USB-камера → видеопрограммы</text>
+  <text x="746" y="624" class="body purple">Локальный USB/IP · 127.0.0.1:13250</text>
+  <text x="746" y="652" font-size="17" class="muted">USBIP-WIN2 с подписью + штатный usbvideo.sys</text>
+  <text x="44" y="693" class="small muted">Приёмник создаёт USB/UVC-камеру на сервере через подписанный виртуальный USB-контроллер.</text>
+
+  <!-- Path 3: an independent sender and receiver, both on the client. -->
+  <rect x="24" y="728" width="1152" height="252" rx="18" fill="#112a2b" stroke="#39605b" />
+  <circle cx="59" cy="763" r="17" fill="#205646" />
+  <text x="59" y="769" text-anchor="middle" font-size="18" font-weight="700" class="green">3</text>
+  <text x="91" y="771" class="heading">Отдельная камера на клиенте</text>
+  <text x="1152" y="769" text-anchor="end" class="label green">КЛИЕНТ → ЭТОТ ЖЕ ПК</text>
+
+  <rect x="44" y="794" width="400" height="154" rx="12" class="card" />
+  <text x="64" y="821" class="label green">КЛИЕНТ · ОТДЕЛЬНЫЙ ИСТОЧНИК</text>
+  <text x="64" y="858" font-size="21" font-weight="600">Unity Capture Client · слот 1</text>
+  <text x="64" y="891" class="body">Свой локальный отправитель и ключ</text>
+  <text x="64" y="924" class="small muted">Независим от передачи видео на сервер</text>
+
+  <text x="578" y="818" text-anchor="middle" class="label green">ТОЛЬКО НА КЛИЕНТЕ</text>
+  <text x="578" y="851" text-anchor="middle" font-size="19" font-weight="600">127.0.0.1:13251</text>
+  <path d="M470 870H688" class="local" />
+  <text x="578" y="905" text-anchor="middle" font-size="17">MJPEG + аутентификация</text>
+  <text x="578" y="931" text-anchor="middle" font-size="15" class="muted">Видео не выходит в сеть</text>
+
+  <rect x="724" y="794" width="432" height="154" rx="12" fill="#183a35" stroke="#4f8974" />
+  <text x="746" y="821" class="label green">КЛИЕНТ · ЛОКАЛЬНАЯ USB/UVC-КАМЕРА</text>
+  <use href="#camera" x="746" y="831" width="33" height="33" color="#86edc4" />
+  <text x="791" y="858" font-size="27" font-weight="600">Виртуальная USB-камера</text>
+  <text x="746" y="891" class="body">Приёмник → USB-камера → видеопрограммы</text>
+  <text x="746" y="924" class="body green">Локальный USB/IP · 127.0.0.1:13250</text>
+  <text x="44" y="971" class="small muted">Выход источника подаёт видео в выбранную камеру; у двух маршрутов свои отправители, ключи и настройки.</text>
+
+  <!-- Shared camera behavior, including receiver-local silent audio. -->
+  <rect x="24" y="1004" width="1152" height="102" rx="14" fill="#152439" stroke="#3c536c" />
+  <text x="44" y="1034" font-size="20" font-weight="600">Обе камеры — USB/UVC в Windows</text>
+  <text x="44" y="1062" class="small muted">Имя меняется · серийный номер постоянный</text>
+  <text x="44" y="1089" font-size="15" class="muted">Нет кадров 2 с → чёрный экран; камера подключена</text>
+  <path d="M594 1022V1088" stroke="#3c536c" />
+  <use href="#microphone" x="615" y="1014" width="24" height="24" color="#f1ce91" />
+  <text x="650" y="1034" font-size="20" font-weight="600">Дополнительный USB-микрофон</text>
+  <text x="616" y="1062" class="small muted">По умолчанию выкл. · тишина 48 кГц, моно</text>
+  <text x="616" y="1089" font-size="15" class="muted">Тишина на приёмнике, без захвата и передачи звука</text>
+
+  <rect x="24" y="1130" width="568" height="218" rx="14" fill="#111e30" stroke="#354d68" />
+  <text x="44" y="1165" font-size="22" font-weight="600" class="cyan">Управление и восстановление</text>
+  <text x="44" y="1198" font-size="17">Окно / трей / CLI · автозапуск · контроль процессов</text>
+  <text x="44" y="1228" font-size="17">Сохранённые серверы и устройства · переподключение</text>
+  <text x="44" y="1258" font-size="17">Полный выход завершает свои фоновые процессы</text>
+  <text x="44" y="1288" class="small muted">Сеть / VPN · разрешённые IP · HTTP(S) / SOCKS5 для USB</text>
+  <text x="44" y="1319" class="small muted">OBS / Unity Capture устанавливаются отдельно</text>
+
+  <rect x="608" y="1130" width="568" height="218" rx="14" fill="#111e30" stroke="#354d68" />
+  <text x="628" y="1165" font-size="22" font-weight="600" class="green">Перенос и MSI · установка без интернета</text>
+  <text x="628" y="1198" font-size="17">Оба EXE и вся папка app/ переносятся вместе</text>
+  <text x="628" y="1228" font-size="17">Установщики usbipd-win и USBIP-WIN2 с подписью</text>
+  <text x="628" y="1258" font-size="17">Новый ПК: сервер — с нуля; клиент — сохранить / сбросить</text>
+  <text x="628" y="1288" class="small muted">Проверка подписей локально · без скачивания</text>
+  <text x="628" y="1319" class="small muted">Исходные драйверы · Secure Boot можно оставить включённым</text>
+
+  <text x="40" y="1378" class="small muted">Порты меняются в настройках. На каждом ПК своя пара 13250/13251. Имя не задаёт разрешение.</text>
+  <text x="40" y="1404" class="small muted">Native — сервер на Rust в пользовательском режиме; оба варианта сервера используют исходный подписанный драйвер захвата.</text>
+</svg>
