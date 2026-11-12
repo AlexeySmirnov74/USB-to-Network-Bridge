@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1424" viewBox="0 0 1200 1424" role="img" aria-labelledby="title desc">
-  <title id="title">USB to Network Bridge v0.2.13 — USB sharing and two video destinations</title>
-  <desc id="desc">Windows 11 x64. Three independent paths: physical USB devices from server to clients over USB/IP TCP 3240; client video from Unity Capture Server slot 0 or another selected source to a server USB/UVC camera over authenticated MJPEG TCP 13251; and Unity Capture Client slot 1 to a separate client-local USB/UVC camera over loopback TCP 13251. Each generated camera is imported on its own PC over loopback USB/IP TCP 13250 using the signed USBIP-WIN2 controller and inbox Windows camera driver. Camera names and serials are independent. Optional microphones generate local silence only. Native is the Rust userspace server, using the same unchanged signed VBoxUSB capture driver as usbipd-win. Complete MSI and portable packages include signed driver installers for offline setup and repair. Ports are configurable defaults; use a trusted LAN or VPN.</desc>
+  <title id="title">USB to Network Bridge v0.2.14 — USB sharing and two video destinations</title>
+  <desc id="desc">Windows 11 x64. Three independent paths: physical USB devices from server to clients over USB/IP TCP 3240; client video from Unity Capture Server slot 0 or another selected source to a server USB/UVC camera over authenticated MJPEG TCP 13251; and Unity Capture Client slot 1 to a separate client-local USB/UVC camera over loopback TCP 13251. Each generated camera is imported on its own PC over loopback USB/IP TCP 13250 using the signed USBIP-WIN2 controller and inbox Windows camera driver. Camera names and serials are independent. Optional microphones generate local silence only. Native is the Rust userspace server, using the same unchanged signed VBoxUSB capture driver as usbipd-win. Complete MSI and portable packages include signed driver installers and the x64 Unity Capture filter for offline setup and repair. Client setup automatically registers the two independent Unity Capture slots. OBS and producer applications are separate. Ports are configurable defaults; use a trusted LAN or VPN.</desc>
   <defs>
     <linearGradient id="background" x2="1" y2="1"><stop stop-color="#0b1220"/><stop offset="1" stop-color="#14273a"/></linearGradient>
     <marker id="usb-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#4cdae8"/></marker>
@@ -28,7 +28,7 @@
   <text x="40" y="49" font-size="32" font-weight="700">USB to Network Bridge</text>
   <text x="40" y="81" class="body muted">Physical USB over IP + two independent video destinations</text>
   <rect x="1024" y="22" width="136" height="36" rx="18" fill="#223b53" stroke="#47637d"/>
-  <text x="1092" y="46" text-anchor="middle" font-size="18" font-weight="600">v0.2.13</text>
+  <text x="1092" y="46" text-anchor="middle" font-size="18" font-weight="600">v0.2.14</text>
   <text x="1160" y="81" text-anchor="end" class="small muted">Windows 11 x64</text>
 
   <!-- Path 1: real USB devices, with full-duplex USB/IP traffic. -->
@@ -140,14 +140,14 @@
   <text x="44" y="1228" font-size="17">Saved servers and devices · automatic USB reconnect</text>
   <text x="44" y="1258" font-size="17">Full Exit stops this role's owned background processes</text>
   <text x="44" y="1288" class="small muted">Trusted LAN/VPN · IP allowlist · HTTP(S) / SOCKS5 for USB</text>
-  <text x="44" y="1319" class="small muted">OBS / Unity Capture are optional external installations</text>
+  <text x="44" y="1319" class="small muted">Bundled Unity Capture · OBS / producer app separate</text>
 
   <rect x="608" y="1130" width="568" height="218" rx="14" fill="#111e30" stroke="#354d68"/>
   <text x="628" y="1165" font-size="22" font-weight="600" class="green">Portable + MSI · offline setup</text>
   <text x="628" y="1198" font-size="17">Copy both launchers with the complete app/ folder</text>
   <text x="628" y="1228" font-size="17">Bundled signed usbipd-win + USBIP-WIN2 installers</text>
   <text x="628" y="1258" font-size="17">New PC: fresh server setup; client chooses Keep / New</text>
-  <text x="628" y="1288" class="small muted">Local signature checks · no runtime downloads</text>
+  <text x="628" y="1288" class="small muted">Driver + Unity setup locally · no runtime downloads</text>
   <text x="628" y="1319" class="small muted">Upstream drivers unchanged · Secure Boot can stay enabled</text>
 
   <text x="40" y="1378" class="small muted">Ports are configurable defaults. Each PC has its own 13250/13251 pair. Camera names do not set resolution.</text>

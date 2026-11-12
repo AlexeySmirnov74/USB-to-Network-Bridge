@@ -1,6 +1,6 @@
 # USB to Network Bridge: architecture and implementation limits
 
-![USB to Network Bridge v0.2.13: physical USB sharing, separate server and client-local USB/UVC cameras, silent microphones, signed drivers and offline deployment](assets/architecture.svg)
+![USB to Network Bridge v0.2.14: physical USB sharing, separate server and client-local USB/UVC cameras, silent microphones, signed drivers and offline deployment](assets/architecture.svg)
 
 USBBridge implements USB/IP 1.1.1. Device listing/import uses a short-lived management exchange; each imported device then owns a TCP connection. The data reader uses a one-second socket poll to observe cancellation and retries timeouts indefinitely, including mid-header reads. There is no session, trial or idle expiry. TCP keepalive detects a broken peer.
 
@@ -92,6 +92,8 @@ Startup and recurring triggers have no retry-count expiry. A separate health tas
 ## Video input and software UVC endpoint
 
 The optional video path runs independently from physical capture. `src/video.rs` authenticates a sender, retains one bounded latest complete MJPEG frame, and feeds `src/uvc.rs`, which implements a UVC 1.1 bulk camera through USB/IP on loopback. USBIP-WIN2 provides the unchanged signed virtual controller and Windows `usbvideo.sys` supplies camera APIs. The Rust component implements the software device's descriptors, probe/commit, request cancellation and frame packetization; it does not patch or replace a kernel driver. Source loss changes the image to black while the local USB endpoint stays available. Its prototype hardware IDs are excluded from physical publication.
+
+The complete MSI and portable package include the verified x64 Unity Capture filter under `app/components/unity-capture`. Client setup registers its two independent producer slots locally; missing registrations can be repaired before enabling the local camera without downloading a component. Existing compatible registrations and unique DirectShow identities are preserved. OBS and producer applications remain separate.
 
 The sender uses the existing DirectShow worker, including moniker display names for non-PnP OBS/Unity filters. Capture/encoding/network queues retain only the latest frame; optional AVX2 JPEG encoding selects its path at runtime. Mutual challenge authentication and per-frame sequence/MAC checks precede publication of received images. Keys are protected from file creation; GUI credentials additionally use machine DPAPI and explicit owner/SYSTEM/Administrators ACLs.
 

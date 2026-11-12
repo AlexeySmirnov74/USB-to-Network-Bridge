@@ -11,13 +11,13 @@
 
 面向 Windows 11 x64 的开源 USB over IP（USB/IP）重定向工具。通过局域网或 VPN 在 Windows 计算机间共享真实 USB 设备，包括摄像头和 Android 手机的 ADB 接口/存储。Rust 服务器导出选定设备，Windows 客户端通过虚拟 USB 控制器导入。无需激活，没有试用倒计时，也没有许可证规定的设备数量限制。
 
-**v0.2.13：Windows 11 x64。** 使用 Rust 编写的 USB 服务器和客户端，提供图形界面、命令行、自动发现与重连、MSI 安装包及便携 ZIP。[下载最新版本](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest)。
+**v0.2.14：Windows 11 x64。** 使用 Rust 编写的 USB 服务器和客户端，提供图形界面、命令行、自动发现与重连、MSI 安装包及便携 ZIP。[下载最新版本](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest)。
 
-**离线安装：** 便携 ZIP 和 MSI 均包含服务器和客户端的已签名驱动安装程序。将两个 EXE 和整个 `app` 文件夹复制到另一台 Windows 11 x64 电脑；首次安装仅使用本地文件。[安装说明](docs/installation.md) · [驱动许可证及源代码](docs/driver-sources.md)。
+**离线安装：** 便携 ZIP 和 MSI 均包含服务器和客户端的已签名驱动安装程序及 x64 Unity Capture 筛选器。将两个 EXE 和整个 `app` 文件夹复制到全新的 Windows 11 x64 电脑；安装和修复仅使用本地文件。客户端安装会注册 **Unity Capture Server**（槽位 0）和 **Unity Capture Client**（槽位 1）；启用客户端 USB 摄像头时，也会从本地安装包修复缺失的注册。OBS 和生成视频的应用需另外安装。[安装说明](docs/installation.md) · [驱动许可证及源代码](docs/driver-sources.md)。
 
 **v0.2.1 代理健康检查：**服务器和客户端控制器分别由监控程序管理。退出的控制器会自动重启；心跳停止两分钟后会被检测到。独立的 Windows 任务每分钟还会检查并恢复监控程序。过期状态不再显示设备已连接。诊断命令：`usbbridge --config FILE server health` 或 `client health`。[更新记录](CHANGELOG.md)。
 
-![USB to Network Bridge v0.2.13：物理 USB 共享、服务器和客户端的独立摄像头、静音麦克风及离线驱动安装；英文示意图](docs/assets/architecture.svg)
+![USB to Network Bridge v0.2.14：物理 USB 共享、服务器和客户端的独立摄像头、静音麦克风及离线驱动安装；英文示意图](docs/assets/architecture.svg)
 
 
 **v0.2.3：** 摄像头名称在 DirectShow 与 Media Foundation 之间同步。捕获在新帧到达时唤醒，重复使用有容量限制的工作缓冲区，并报告处理耗时。客户端电脑上的第三方视频应用可参考 [OBS/Unity Capture 集成指南](docs/third-party-video.md)（英文），其中包括命令行示例及其他项目的集成任务说明。
@@ -128,10 +128,11 @@ git clone https://github.com/AlexeySmirnov74/USB-to-Network-Bridge.git
 Set-Location USB-to-Network-Bridge
 .\Build.ps1
 .\Download-Drivers.ps1 -Role Both
+.\Download-VideoComponents.ps1
 .\Package.ps1
 ```
 
-`dist` 中的 ZIP 包含两个未修改的已签名驱动安装程序、EXE、运行脚本、示例和许可证。开发者在打包前联网运行一次 `Download-Drivers.ps1 -Role Both`。SHA-256 和 Authenticode 根据 `driver-installers.json` 离线验证。CI 仅在构建时下载固定版本依赖，不安装驱动，也不能替代硬件测试。可选的 `Bootstrap.ps1` 安装 Rust；`-InstallBuildTools` 还会安装 Microsoft 构建工具。
+`dist` 中的 ZIP 包含两个未修改的已签名驱动安装程序、经过验证的 Unity Capture 筛选器、EXE、运行脚本、示例和许可证。开发者在打包前联网运行一次 `Download-Drivers.ps1 -Role Both` 和 `Download-VideoComponents.ps1`；筛选器根据 `unity-capture.json` 验证。SHA-256 和 Authenticode 根据 `driver-installers.json` 离线验证。CI 仅在构建时下载固定版本依赖，不安装驱动，也不能替代硬件测试。可选的 `Bootstrap.ps1` 安装 Rust；`-InstallBuildTools` 还会安装 Microsoft 构建工具。
 
 **需要 Windows PowerShell 5.1 及运行用 `.ps1` 文件**，它们负责共享、捕获、模块切换和自动启动。已安装的计算机无需构建脚本。项目 EXE 和 MSI 不进行 Authenticode 签名；USB 驱动保留官方生产签名。MSI 支持安装、修复、升级、回滚和卸载。参见[安装](docs/installation.md)和[构建与发布](docs/production-readiness.md)。
 

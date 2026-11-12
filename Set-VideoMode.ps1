@@ -1,4 +1,4 @@
-﻿# Configure only this runtime's video endpoint. Physical USB sessions are untouched.
+# Configure only this runtime's video endpoint. Physical USB sessions are untouched.
 param([Parameter(Mandatory=$true)][ValidateSet('Receive','Send','LocalSend')][string]$Role,[Parameter(Mandatory=$true)][string]$Config,[Parameter(Mandatory=$true)][string]$RequestFile,[string]$InteractiveUser,[switch]$Elevate)
 . (Join-Path $PSScriptRoot 'Portable-Paths.ps1')
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
@@ -37,6 +37,10 @@ try {
  & $exe validate $mode $RequestFile|Out-Null
  if($LASTEXITCODE-ne 0){throw 'Video settings validation failed.'}
  if($Role-ne 'Receive'-and $request.enabled-and -not $InteractiveUser){throw 'An interactive Windows user is required for OBS/Unity video capture.'}
+ if($request.enabled){
+  if((Get-Service -Name Schedule -ErrorAction Stop).Status-ne 'Running'){throw 'Windows Task Scheduler (Schedule) must be running before enabling video. Existing video settings were preserved.'}
+
+ }
  $oldTask=Get-ScheduledTask -TaskPath $taskPath -TaskName $taskName -ErrorAction SilentlyContinue
  $expected=$mode+' --config "'+$Config+'"'
  if($oldTask){if(@($oldTask.Actions).Count-ne 1-or $oldTask.Actions[0].Execute-ne $exe-or $oldTask.Actions[0].Arguments-ne $expected){throw 'The video task belongs to another runtime/configuration.'};$oldXml=Export-ScheduledTask -TaskPath $taskPath -TaskName $taskName;$oldRunning=$oldTask.State-eq 'Running'}
@@ -45,6 +49,12 @@ try {
  if(Test-Path -LiteralPath $Config){$oldBytes=[IO.File]::ReadAllBytes($Config);$oldConfig=Get-Content -LiteralPath $Config -Raw -Encoding UTF8|ConvertFrom-Json}
  $rule=Get-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue
  if($rule){$app=$rule|Get-NetFirewallApplicationFilter;if($app.Program-ne $exe){throw 'The video firewall rule belongs to another application.'};$port=$rule|Get-NetFirewallPortFilter;$address=$rule|Get-NetFirewallAddressFilter;$oldRule=[ordered]@{port=$port.LocalPort;remote=$address.RemoteAddress}}
+ if($request.enabled){
+  if($Role-eq 'LocalSend'){
+   $videoSetup=& {param($helper,$directory) . $helper -Role Client -RuntimeDirectory $directory -FunctionsOnly; Ensure-BridgeVideoPrerequisites -Role Client -RuntimeDirectory $directory} (Join-Path $runtime 'Ensure-VideoPrerequisites.ps1') $runtime
+   if(-not $videoSetup.Ready){throw 'The local Unity Capture sources are not ready. Existing video settings were preserved.'}
+  }
+ }
  # A server-only PC also needs the signed client controller for its generated
  # camera. Verify task/firewall ownership before any local driver setup, and do
  # not stop a working endpoint if setup requires a manual Windows restart.
@@ -54,6 +64,24 @@ try {
   if($driver[0].RestartRequired-or -not $driver[0].Ready){throw 'The signed camera controller requires a manual Windows restart before enabling this camera. The existing video configuration was preserved.'}
   & $exe driver-ready|Out-Null
   if($LASTEXITCODE-ne 0){throw 'The signed camera controller is not ready. The existing video configuration was preserved; restart Windows manually if required.'}
+ }
+ # Finish prerequisites before stopping any working video endpoint.
+ if($request.enabled){
+  $schedule=Get-Service -Name Schedule -ErrorAction Stop
+  if($schedule.Status-ne 'Running'){throw 'Windows Task Scheduler (Schedule) must be running before enabling video. Existing video settings were preserved.'}
+  if($Role-eq 'Receive'-and -not $request.loopback_only){
+   foreach($serviceName in @('BFE','MpsSvc')){if((Get-Service -Name $serviceName -ErrorAction Stop).Status-ne 'Running'){throw ('Windows firewall service '+$serviceName+' must be running before enabling network video. Existing video settings were preserved.')}}
+  }
+  if($Role-eq 'Receive'-and $request.camera.microphone){
+   foreach($serviceName in @('AudioEndpointBuilder','Audiosrv')){
+    $service=Get-Service -Name $serviceName -ErrorAction Stop
+    if($service.Status-ne 'Running'){
+     if($service.StartType-eq 'Disabled'){throw ('Windows audio service '+$serviceName+' is disabled. Enable it in Windows Services or turn off the optional silent microphone. Existing video settings were preserved.')}
+     Start-Service -Name $serviceName -ErrorAction Stop
+     $service.WaitForStatus([ServiceProcess.ServiceControllerStatus]::Running,[TimeSpan]::FromSeconds(10))
+    }
+   }
+  }
  }
  $taskStateChanged=$true
  if($healthTask){$healthTask|Disable-ScheduledTask|Out-Null;$healthTask|Stop-ScheduledTask -ErrorAction SilentlyContinue}

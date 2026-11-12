@@ -325,3 +325,31 @@ function Get-BridgeDriverReadiness([ValidateSet('Server','Client')][string]$Role
  }
  [pscustomobject]@{Ready=($missing.Count-eq 0);Missing=@($missing);Partial=($present.Count-gt 0-or [bool]$service)}
 }
+function Get-BridgeInstallationReadiness([ValidateSet('Server','Client')][string]$Role,[string]$Runtime) {
+ # Keep the physical-driver probe separate: a missing video source must not
+ # trigger a USB controller repair or interrupt existing USB sessions.
+ $drivers=Get-BridgeDriverReadiness $Role $Runtime
+ $missing=@($drivers.Missing)
+ $videoReady=$Role-ne 'Client'
+ if($Role-eq 'Client'){
+  $helper=Join-Path $Runtime 'Ensure-VideoPrerequisites.ps1'
+  if(-not(Test-Path -LiteralPath $helper -PathType Leaf)){$missing+='bundled video setup'}else{
+   . $helper -Role $Role -RuntimeDirectory $Runtime -FunctionsOnly
+   $video=Test-BridgeUnityCaptureReadiness $Runtime
+   $videoReady=[bool]$video.Ready
+   if(-not $video.Ready){$missing+='Unity Capture Server/Client sources'}
+  }
+ }
+ [pscustomobject]@{Ready=($missing.Count-eq 0);Missing=@($missing);Partial=$drivers.Partial;DriversReady=[bool]$drivers.Ready;VideoReady=$videoReady}
+}
+function Repair-BridgeExistingVideoPrerequisites {
+ param([ValidateSet('Server','Client')][string]$Role,[string]$Disposition,[string]$Config,[string]$Runtime,$Readiness)
+ if($Role-ne 'Client'-or $Disposition-notin @('Current','Adopt')-or -not(Test-Path -LiteralPath $Config -PathType Leaf)-or -not $Readiness.DriversReady-or $Readiness.VideoReady){return $Readiness}
+ # This is a component-only upgrade of an already verified installation.
+ # Do not enter role setup: its data ACLs, keys and startup tasks are unrelated.
+ & (Join-Path $Runtime 'Ensure-VideoPrerequisites.ps1') -Role Client -RuntimeDirectory $Runtime -Elevate|Out-Null
+ if(-not $?){throw 'The local Unity Capture sources could not be prepared. Existing role settings and startup were preserved.'}
+ $after=Get-BridgeInstallationReadiness $Role $Runtime
+ if(-not $after.VideoReady){throw 'Unity Capture sources are still unavailable after local setup. Existing role settings and startup were preserved.'}
+ $after
+}

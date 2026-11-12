@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "file": "components/unity-capture/UnityCaptureFilter64.dll",
+  "sha256": "72812F5363D8ECB45632253F8C8C888844B1B62E27616F3C8CC21064CCDE25E5",
+  "architecture": "x64",
+  "license": "MIT",
+  "upstream": "https://github.com/schellingb/UnityCapture",
+  "commit": "3ed54c325e0ad71afcf4f246c07e5e17b3d7f2d2",
+  "url": "https://raw.githubusercontent.com/schellingb/UnityCapture/3ed54c325e0ad71afcf4f246c07e5e17b3d7f2d2/Install/UnityCaptureFilter64.dll",
+  "source": "https://github.com/schellingb/UnityCapture/tree/3ed54c325e0ad71afcf4f246c07e5e17b3d7f2d2/Source"
+}

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.14
+
+- Bundle the hash-pinned x64 Unity Capture filter and its MIT notice for completely offline setup on Windows 11 x64.
+- Register separate Server and Client producer slots during fresh client setup; repair missing slots before enabling the local camera, preserving existing valid sources and rejecting conflicting registrations.
+- Keep new COM registrations in a protected permanent component directory so application folder moves remain supported.
+- Check required Windows video services before changing endpoints, and start stopped audio services when the optional silent microphone is explicitly enabled.
+- Remove the unused legacy modal server-settings dialog and obsolete host-ID wrapper; preserve the active CLI, diagnostics and optional capture backends.
+- Keep build-only download helpers out of the runtime package; audit packaged dependencies and document which development tools and optional backends remain in use.
+
 ## 0.2.13
 
 - Add a Russian architecture diagram and replace resolution-like example camera names in both diagrams with descriptive virtual USB camera labels.

@@ -11,13 +11,13 @@
 
 Un redirecteur USB over IP (USB/IP) open source pour Windows 11 x64. Partagez de vrais périphériques USB sur un LAN ou un VPN, dont webcams et interfaces ADB/stockage de téléphones Android. Le serveur Rust exporte les appareils sélectionnés ; le client Windows les importe via un contrôleur USB virtuel. Sans activation, expiration d'essai ni quota de périphériques lié à une licence.
 
-**v0.2.13 — Windows 11 x64.** Serveur et client USB en Rust avec interface graphique, ligne de commande, découverte et reconnexion automatiques, installateur MSI et ZIP portable. [Télécharger la dernière version](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+**v0.2.14 — Windows 11 x64.** Serveur et client USB en Rust avec interface graphique, ligne de commande, découverte et reconnexion automatiques, installateur MSI et ZIP portable. [Télécharger la dernière version](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
 
-**Installation hors ligne :** le ZIP portable et le MSI incluent les installateurs signés des pilotes serveur et client. Copiez les deux EXE et tout le dossier `app` vers un autre PC Windows 11 x64 ; la première installation utilise uniquement les fichiers locaux. [Installation](docs/installation.md) · [Licences et sources des pilotes](docs/driver-sources.md).
+**Installation hors ligne :** le ZIP portable et le MSI incluent les installateurs signés des pilotes serveur et client et le filtre Unity Capture x64. Copiez les deux EXE et tout le dossier `app` vers un PC Windows 11 x64 vierge ; installation et réparation utilisent uniquement les fichiers locaux. La configuration cliente enregistre **Unity Capture Server** (emplacement 0) et **Unity Capture Client** (emplacement 1) ; l’activation de la caméra USB cliente répare aussi les enregistrements manquants depuis le paquet. OBS et l’application produisant la vidéo s’installent séparément. [Installation](docs/installation.md) · [Licences et sources des pilotes](docs/driver-sources.md).
 
 **État des agents dans la v0.2.1 :** les contrôleurs serveur et client ont des superviseurs distincts. Un contrôleur arrêté redémarre automatiquement ; un signal de vie figé est détecté après deux minutes. Des tâches indépendantes vérifient aussi les superviseurs chaque minute. Les anciens rapports ne déclarent plus un périphérique connecté. Diagnostic : `usbbridge --config FILE server health` ou `client health`. [Modifications](CHANGELOG.md).
 
-![USB to Network Bridge v0.2.13 : partage USB physique, caméras indépendantes sur le serveur et le client, microphones silencieux et installation hors ligne des pilotes ; schéma en anglais](docs/assets/architecture.svg)
+![USB to Network Bridge v0.2.14 : partage USB physique, caméras indépendantes sur le serveur et le client, microphones silencieux et installation hors ligne des pilotes ; schéma en anglais](docs/assets/architecture.svg)
 
 
 **v0.2.3 :** le nom est synchronisé entre DirectShow et Media Foundation. La capture se réveille à l’arrivée d’une image, réutilise des tampons bornés et publie ses temps de traitement. Pour une application source sur le PC client, suivre le [guide OBS/Unity Capture](docs/third-party-video.md) en anglais, avec exemples CLI et consignes pour un autre projet.
@@ -128,10 +128,11 @@ git clone https://github.com/AlexeySmirnov74/USB-to-Network-Bridge.git
 Set-Location USB-to-Network-Bridge
 .\Build.ps1
 .\Download-Drivers.ps1 -Role Both
+.\Download-VideoComponents.ps1
 .\Package.ps1
 ```
 
-Le ZIP dans `dist` contient les deux installateurs de pilotes originaux signés, les EXE, scripts, exemples et licences. Le développeur exécute une fois `Download-Drivers.ps1 -Role Both` avec accès internet avant de créer le paquet. SHA-256 et Authenticode sont vérifiés hors ligne selon `driver-installers.json`. La CI récupère les dépendances pendant la compilation sans installer de pilotes et ne remplace pas les essais matériels. `Bootstrap.ps1` installe facultativement Rust ; `-InstallBuildTools` ajoute les outils Microsoft.
+Le ZIP dans `dist` contient les deux installateurs de pilotes originaux signés, le filtre Unity Capture vérifié, les EXE, scripts, exemples et licences. Le développeur exécute une fois `Download-Drivers.ps1 -Role Both` et `Download-VideoComponents.ps1` avec accès internet avant de créer le paquet ; le filtre est vérifié selon `unity-capture.json`. SHA-256 et Authenticode sont vérifiés hors ligne selon `driver-installers.json`. La CI récupère les dépendances pendant la compilation sans installer de pilotes et ne remplace pas les essais matériels. `Bootstrap.ps1` installe facultativement Rust ; `-InstallBuildTools` ajoute les outils Microsoft.
 
 **Windows PowerShell 5.1 et les scripts `.ps1` d’exécution sont nécessaires** pour le partage, la capture, les modules et le démarrage. Les scripts de compilation ne sont pas requis sur le PC installé. Les EXE et le MSI du projet ne sont pas signés Authenticode ; les pilotes USB conservent leurs signatures officielles. Le MSI prend en charge installation, réparation, mise à niveau, restauration et désinstallation. [Installation](docs/installation.md) · [Compilation et publication](docs/production-readiness.md).
 

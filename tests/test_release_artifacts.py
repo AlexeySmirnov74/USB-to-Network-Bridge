@@ -31,6 +31,12 @@ class ArtifactTests(unittest.TestCase):
             payload[module.DRIVER_PREFIX + pins[role]["file"]] = content
         (root / "trusted-driver-installers.json").write_text(json.dumps(pins), encoding="utf-8")
         payload[module.DRIVER_MANIFEST] = json.dumps(pins).encode()
+        unity = json.loads(module.TRUSTED_UNITY_MANIFEST.read_text(encoding="utf-8-sig"))
+        unity_content = b"reviewed fixture Unity Capture DLL"
+        unity["sha256"] = hashlib.sha256(unity_content).hexdigest()
+        (root / "trusted-unity-capture.json").write_text(json.dumps(unity), encoding="utf-8")
+        payload[module.UNITY_MANIFEST] = json.dumps(unity).encode()
+        payload["app/" + unity["file"]] = unity_content
         payload.update(replacements or {})
         payload.update(additions or {})
         for name in omissions:
@@ -44,6 +50,16 @@ class ArtifactTests(unittest.TestCase):
                 archive.writestr(name, content)
             archive.writestr(module.MANIFEST, manifest_bytes)
         return path, payload, manifest_bytes
+
+    def test_pinned_unity_component_is_required_and_not_replaceable(self):
+        name = "app/components/unity-capture/UnityCaptureFilter64.dll"
+        for mode in ("missing", "corrupt", "manifest"):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                kwargs = {"omissions": (name,)} if mode == "missing" else {"replacements": {name: b"corrupt"}} if mode == "corrupt" else {"replacements": {module.UNITY_MANIFEST: b"{}"}}
+                path, _, _ = self.package(root, **kwargs)
+                with self.assertRaisesRegex(ValueError, "Unity Capture"):
+                    module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
 
     def test_duplicate_case_is_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -67,7 +83,7 @@ class ArtifactTests(unittest.TestCase):
             root = Path(folder)
             path, _, _ = self.package(root, replacements={"app/usbbridge.exe": b"different"})
             with self.assertRaisesRegex(ValueError, "differs from tested"):
-                module.verify_portable(path, root, root / "trusted-driver-installers.json")
+                module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
 
     def test_msi_payload_substitution_is_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -82,7 +98,7 @@ class ArtifactTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             path, payload, manifest_bytes = self.package(root)
-            result, expected = module.verify_portable(path, root, root / "trusted-driver-installers.json")
+            result, expected = module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
             self.assertEqual(result, manifest_bytes)
             self.assertIn("app/usbbridge.exe", expected)
             self.assertIn("USB-to-Network-Bridge-Server.exe", expected)
@@ -98,7 +114,7 @@ class ArtifactTests(unittest.TestCase):
             root = Path(folder)
             path, _, _ = self.package(root, additions={"usbbridge.exe": b"internal"})
             with self.assertRaisesRegex(ValueError, "root must contain only"):
-                module.verify_portable(path, root, root / "trusted-driver-installers.json")
+                module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
 
     def test_root_cannot_contain_extra_file_or_directory(self):
         for extra in ("README.md", "extra/"):
@@ -108,7 +124,7 @@ class ArtifactTests(unittest.TestCase):
                 with zipfile.ZipFile(path, "a") as archive:
                     archive.writestr(extra, b"")
                 with self.assertRaisesRegex(ValueError, "root must contain only"):
-                    module.verify_portable(path, root, root / "trusted-driver-installers.json")
+                    module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
 
     def test_runtime_helpers_are_required(self):
         for helper in ("FirstRun-Identity.ps1", "Migrate-PortableLayout.ps1", "Configure-UnityCapture.ps1", "Set-BackendProcessAccess.ps1",
@@ -117,7 +133,7 @@ class ArtifactTests(unittest.TestCase):
                 root = Path(folder)
                 path, _, _ = self.package(root, omissions=("app/" + helper,))
                 with self.assertRaisesRegex(ValueError, "helper is missing"):
-                    module.verify_portable(path, root, root / "trusted-driver-installers.json")
+                    module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
 
     def test_private_app_files_are_rejected(self):
         for name in ("app/client.LOCAL.json", "app/keys/private.pem", "app/logs/client.debug.jsonl",
@@ -126,7 +142,7 @@ class ArtifactTests(unittest.TestCase):
                 root = Path(folder)
                 path, _, _ = self.package(root, additions={name: b"private"})
                 with self.assertRaisesRegex(ValueError, "Private data or driver binary"):
-                    module.verify_portable(path, root, root / "trusted-driver-installers.json")
+                    module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
 
     def test_both_pinned_offline_installers_are_required(self):
         pins, paths = module.driver_pins()
@@ -135,7 +151,7 @@ class ArtifactTests(unittest.TestCase):
                 root = Path(folder)
                 path, _, _ = self.package(root, omissions=(name,))
                 with self.assertRaisesRegex(ValueError, "installer is missing"):
-                    module.verify_portable(path, root, root / "trusted-driver-installers.json")
+                    module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
 
     def test_coherent_archive_manifest_cannot_hide_corrupt_installer(self):
         _, paths = module.driver_pins()
@@ -144,7 +160,7 @@ class ArtifactTests(unittest.TestCase):
                 root = Path(folder)
                 path, _, _ = self.package(root, replacements={name: b"corrupt installer"})
                 with self.assertRaisesRegex(ValueError, "Pinned driver installer hash mismatch"):
-                    module.verify_portable(path, root, root / "trusted-driver-installers.json")
+                    module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
 
     def test_candidate_cannot_supply_its_own_driver_pins(self):
         for change in ("sha256", "signer", "signer_name", "file"):
@@ -154,7 +170,7 @@ class ArtifactTests(unittest.TestCase):
                 bad["Server"][change] = {"sha256": "0" * 64, "signer": "Unreviewed signer", "signer_name": "Unreviewed CN", "file": "another.msi"}[change]
                 path, _, _ = self.package(root, replacements={module.DRIVER_MANIFEST: json.dumps(bad).encode()})
                 with self.assertRaisesRegex(ValueError, "manifest differs"):
-                    module.verify_portable(path, root, root / "trusted-driver-installers.json")
+                    module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
 
     def test_installer_directory_does_not_allow_other_binaries(self):
         for name in (module.DRIVER_PREFIX + "another.exe", module.DRIVER_PREFIX + "another.msi",
@@ -164,7 +180,7 @@ class ArtifactTests(unittest.TestCase):
                 root = Path(folder)
                 path, _, _ = self.package(root, additions={name: b"unreviewed binary"})
                 with self.assertRaisesRegex(ValueError, "Private data or driver binary"):
-                    module.verify_portable(path, root, root / "trusted-driver-installers.json")
+                    module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
 
     def test_valid_offline_archive_verification_never_fetches_or_launches(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -172,7 +188,7 @@ class ArtifactTests(unittest.TestCase):
             path, _, _ = self.package(root)
             with patch("socket.create_connection", side_effect=AssertionError("network used")), \
                     patch("subprocess.run", side_effect=AssertionError("process launched")):
-                _, expected = module.verify_portable(path, root, root / "trusted-driver-installers.json")
+                _, expected = module.verify_portable(path, root, root / "trusted-driver-installers.json", root / "trusted-unity-capture.json")
             _, pins = module.driver_pins(root / "trusted-driver-installers.json")
             self.assertTrue(set(pins).issubset(expected))
 

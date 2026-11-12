@@ -1239,6 +1239,71 @@ fn video_apply_endpoint(
     Ok(())
 }
 
+fn ensure_local_camera_prerequisites() -> io::Result<()> {
+    use std::os::windows::process::CommandExt;
+    let runtime = std::env::current_exe()?
+        .parent()
+        .ok_or_else(|| io::Error::other("runtime missing"))?
+        .to_path_buf();
+    let helper = runtime.join("Ensure-VideoPrerequisites.ps1");
+    if !helper.is_file() {
+        return Err(io::Error::other(crate::i18n::t(
+            "Video setup files are missing. Extract the complete offline package, including the app folder.",
+        )));
+    }
+    let result = std::process::Command::new("powershell.exe")
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
+        .arg(helper)
+        .arg("-Role")
+        .arg("Client")
+        .arg("-RuntimeDirectory")
+        .arg(runtime)
+        .arg("-Elevate")
+        .creation_flags(0x08000000)
+        .status()?;
+    if !result.success() {
+        return Err(io::Error::other(crate::i18n::t(
+            "Local video setup failed or was cancelled. Follow any setup error shown, restore the complete app folder from this release, and try again. Nothing was downloaded.",
+        )));
+    }
+    Ok(())
+}
+
+/// Existing, unique producer bindings need no privileged operation. A missing
+/// slot can be installed from the local package, but ambiguity must never be
+/// repaired by choosing a different camera or overwriting another installation.
+fn resolve_local_camera_source(
+    cameras: &[crate::camera::Camera],
+    prepare: impl FnOnce() -> io::Result<()>,
+    enumerate: impl FnOnce() -> io::Result<Vec<crate::camera::Camera>>,
+) -> io::Result<String> {
+    if let Ok(source) = crate::video::unity_client_source(cameras) {
+        return Ok(source);
+    }
+    if cameras
+        .iter()
+        .any(|camera| camera.name == "Unity Capture Client" && crate::video::allowed_source(camera))
+    {
+        return Err(io::Error::other(crate::i18n::t(
+            "Multiple Unity Capture Client sources were found. Close video applications and repair the conflicting Unity Capture registration before enabling the client camera.",
+        )));
+    }
+    prepare()?;
+    crate::video::unity_client_source(&enumerate()?).map_err(|_| {
+        io::Error::other(crate::i18n::t(
+            "Unity Capture Client is still missing or ambiguous after local setup. Close video applications and repair Unity Capture registration; another camera will not be selected.",
+        ))
+    })
+}
+
+fn local_camera_source() -> io::Result<String> {
+    resolve_local_camera_source(
+        &crate::camera::list()?,
+        ensure_local_camera_prerequisites,
+        crate::camera::list,
+    )
+}
+
 /// Configure the two owned client-local endpoints together. Never touch the
 /// existing network sender, server camera, or physical USB selections.
 pub fn local_camera_apply(path: &Path, value: serde_json::Value) -> io::Result<()> {
@@ -1264,7 +1329,7 @@ pub fn local_camera_apply(path: &Path, value: serde_json::Value) -> io::Result<(
         ));
     }
     let camera = if receiver.enabled {
-        crate::video::unity_client_source(&crate::camera::list()?)?
+        local_camera_source()?
     } else {
         previous_sender
             .as_ref()
@@ -1388,139 +1453,78 @@ pub fn local_camera_settings(owner: HWND, path: &Path) {
             return Ok(());
         };
         let enabled = values[0] == "1";
-        // Validate the explicitly named producer slot before creating a key or
-        // starting a UAC operation. Never capture an unrelated camera.
-        if enabled {
-            crate::video::unity_client_source(&crate::camera::list()?)?;
-        }
-        let key_file = match saved.and_then(|v| v["key_file"].as_str()) {
-            Some(path) => PathBuf::from(path),
-            None => crate::credentials::save_at(
-                &file
-                    .parent()
-                    .unwrap_or(Path::new("."))
-                    .join("video-credentials"),
-                &crate::proxy::Credentials {
-                    username: "USBBridgeLocalVideo".into(),
-                    password: format!(
-                        "{}{}",
-                        uuid::Uuid::new_v4().simple(),
-                        uuid::Uuid::new_v4().simple()
-                    ),
-                },
-            )?,
-        };
         let (width, height) = *values[2]
             .parse::<usize>()
             .ok()
             .and_then(|i| mode_list.get(i))
             .ok_or_else(|| io::Error::other("Invalid camera mode"))?;
-        let receiver = crate::video::ReceiverSettings {
-            enabled,
-            camera: crate::uvc::Config {
-                name: values[1].trim().into(),
-                serial: saved
-                    .and_then(|v| v["camera"]["serial"].as_str())
-                    .map(str::to_owned)
-                    .unwrap_or_else(|| format!("UBC-{}", uuid::Uuid::new_v4().simple())),
-                width,
-                height,
-                fps: 30,
-                test_pattern: false,
-                microphone: values[4] == "1",
-            },
-            usb_port: saved.and_then(|v| v["usb_port"].as_u64()).unwrap_or(13250) as u16,
-            video_port: parse_port(&values[3])?,
-            loopback_only: true,
-            allowed_ips: vec![std::net::Ipv4Addr::LOCALHOST.into()],
-            key_file,
+        let camera = crate::uvc::Config {
+            name: values[1].trim().into(),
+            serial: saved
+                .and_then(|v| v["camera"]["serial"].as_str())
+                .map(str::to_owned)
+                .unwrap_or_else(|| format!("UBC-{}", uuid::Uuid::new_v4().simple())),
+            width,
+            height,
+            fps: 30,
+            test_pattern: false,
+            microphone: values[4] == "1",
         };
-        receiver.validate()?;
-        let value = serde_json::to_value(receiver).map_err(io::Error::other)?;
-        let path = path.to_path_buf();
-        std::thread::spawn(move || match local_camera_apply(&path, value) {
-            Ok(()) => information(null_mut(), crate::i18n::t("Client camera settings applied")),
-            Err(error) => information(null_mut(), &error.to_string()),
-        });
-        Ok(())
-    })();
-    if let Err(error) = result {
-        information(owner, &error.to_string());
-    }
-}
-pub fn server_settings(owner: HWND, path: &Path) {
-    let result = (|| -> io::Result<()> {
-        let host: HostSettings = settings::read(path)?;
-        let state: serde_json::Value = settings::read(&host.runtime.join("backend-state.json"))?;
-        let backend = state["DesiredBackend"].as_str().unwrap_or("Native");
-        let fields = vec![
-            Field::text(crate::i18n::t("Имя сервера"), &host.name),
-            Field::number(
-                crate::i18n::t("TCP-порт подключения"),
-                settings::endpoint(&host.probe_address)?.1,
-            ),
-            Field::number(
-                crate::i18n::t("Порт поиска и списка устройств (UDP/TCP)"),
-                host.discovery_port,
-            ),
-            Field {
-                label: crate::i18n::t("Разрешённые IP клиентов (по одному на строку)").into(),
-                value: host
-                    .allowed_ips
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join("\r\n"),
-                kind: FieldKind::Multiline,
-            },
-            Field {
-                label: crate::i18n::t("Серверный модуль").into(),
-                value: if backend == "Usbipd" { "1" } else { "0" }.into(),
-                kind: FieldKind::Choice(vec![
-                    crate::i18n::t("Native — сервер Rust").into(),
-                    crate::i18n::t("Usbipd — штатный сервер").into(),
-                ]),
-            },
-        ];
-        let Some(values) = form(owner, &Role::Server.window_title(), fields, false) else {
-            return Ok(());
-        };
-        let tcp = parse_port(&values[1])?;
-        let udp = parse_port(&values[2])?;
-        let peers: Vec<std::net::IpAddr> = values[3]
-            .split(|c: char| c.is_whitespace() || c == ',' || c == ';')
-            .filter(|s| !s.is_empty())
-            .map(|s| s.parse().map_err(io::Error::other))
-            .collect::<io::Result<_>>()?;
-        if values[0].trim().is_empty() || values[0].len() > 128 || peers.is_empty() {
+        camera.validate()?;
+        let usb_port = saved.and_then(|v| v["usb_port"].as_u64()).unwrap_or(13250) as u16;
+        let video_port = parse_port(&values[3])?;
+        if usb_port == 0 || usb_port == video_port {
             return Err(io::Error::other(crate::i18n::t(
-                "Укажите имя сервера и хотя бы один IP клиента",
+                "USB and video TCP ports must be different and nonzero",
             )));
         }
-        let request = path.with_extension(format!("{}.local.request.json", uuid::Uuid::new_v4()));
-        settings::save(
-            &request,
-            &serde_json::json!({"name":values[0].trim(),"tcp_port":tcp,"discovery_port":udp,"allowed_ips":peers,"backend":if values[4]=="1"{"Usbipd"}else{"Native"}}),
-        )?;
-        let config = path.to_path_buf();
+        let saved_key = saved
+            .and_then(|v| v["key_file"].as_str())
+            .map(PathBuf::from);
+        let path = path.to_path_buf();
         std::thread::spawn(move || {
-            use std::os::windows::process::CommandExt;
-            let result = std::process::Command::new("powershell.exe")
-                .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
-                .arg(host.runtime.join("Configure-Server.ps1"))
-                .arg("-Config")
-                .arg(config)
-                .arg("-RequestFile")
-                .arg(&request)
-                .arg("-Elevate")
-                .creation_flags(0x08000000)
-                .status();
-            let reply = PathBuf::from(format!("{}.result.json", request.display()));
-            let outcome = settings::read::<serde_json::Value>(&reply);
-            let message=match (result,outcome){(Ok(status),Ok(value)) if status.success()&&value["Success"].as_bool()==Some(true)=>crate::i18n::t("Настройки сервера сохранены. Сервер перезапущен; клиенты восстановят подключения. Если менялся UDP-порт, укажите его и в настройках поиска клиента.").into(),(_,Ok(value))=>value["Error"].as_str().unwrap_or(crate::i18n::t("Не удалось применить настройки")).to_string(),(Err(e),_)=>e.to_string(),_=>crate::i18n::t("Не удалось применить настройки. Проверьте журнал сервера.").into()};
-            information(null_mut(), &message);
-            let _ = std::fs::remove_file(&request);
-            let _ = std::fs::remove_file(&reply);
+            let result = (|| -> io::Result<()> {
+                // Installation and fresh DirectShow enumeration run off the UI
+                // thread, before creating a key or changing either endpoint.
+                if enabled {
+                    local_camera_source()?;
+                }
+                let key_file = match saved_key {
+                    Some(path) => path,
+                    None => crate::credentials::save_at(
+                        &file
+                            .parent()
+                            .unwrap_or(Path::new("."))
+                            .join("video-credentials"),
+                        &crate::proxy::Credentials {
+                            username: "USBBridgeLocalVideo".into(),
+                            password: format!(
+                                "{}{}",
+                                uuid::Uuid::new_v4().simple(),
+                                uuid::Uuid::new_v4().simple()
+                            ),
+                        },
+                    )?,
+                };
+                let receiver = crate::video::ReceiverSettings {
+                    enabled,
+                    camera,
+                    usb_port,
+                    video_port,
+                    loopback_only: true,
+                    allowed_ips: vec![std::net::Ipv4Addr::LOCALHOST.into()],
+                    key_file,
+                };
+                receiver.validate()?;
+                local_camera_apply(
+                    &path,
+                    serde_json::to_value(receiver).map_err(io::Error::other)?,
+                )
+            })();
+            match result {
+                Ok(()) => information(null_mut(), crate::i18n::t("Client camera settings applied")),
+                Err(error) => information(null_mut(), &error.to_string()),
+            }
         });
         Ok(())
     })();
@@ -3341,6 +3345,122 @@ unsafe extern "system" fn client_procedure(
 
 #[cfg(test)]
 mod tests {
+    fn unity_source(name: &str, path: &str) -> crate::camera::Camera {
+        crate::camera::Camera {
+            name: name.into(),
+            path: path.into(),
+            identities: vec![path.into()],
+        }
+    }
+    #[test]
+    fn local_camera_source_reuses_unique_slot_without_setup_or_refresh() {
+        let sources = [
+            unity_source("Unity Capture Server", "server-moniker"),
+            unity_source("Unity Capture Client", "client-moniker"),
+        ];
+        assert_eq!(
+            super::resolve_local_camera_source(
+                &sources,
+                || panic!("an existing slot must not request privileged setup"),
+                || panic!("a resolved source needs no second enumeration"),
+            )
+            .unwrap(),
+            "client-moniker"
+        );
+    }
+    #[test]
+    fn local_camera_source_installs_missing_slot_then_uses_fresh_identity() {
+        let prepared = std::cell::Cell::new(false);
+        let sources = [unity_source("Unity Capture Server", "server-moniker")];
+        let source = super::resolve_local_camera_source(
+            &sources,
+            || {
+                prepared.set(true);
+                Ok(())
+            },
+            || {
+                assert!(prepared.get());
+                Ok(vec![unity_source(
+                    "Unity Capture Client",
+                    "new-client-moniker",
+                )])
+            },
+        )
+        .unwrap();
+        assert_eq!(source, "new-client-moniker");
+    }
+    #[test]
+    fn local_camera_source_does_not_mutate_an_ambiguous_registration() {
+        let sources = [
+            unity_source("Unity Capture Client", "first-moniker"),
+            unity_source("Unity Capture Client", "second-moniker"),
+        ];
+        assert!(
+            super::resolve_local_camera_source(
+                &sources,
+                || panic!("ambiguity must be resolved explicitly"),
+                || panic!("ambiguous existing registrations must fail closed"),
+            )
+            .is_err()
+        );
+    }
+    #[test]
+    fn local_camera_source_preserves_setup_failure_and_never_falls_back() {
+        let error = super::resolve_local_camera_source(
+            &[],
+            || {
+                Err(io::Error::other(
+                    "registration belongs to another installation",
+                ))
+            },
+            || panic!("failed setup must not capture another device"),
+        )
+        .unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "registration belongs to another installation"
+        );
+        let sources = [unity_source("Unity Capture Server", "server-moniker")];
+        for refreshed in [
+            sources.to_vec(),
+            vec![
+                unity_source("Unity Capture Client", "first-moniker"),
+                unity_source("Unity Capture Client", "second-moniker"),
+            ],
+        ] {
+            assert!(
+                super::resolve_local_camera_source(&sources, || Ok(()), || Ok(refreshed)).is_err()
+            );
+        }
+    }
+    #[test]
+    fn local_camera_source_never_captures_a_generated_usb_endpoint() {
+        let mut generated = unity_source("Unity Capture Client", "generated-camera");
+        generated.identities = vec!["USB\\VID_1209&PID_F002\\serial".into()];
+        assert!(
+            super::resolve_local_camera_source(
+                &[generated.clone()],
+                || Ok(()),
+                || { Ok(vec![generated]) }
+            )
+            .is_err()
+        );
+    }
+    #[test]
+    fn local_camera_source_preserves_fresh_enumeration_error() {
+        let error = super::resolve_local_camera_source(
+            &[],
+            || Ok(()),
+            || {
+                Err(io::Error::new(
+                    io::ErrorKind::PermissionDenied,
+                    "DirectShow enumeration failed",
+                ))
+            },
+        )
+        .unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+    }
     #[test]
     fn silent_microphone_choice_preserves_saved_value_and_defaults_off() {
         assert_eq!(super::silent_microphone_field(None).value, "0");

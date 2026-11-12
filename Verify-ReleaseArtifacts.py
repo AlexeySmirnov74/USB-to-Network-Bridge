@@ -16,9 +16,11 @@ MANIFEST = "app/SHA256.json"
 DRIVER_MANIFEST = "app/driver-installers.json"
 DRIVER_PREFIX = "app/tools/driver-installers/"
 TRUSTED_DRIVER_MANIFEST = Path(__file__).resolve().with_name("driver-installers.json")
+UNITY_MANIFEST = "app/unity-capture.json"
+TRUSTED_UNITY_MANIFEST = Path(__file__).resolve().with_name("unity-capture.json")
 HELPERS = ("Open-Installation.ps1", "Configure-Installation.ps1", "FirstRun-Identity.ps1", "Quit-Application.ps1",
            "Portable-Paths.ps1", "Portable-Installation.ps1", "Update-PortableSettings.ps1", "Relocate-Installation.ps1",
-           "Migrate-PortableLayout.ps1", "Maintain-Installation.ps1", "Configure-UnityCapture.ps1", "Set-BackendProcessAccess.ps1", "Verify-DriverInstaller.ps1", "Ensure-ProductionDrivers.ps1")
+           "Migrate-PortableLayout.ps1", "Maintain-Installation.ps1", "Configure-UnityCapture.ps1", "Set-BackendProcessAccess.ps1", "Verify-DriverInstaller.ps1", "Ensure-ProductionDrivers.ps1", "Ensure-VideoPrerequisites.ps1")
 
 
 def payload_binary(name):
@@ -65,8 +67,19 @@ def driver_pins(manifest_path=None):
     return pins, paths
 
 
-def verify_portable(portable, binaries, driver_manifest=None):
+def unity_pins(manifest_path=None):
+    pins = json.loads(Path(manifest_path or TRUSTED_UNITY_MANIFEST).read_text(encoding="utf-8-sig"))
+    if (not isinstance(pins, dict) or pins.get("schema") != 1
+            or pins.get("file") != "components/unity-capture/UnityCaptureFilter64.dll"
+            or pins.get("architecture") != "x64"
+            or not re.fullmatch(r"[a-fA-F0-9]{64}", pins.get("sha256", ""))):
+        raise ValueError("Invalid reviewed Unity Capture pins")
+    return pins, {"app/" + pins["file"]: pins["sha256"].lower()}
+
+
+def verify_portable(portable, binaries, driver_manifest=None, unity_manifest=None):
     pins, driver_paths = driver_pins(driver_manifest)
+    unity, unity_paths = unity_pins(unity_manifest)
     application_paths = {payload_binary(name) for name in BINARIES}
     with zipfile.ZipFile(portable) as archive:
         entries = safe_names(archive)
@@ -86,6 +99,11 @@ def verify_portable(portable, binaries, driver_manifest=None):
         for name in driver_paths:
             if name not in entries:
                 raise ValueError("Pinned offline driver installer is missing: " + name)
+        if UNITY_MANIFEST not in entries or json.loads(archive.read(entries[UNITY_MANIFEST]).decode("utf-8-sig")) != unity:
+            raise ValueError("Unity Capture manifest differs from the reviewed source")
+        for name in unity_paths:
+            if name not in entries:
+                raise ValueError("Pinned offline Unity Capture component is missing: " + name)
         manifest_bytes = archive.read(entries[MANIFEST])
         manifest = json.loads(manifest_bytes.decode("utf-8-sig"))
         expected = {}
@@ -99,11 +117,13 @@ def verify_portable(portable, binaries, driver_manifest=None):
                 raise ValueError("Portable payload hash mismatch: " + name)
             if name in driver_paths and digest != driver_paths[name]:
                 raise ValueError("Pinned driver installer hash mismatch: " + name)
+            if name in unity_paths and digest != unity_paths[name]:
+                raise ValueError("Pinned Unity Capture hash mismatch: " + name)
             private_name = name.casefold()
             suffix = PurePosixPath(name).suffix.lower()
             if (".local." in private_name or private_name.endswith((".status.json", ".preferences.json", ".agent.lock", ".edit.lock", ".tray.lock"))
                     or suffix in (".sys", ".cat", ".pfx", ".key", ".pem", ".credential", ".jsonl", ".log")
-                    or (suffix in (".exe", ".dll", ".msi") and name not in application_paths and name not in driver_paths)):
+                    or (suffix in (".exe", ".dll", ".msi") and name not in application_paths and name not in driver_paths and name not in unity_paths)):
                 raise ValueError("Private data or driver binary in portable archive: " + name)
             expected[name] = (len(content), digest)
         if set(entries) != set(expected) | {MANIFEST}:

@@ -25,15 +25,15 @@ DeepLive writes to the selected slot. The two Bridge senders are independent and
 
 ## 1. Prepare the two Unity Capture sources on the client
 
-This integration is optional. USB to Network Bridge does not bundle the upstream Unity Capture DLL. If it is already installed, use its existing permanent x64 DLL location. Follow the [upstream Unity Capture setup](https://github.com/schellingb/UnityCapture) if the filter is not installed.
+The complete portable ZIP and MSI include the x64 Unity Capture filter. On a clean Windows 11 x64 PC, client first-run setup registers both dedicated sources automatically from local files. Enabling **Client USB camera** also installs a missing registration before creating or changing the camera; an already valid source needs no additional setup. No filter download or compilation is required on that PC.
 
-Stop Live and close applications holding these Unity Capture sources before registering the additional slot. Open **64-bit Windows PowerShell as Administrator** in the packaged `app` directory (for example `C:\USBBridge\app`):
+For an explicit check or repair, stop Live and close applications holding these sources. Open **64-bit Windows PowerShell** in the packaged `app` directory (for example `C:\USBBridge\app`):
 
 ```powershell
-.\Configure-UnityCapture.ps1 -FilterDll 'C:\YourPermanentUnityCaptureDirectory\UnityCaptureFilter64.dll'
+.\Ensure-VideoPrerequisites.ps1 -Role Client -RuntimeDirectory . -Elevate
 ```
 
-Replace the example path with the existing absolute path. The helper registers two slots and sets their exact names to **Unity Capture Server** and **Unity Capture Client**. It refuses to take over a slot registered to a different DLL location. Keep the DLL at that location after registration.
+Approve UAC if registration is needed. The helper verifies the bundled filter, registers **Unity Capture Server** (slot 0) and **Unity Capture Client** (slot 1), and checks their separate identities. A complete existing compatible registration is reused. Conflicting or ambiguous registrations stop with an actionable error rather than taking over another installation or selecting a different source. New registrations use a protected, stable Windows data folder so moving the portable application does not invalidate the filter path. Keep the complete `app` folder for offline repair. OBS and the video-producing application, such as DeepLive or a Unity project, remain separate products.
 
 Verify the sources from the same interactive Windows user/session that runs DeepLive:
 
@@ -111,7 +111,7 @@ Generated Bridge USB cameras are excluded as capture sources and rejected by the
 
 На клиенте доступны два независимых направления: **Unity Capture Server**, слот 0, передаёт поток в существующую камеру сервера; **Unity Capture Client**, слот 1, — в новую камеру клиента. Имена выходных камер меняются отдельно и не определяют разрешение.
 
-1. На клиенте зарегистрируйте два Unity Capture-фильтра из уже установленной `UnityCaptureFilter64.dll` командой `Configure-UnityCapture.ps1 -FilterDll <абсолютный путь>` в 64-разрядном PowerShell от администратора.
+1. Полный ZIP и MSI уже включают x64-фильтр Unity Capture. Первая настройка клиента автоматически регистрирует оба источника из локальных файлов. При необходимости проверки или восстановления выполните `Ensure-VideoPrerequisites.ps1 -Role Client -RuntimeDirectory . -Elevate` из папки `app` в 64-разрядном PowerShell и подтвердите UAC. Отдельно устанавливаются OBS и само приложение-источник, а не фильтр из комплекта.
 2. В Bridge-клиенте откройте **Устройство → USB-камера клиента**, включите её и задайте имя, например `2k web camera`, и режим видео. Локальный ключ создаётся автоматически. Настройки работающей серверной камеры сохраняются.
 3. В DeepLive, во вкладке **«Вывод»**, выберите **Unity Capture Client** или **Unity Capture Server**. В видеомессенджере на нужном ПК выберите соответствующую USB-камеру.
 
@@ -123,7 +123,7 @@ On either receiver, enable **Silent microphone** in its camera dialog and apply.
 
 Windows enumerates an additional USB Audio Class capture function under the same composite USB parent as the camera. It supplies mono 48 kHz / 16-bit PCM silence locally, including when network video is absent. It never opens a physical microphone, forwards audio, or adds a network port. Windows uses its inbox audio class driver with the existing signed USB/IP controller.
 
-The **receiving PC** also needs **Windows Audio Endpoint Builder** (`AudioEndpointBuilder`) and **Windows Audio** (`Audiosrv`) running. If these services were disabled, the USB audio function can appear in Device Manager without a usable microphone appearing in applications. The Bridge installer does not enable these Windows services. Check their state in PowerShell:
+The **receiving PC** also needs **Windows Audio Endpoint Builder** (`AudioEndpointBuilder`) and **Windows Audio** (`Audiosrv`) running. Applying an enabled receiver with **Silent microphone** starts these services if they are stopped. It respects an explicitly Disabled service: setup reports how to enable it, before changing a working camera endpoint. Without these services, the USB audio function can appear in Device Manager without a usable microphone appearing in applications. Check their state in PowerShell:
 
 ```powershell
 Get-Service -Name AudioEndpointBuilder,Audiosrv | Select-Object Name,Status,StartType
@@ -133,4 +133,4 @@ If audio was disabled on that PC, open `services.msc` as Administrator, set thes
 
 Messengers normally have separate camera and microphone selectors. Select the associated microphone in the app audio settings if it does not select it automatically. A shared device container allows applications to associate the two functions, but does not force an app to change its selected audio input. This feature does not make a camera-only application expose an audio selector.
 
-По-русски: включите **«Микрофон (тишина)»** в настройках нужной камеры и примените. Камера кратко переподключится; после этого обновите список устройств или заново откройте её в приложении. Микрофон появится как аудиовход того же составного USB-устройства и будет выдавать тишину. Настоящий микрофон не захватывается. В мессенджере при необходимости выберите этот вход отдельно от камеры. На принимающем ПК должны работать службы **AudioEndpointBuilder** и **Audiosrv**; установщик Bridge сам их не включает. Если они отключены, включите автоматический запуск в `services.msc` от администратора и запустите обе службы. Проверьте разрешение на доступ к микрофону в параметрах конфиденциальности Windows.
+По-русски: включите **«Микрофон (тишина)»** в настройках нужной камеры и примените. Камера кратко переподключится; после этого обновите список устройств или заново откройте её в приложении. Микрофон появится как аудиовход того же составного USB-устройства и будет выдавать тишину. Настоящий микрофон не захватывается. В мессенджере при необходимости выберите этот вход отдельно от камеры. На принимающем ПК должны работать службы **AudioEndpointBuilder** и **Audiosrv**; при включении микрофона Bridge запускает остановленные службы, но не меняет явно отключённый тип запуска. Если они отключены, включите автоматический запуск в `services.msc` от администратора и запустите обе службы. Проверьте разрешение на доступ к микрофону в параметрах конфиденциальности Windows.

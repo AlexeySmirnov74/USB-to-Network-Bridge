@@ -1,4 +1,4 @@
-﻿# Build an x64 MSI with native Windows Installer APIs; no third-party compiler.
+# Build an x64 MSI with native Windows Installer APIs; no third-party compiler.
 param([string]$PayloadZip,[string]$OutputPath,[string]$VersionOverride,[switch]$TestFixture)
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 $root=$PSScriptRoot
@@ -40,6 +40,12 @@ $driverPaths=@{}
 foreach($role in @('Server','Client')){$driverPaths['app/tools/driver-installers/'+$driverManifest.$role.file]=[string]$driverManifest.$role.sha256}
 & (Join-Path $root 'Verify-DriverInstaller.ps1') -Role Both -InstallerDirectory (Join-Path $payload 'app\tools\driver-installers') -ManifestPath $driverManifestPath|Out-Null
 if(-not $?){throw 'MSI payload has invalid offline driver installers.'}
+$unityPinPath=Join-Path $root 'unity-capture.json'
+if((Get-FileHash -LiteralPath (Join-Path $payload 'app\unity-capture.json')).Hash-ne (Get-FileHash -LiteralPath $unityPinPath).Hash){throw 'The packaged Unity Capture pins differ from the reviewed manifest.'}
+$unityPin=Get-Content -LiteralPath $unityPinPath -Raw|ConvertFrom-Json
+if($unityPin.schema-ne 1-or $unityPin.file-cne 'components/unity-capture/UnityCaptureFilter64.dll'-or $unityPin.architecture-cne 'x64'){throw 'Invalid Unity Capture pins.'}
+$driverPaths['app/'+$unityPin.file]=[string]$unityPin.sha256
+if((Get-FileHash -LiteralPath (Join-Path $payload ('app/'+$unityPin.file))).Hash-ne $unityPin.sha256){throw 'Pinned offline Unity Capture hash mismatch.'}
 $applicationExecutables=@('USB-to-Network-Bridge-Server.exe','USB-to-Network-Bridge-Client.exe','app/usbbridge.exe','app/usbbridge-client.exe','app/usbbridge-server.exe','app/usbbridge-agent.exe','app/usbbridge-camera.exe')
 foreach($item in @(Get-ChildItem -LiteralPath $payload -File -Recurse)){
  $relative=$item.FullName.Substring($payload.Length+1).Replace('\','/')
@@ -49,7 +55,7 @@ foreach($item in @(Get-ChildItem -LiteralPath $payload -File -Recurse)){
  $privateName=$relative.ToLowerInvariant()
  if($privateName.Contains('.local.')-or $privateName-match '\.(status\.json|preferences\.json|agent\.lock|edit\.lock|tray\.lock)$'-or $item.Extension-in @('.pfx','.key','.pem','.credential','.sys','.cat','.jsonl','.log')-or ($item.Extension-in @('.exe','.dll','.msi')-and $relative-cnotin $applicationExecutables-and -not $pinnedDriver)){throw ('Private/runtime/unreviewed binary in package: '+$relative)}
 }
-foreach($helper in @('Open-Installation.ps1','Configure-Installation.ps1','FirstRun-Identity.ps1','Migrate-PortableLayout.ps1','Maintain-Installation.ps1','Verify-DriverInstaller.ps1','Ensure-ProductionDrivers.ps1')){if(-not(Test-Path -LiteralPath (Join-Path $payload ('app\'+$helper)))){throw ('Rebuild Package.ps1: missing app/'+$helper)}}
+foreach($helper in @('Open-Installation.ps1','Configure-Installation.ps1','FirstRun-Identity.ps1','Migrate-PortableLayout.ps1','Maintain-Installation.ps1','Verify-DriverInstaller.ps1','Ensure-ProductionDrivers.ps1','Ensure-VideoPrerequisites.ps1')){if(-not(Test-Path -LiteralPath (Join-Path $payload ('app\'+$helper)))){throw ('Rebuild Package.ps1: missing app/'+$helper)}}
 function Com-Call($Object,$Name,$Arguments){
  switch($Name){
   'OpenDatabase' {$Object.OpenDatabase([string]$Arguments[0],[int]$Arguments[1])}

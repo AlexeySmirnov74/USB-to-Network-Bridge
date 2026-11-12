@@ -1,5 +1,7 @@
 # Installing USB to Network Bridge
 
+Supported runtime: **Windows 11 x64 with the standard Windows media components**. Windows 11 N requires Microsoft’s Media Feature Pack to be installed beforehand; the offline Bridge package cannot supply missing Windows optional features. See [Microsoft’s Windows N guidance](https://support.microsoft.com/en-us/windows/experience/platform-variants/media-feature-pack-for-windows-n).
+
 Windows 11 x64 is the initial target. The MSI and project EXEs are intentionally unsigned. The complete MSI and portable ZIP include both original signed USB driver installers. Setup and repair use local files with pinned SHA-256 and cache-only Windows Authenticode verification; they never download drivers. No test signing or automatic Windows restart is used.
 
 ## MSI
@@ -40,7 +42,7 @@ app/
 
 Double-click the required launcher to open its GUI without a console window. Saved role settings are reused, and an existing interface is activated instead of starting another instance. Keep the complete `app` directory beside the launchers. It contains five internal executables, runtime PowerShell helpers, examples, documentation, licenses and `SHA256.json`. Hash manifest paths are relative to the package root, including the two desktop EXEs. The advanced command-line tool is `app\usbbridge.exe`; an optional launcher `--config FILE` selects an existing custom configuration.
 
-First launch performs role setup automatically. Missing official drivers are installed from the verified local files under `app\tools\driver-installers`; approve UAC when required. Reopen the launcher after any manually requested Windows restart. No automatic reboot or changes to Secure Boot, memory integrity or driver signature mode are performed.
+First launch performs role setup automatically. Missing official drivers are installed from the verified local files under `app\tools\driver-installers`; client setup also verifies and registers the bundled x64 Unity Capture sources. Approve UAC when required. Reopen the launcher after any manually requested Windows restart. No automatic reboot or changes to Secure Boot, memory integrity or driver signature mode are performed.
 
 Fresh setup protects the runtime code in `app` against replacement by ordinary users before registering new administrator/SYSTEM startup tasks. Broadly writable parent locations are rejected during fresh setup; use a normal local installation folder rather than a shared writable directory. A fresh portable client stores its copyable configuration under `app\data\Client`; a fresh server uses the protected ProgramData role directory. A same-PC migration of an existing flat deployment retains its settings and existing trust, and rebases the owned tasks instead of resetting the role. Do not replace an existing deployment's configuration with example files.
 
@@ -81,12 +83,16 @@ app/
   tools/driver-installers/
     usbipd-win_5.3.0_x64.msi
     USBip-0.9.8.1-x64.exe
+  components/unity-capture/
+    UnityCaptureFilter64.dll
 ```
 
 The server uses usbipd-win's signed VBoxUSB capture drivers; the client and each generated-camera receiver use USBIP-WIN2. Its unchanged installer also contains the Visual C++ runtime needed by upstream utilities. Existing working drivers are reused. UAC and a manual Windows restart can still be necessary; no automatic reboot or test-signing changes occur.
 
 Keep the complete folder. A missing, modified, wrongly signed or untrusted installer stops setup with a local error; setup will not silently fetch a replacement. Restore the files from the same verified release package. `Download-Drivers.ps1` is an explicit developer preparation command, never called by normal first-run setup or repair. Driver signatures are checked against Windows' installed trust store/cache without fetching certificates or revocation lists.
 
-This covers the bridge's dependencies. Windows/device-vendor drivers for particular forwarded equipment and optional video-source applications such as OBS or Unity Capture remain their respective products. They are not downloaded by USB Bridge. See [driver licenses and corresponding source](driver-sources.md).
+The complete package also contains the x64 Unity Capture filter used by the two client video routes. Client setup registers **Unity Capture Server** (slot 0) and **Unity Capture Client** (slot 1) locally. Enabling the client USB camera repairs a missing source before changing its endpoints. To check or repair explicitly, close video applications and run `Ensure-VideoPrerequisites.ps1 -Role Client -RuntimeDirectory . -Elevate` from `app` in 64-bit Windows PowerShell. Existing compatible registrations are reused; ambiguous or foreign registrations are not silently replaced.
+
+OBS and the application producing video, such as DeepLive or a Unity project, are separate products; Bridge does not install or download them. Windows/device-vendor drivers needed by particular forwarded equipment also remain their respective products. See [driver licenses and corresponding source](driver-sources.md) and [third-party notices](../THIRD-PARTY.txt).
 
 The local verifier also contains the pinned GlobalSign intermediate CA missing from the original client EXE. After verifying the exact installer hash, it can cache only this non-root issuing certificate in the current user CA store. It does not add trusted roots or TrustedPeople entries, bypass Authenticode checks, or fetch certificate URLs. Windows must already trust the upstream root; a missing or disallowed root remains an error.

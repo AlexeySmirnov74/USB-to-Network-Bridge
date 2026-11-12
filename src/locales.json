@@ -1,4 +1,39 @@
 {
+  "Video setup files are missing. Extract the complete offline package, including the app folder.": {
+    "en": "Video setup files are missing. Extract the complete offline package, including the app folder.",
+    "ru": "Отсутствуют файлы настройки видео. Распакуйте полный автономный комплект вместе с папкой app.",
+    "de": "Die Dateien zur Videoeinrichtung fehlen. Entpacken Sie das vollständige Offlinepaket einschließlich des Ordners app.",
+    "fr": "Les fichiers de configuration vidéo sont absents. Extrayez le paquet hors ligne complet, y compris le dossier app.",
+    "zh": "缺少视频安装文件。请解压完整的离线安装包，包括 app 文件夹。"
+  },
+  "Local video setup failed or was cancelled. Follow any setup error shown, restore the complete app folder from this release, and try again. Nothing was downloaded.": {
+    "en": "Local video setup failed or was cancelled. Follow any setup error shown, restore the complete app folder from this release, and try again. Nothing was downloaded.",
+    "ru": "Локальная настройка видео завершилась ошибкой или была отменена. Выполните указания показанного окна ошибки, восстановите полную папку app из этого выпуска и повторите попытку. Скачивание не выполнялось.",
+    "de": "Die lokale Videoeinrichtung ist fehlgeschlagen oder wurde abgebrochen. Befolgen Sie gegebenenfalls die angezeigte Fehlermeldung, stellen Sie den vollständigen Ordner app aus dieser Version wieder her und versuchen Sie es erneut. Es wurde nichts heruntergeladen.",
+    "fr": "La configuration vidéo locale a échoué ou a été annulée. Suivez les indications de toute erreur affichée, restaurez le dossier app complet de cette version et réessayez. Aucun téléchargement n'a été effectué.",
+    "zh": "本地视频安装失败或已取消。请按照显示的安装错误提示操作，从此版本恢复完整的 app 文件夹，然后重试。未下载任何内容。"
+  },
+  "Multiple Unity Capture Client sources were found. Close video applications and repair the conflicting Unity Capture registration before enabling the client camera.": {
+    "en": "Multiple Unity Capture Client sources were found. Close video applications and repair the conflicting Unity Capture registration before enabling the client camera.",
+    "ru": "Обнаружено несколько источников Unity Capture Client. Закройте видеоприложения и устраните конфликт регистрации Unity Capture перед включением камеры клиента.",
+    "de": "Es wurden mehrere Quellen namens Unity Capture Client gefunden. Schließen Sie Videoanwendungen und beheben Sie die widersprüchliche Unity-Capture-Registrierung, bevor Sie die Client-Kamera aktivieren.",
+    "fr": "Plusieurs sources Unity Capture Client ont été trouvées. Fermez les applications vidéo et corrigez le conflit d'enregistrement Unity Capture avant d'activer la caméra du client.",
+    "zh": "发现多个 Unity Capture Client 源。请关闭视频应用并修复 Unity Capture 注册冲突，然后再启用客户端摄像头。"
+  },
+  "Unity Capture Client is still missing or ambiguous after local setup. Close video applications and repair Unity Capture registration; another camera will not be selected.": {
+    "en": "Unity Capture Client is still missing or ambiguous after local setup. Close video applications and repair Unity Capture registration; another camera will not be selected.",
+    "ru": "После локальной настройки Unity Capture Client по-прежнему отсутствует или неоднозначен. Закройте видеоприложения и восстановите регистрацию Unity Capture. Другая камера автоматически не выбирается.",
+    "de": "Unity Capture Client fehlt nach der lokalen Einrichtung weiterhin oder ist nicht eindeutig. Schließen Sie Videoanwendungen und reparieren Sie die Unity-Capture-Registrierung; es wird keine andere Kamera ausgewählt.",
+    "fr": "Après la configuration locale, Unity Capture Client est toujours absent ou ambigu. Fermez les applications vidéo et réparez l'enregistrement Unity Capture ; aucune autre caméra ne sera sélectionnée.",
+    "zh": "本地安装后 Unity Capture Client 仍然缺失或不明确。请关闭视频应用并修复 Unity Capture 注册；不会选择其他摄像头。"
+  },
+  "USB and video TCP ports must be different and nonzero": {
+    "en": "USB and video TCP ports must be different and nonzero",
+    "ru": "TCP-порты USB и видео должны различаться и быть больше нуля",
+    "de": "Die USB- und Video-TCP-Ports müssen unterschiedlich und ungleich null sein",
+    "fr": "Les ports TCP USB et vidéo doivent être différents et non nuls",
+    "zh": "USB 和视频 TCP 端口必须不同且不能为零"
+  },
   "Silent microphone": {
     "en": "Silent microphone",
     "ru": "Микрофон (тишина)",

@@ -689,9 +689,6 @@ impl HostSettings {
         Ok(())
     }
 }
-pub fn create_host_id() -> String {
-    uuid::Uuid::new_v4().to_string()
-}
 pub fn acquire_file_lock(path: &Path) -> io::Result<File> {
     if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
         fs::create_dir_all(parent)?;

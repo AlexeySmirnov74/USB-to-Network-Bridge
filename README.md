@@ -11,13 +11,13 @@
 
 An open-source USB over IP (USB/IP) redirector for Windows 11 x64. Share real USB devices between Windows computers over a LAN or VPN, including webcams and Android phone ADB/storage. A Rust server exports selected devices; a Windows client imports them through a virtual USB controller. No activation, trial timer or license-based device limit.
 
-**v0.2.13 — Windows 11 x64.** A Rust USB server and client with a desktop GUI, command-line control, automatic discovery and reconnect, plus an MSI installer and portable ZIP. [Download the latest release](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
+**v0.2.14 — Windows 11 x64.** A Rust USB server and client with a desktop GUI, command-line control, automatic discovery and reconnect, plus an MSI installer and portable ZIP. [Download the latest release](https://github.com/AlexeySmirnov74/USB-to-Network-Bridge/releases/latest).
 
-**Offline setup:** the portable ZIP and MSI include the signed server and client driver installers. Copy both launchers and the entire `app` folder to another Windows 11 x64 PC; first-run installation uses only local files. [Installation](docs/installation.md) · [Driver licenses and source](docs/driver-sources.md).
+**Offline setup:** the portable ZIP and MSI include the signed server and client driver installers and the x64 Unity Capture filter. Copy both launchers and the entire `app` folder to another Windows 11 x64 PC; installation and repair use only local files. Client setup registers **Unity Capture Server** (slot 0) and **Unity Capture Client** (slot 1); enabling the client USB camera also repairs missing registrations from the local package. OBS and the application producing video are installed separately. [Installation](docs/installation.md) · [Driver licenses and source](docs/driver-sources.md).
 
 **Agent health in v0.2.1:** server and client controllers run under separate supervisors. Exited controllers restart automatically; stopped heartbeat progress is detected after two minutes. Independent one-minute scheduled checks also recover a missing or stalled supervisor. Stale reports no longer claim a connected device. Use `usbbridge --config FILE server health` or `client health` to inspect current health. See [changes](CHANGELOG.md).
 
-![USB to Network Bridge v0.2.13: physical USB sharing, independent server and client-local video cameras, optional silent microphones and offline driver setup](docs/assets/architecture.svg)
+![USB to Network Bridge v0.2.14: physical USB sharing, independent server and client-local video cameras, optional silent microphones and offline driver setup](docs/assets/architecture.svg)
 
 
 **v0.2.3:** camera names are synchronized across DirectShow and Media Foundation. Video capture wakes when a frame arrives, reuses bounded working buffers and reports processing timings. For a producer running on the client PC, follow the [OBS/Unity Capture integration guide](docs/third-party-video.md), including command-line examples and a handoff task for another project.
@@ -142,10 +142,11 @@ git clone https://github.com/AlexeySmirnov74/USB-to-Network-Bridge.git
 Set-Location USB-to-Network-Bridge
 .\Build.ps1
 .\Download-Drivers.ps1 -Role Both
+.\Download-VideoComponents.ps1
 .\Package.ps1
 ```
 
-`Build.ps1` checks formatting, runs Clippy and tests, and builds seven release executables. Developers run `Download-Drivers.ps1 -Role Both` once with internet access before packaging. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.13-windows-x64.zip` including both original signed driver installers, runtime helpers, examples, docs and dependency licenses. SHA-256 and offline Authenticode checks use `driver-installers.json`. CI downloads the pinned inputs at build time and packages them without installing USB drivers; hardware tests remain separate.
+`Build.ps1` checks formatting, runs Clippy and tests, and builds seven release executables. Developers run `Download-Drivers.ps1 -Role Both` and `Download-VideoComponents.ps1` once with internet access before packaging; the latter verifies the filter against `unity-capture.json`. `Package.ps1` creates `dist\USB-to-Network-Bridge-0.2.14-windows-x64.zip` including both original signed driver installers, the verified Unity Capture filter, runtime helpers, examples, docs and dependency licenses. SHA-256 and offline Authenticode checks use `driver-installers.json`. CI downloads the pinned inputs at build time and packages them without installing USB drivers; hardware tests remain separate.
 
 ## Installation and runtime
 

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1424" viewBox="0 0 1200 1424" role="img" aria-labelledby="title desc" lang="ru" xml:lang="ru">
-  <title id="title">USB to Network Bridge v0.2.13 — USB по сети и два направления видео</title>
-  <desc id="desc">Windows 11 x64. Три независимых маршрута: физические USB-устройства с сервера к клиентам по USB/IP TCP 3240; видео с клиента через Unity Capture Server, слот 0, или другой выбранный источник в виртуальную USB/UVC-камеру сервера по TCP 13251; Unity Capture Client, слот 1, в отдельную виртуальную камеру того же клиента через 127.0.0.1:13251. На каждом принимающем ПК камера подключается локально по USB/IP TCP 13250 через подписанный контроллер USBIP-WIN2 и штатный драйвер камеры Windows. Windows распознаёт программную камеру как USB/UVC-устройство; виртуальный контроллер остаётся виден в дереве устройств. Имена камер можно менять, серийные номера постоянны. Дополнительный микрофон создаёт только локальную тишину. Native — сервер на Rust в пользовательском режиме Windows, использующий тот же исходный подписанный драйвер VBoxUSB, что и usbipd-win. Полные MSI и переносимый ZIP содержат установщики подписанных драйверов для установки без интернета. Порты настраиваются. Используйте доверенную сеть или VPN.</desc>
+  <title id="title">USB to Network Bridge v0.2.14 — USB по сети и два направления видео</title>
+  <desc id="desc">Windows 11 x64. Три независимых маршрута: физические USB-устройства с сервера к клиентам по USB/IP TCP 3240; видео с клиента через Unity Capture Server, слот 0, или другой выбранный источник в виртуальную USB/UVC-камеру сервера по TCP 13251; Unity Capture Client, слот 1, в отдельную виртуальную камеру того же клиента через 127.0.0.1:13251. На каждом принимающем ПК камера подключается локально по USB/IP TCP 13250 через подписанный контроллер USBIP-WIN2 и штатный драйвер камеры Windows. Windows распознаёт программную камеру как USB/UVC-устройство; виртуальный контроллер остаётся виден в дереве устройств. Имена камер можно менять, серийные номера постоянны. Дополнительный микрофон создаёт только локальную тишину. Native — сервер на Rust в пользовательском режиме Windows, использующий тот же исходный подписанный драйвер VBoxUSB, что и usbipd-win. Полные MSI и переносимый ZIP содержат установщики подписанных драйверов и x64-фильтр Unity Capture для установки без интернета. Настройка клиента автоматически регистрирует два независимых слота Unity Capture. OBS и приложения-источники устанавливаются отдельно. Порты настраиваются. Используйте доверенную сеть или VPN.</desc>
   <defs>
     <linearGradient id="background" x2="1" y2="1"><stop stop-color="#0b1220" /><stop offset="1" stop-color="#14273a" /></linearGradient>
     <marker id="usb-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#4cdae8" /></marker>
@@ -28,7 +28,7 @@
   <text x="40" y="49" font-size="32" font-weight="700">USB to Network Bridge</text>
   <text x="40" y="81" class="body muted">Физические USB по сети и два независимых направления видео</text>
   <rect x="1024" y="22" width="136" height="36" rx="18" fill="#223b53" stroke="#47637d" />
-  <text x="1092" y="46" text-anchor="middle" font-size="18" font-weight="600">v0.2.13</text>
+  <text x="1092" y="46" text-anchor="middle" font-size="18" font-weight="600">v0.2.14</text>
   <text x="1160" y="81" text-anchor="end" class="small muted">Windows 11 x64</text>
 
   <!-- Path 1: real USB devices, with full-duplex USB/IP traffic. -->
@@ -140,14 +140,14 @@
   <text x="44" y="1228" font-size="17">Сохранённые серверы и устройства · переподключение</text>
   <text x="44" y="1258" font-size="17">Полный выход завершает свои фоновые процессы</text>
   <text x="44" y="1288" class="small muted">Сеть / VPN · разрешённые IP · HTTP(S) / SOCKS5 для USB</text>
-  <text x="44" y="1319" class="small muted">OBS / Unity Capture устанавливаются отдельно</text>
+  <text x="44" y="1319" class="small muted">Unity Capture в комплекте · OBS / источник отдельно</text>
 
   <rect x="608" y="1130" width="568" height="218" rx="14" fill="#111e30" stroke="#354d68" />
   <text x="628" y="1165" font-size="22" font-weight="600" class="green">Перенос и MSI · установка без интернета</text>
   <text x="628" y="1198" font-size="17">Оба EXE и вся папка app/ переносятся вместе</text>
   <text x="628" y="1228" font-size="17">Установщики usbipd-win и USBIP-WIN2 с подписью</text>
   <text x="628" y="1258" font-size="17">Новый ПК: сервер — с нуля; клиент — сохранить / сбросить</text>
-  <text x="628" y="1288" class="small muted">Проверка подписей локально · без скачивания</text>
+  <text x="628" y="1288" class="small muted">Драйверы + Unity локально · без скачивания</text>
   <text x="628" y="1319" class="small muted">Исходные драйверы · Secure Boot можно оставить включённым</text>
 
   <text x="40" y="1378" class="small muted">Порты меняются в настройках. На каждом ПК своя пара 13250/13251. Имя не задаёт разрешение.</text>

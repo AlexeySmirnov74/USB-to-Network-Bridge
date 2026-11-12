@@ -64,7 +64,8 @@ try {
   if(-not $?){throw 'Portable settings could not be updated.'}
   $marker=Get-BridgeMachineMarker -Role $Role -Runtime $runtime
  }
- $driver=Get-BridgeDriverReadiness $Role $runtime
+ $driver=Get-BridgeInstallationReadiness $Role $runtime
+ $driver=Repair-BridgeExistingVideoPrerequisites -Role $Role -Disposition $disposition -Config $Config -Runtime $runtime -Readiness $driver
  $needsSetup=$disposition-notin @('Current','Adopt')-or -not(Test-Path -LiteralPath $Config)-or -not $driver.Ready
  if($needsSetup){
   $choice='New'

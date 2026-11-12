@@ -1,4 +1,4 @@
-﻿# Package applications plus exactly the two pinned, signed offline driver installers.
+# Package applications plus exactly the two pinned, signed offline driver installers.
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $localCargo = Join-Path $root 'tools\cargo\bin\cargo.exe'
@@ -20,6 +20,9 @@ try {
     $driverCache = Join-Path $root 'tools\driver-installers'
     & (Join-Path $root 'Verify-DriverInstaller.ps1') -Role Both -InstallerDirectory $driverCache -ManifestPath $driverManifestPath | Out-Null
     if (-not $?) { throw 'The pinned offline driver installers failed verification.' }
+    $unityPin = Get-Content -LiteralPath (Join-Path $root 'unity-capture.json') -Raw | ConvertFrom-Json
+    $unityFile = Join-Path $root $unityPin.file
+    if ($unityPin.schema -ne 1 -or $unityPin.file -cne 'components/unity-capture/UnityCaptureFilter64.dll' -or $unityPin.architecture -cne 'x64' -or (Get-FileHash -LiteralPath $unityFile -Algorithm SHA256).Hash -ne $unityPin.sha256) { throw 'Missing or corrupt pinned offline Unity Capture input. Run Download-VideoComponents.ps1 at build time.' }
     $name = 'USB-to-Network-Bridge-' + $project.version + '-windows-x64'
     $dist = Join-Path $root 'dist'
     $stage = Join-Path $dist ($name + '-' + [guid]::NewGuid().ToString('N'))
@@ -35,10 +38,15 @@ try {
     foreach ($file in @(
         'Open-Installation.ps1', 'Configure-Installation.ps1', 'FirstRun-Identity.ps1', 'Portable-Paths.ps1', 'Portable-Installation.ps1', 'Update-PortableSettings.ps1', 'Relocate-Installation.ps1', 'Migrate-PortableLayout.ps1', 'Maintain-Installation.ps1', 'Restart-AgentSupervisor.ps1', 'Set-VideoMode.ps1', 'Restart-VideoEndpoint.ps1', 'Configure-UnityCapture.ps1', 'CHANGELOG.md', 'README.md', 'README.ru.md', 'README.fr.md', 'README.de.md', 'README.zh-CN.md',
         'THIRD-PARTY.txt', 'LICENSE', 'Switch-Backend.ps1', 'Restart-UsbPort.ps1', 'Quit-Application.ps1',
-        'Inspect-Host.ps1', 'Download-Drivers.ps1', 'Install-ProductionDrivers.ps1',
+        'Inspect-Host.ps1', 'Ensure-VideoPrerequisites.ps1', 'unity-capture.json', 'Install-ProductionDrivers.ps1',
         'Verify-DriverInstaller.ps1', 'Ensure-ProductionDrivers.ps1', 'driver-installers.json', 'server.example.psd1', 'client.example.json', 'Test-Transport.ps1',
         'Set-Autostart.ps1', 'Ensure-Exports.ps1', 'Test-DeviceReconnect.ps1', 'Configure-Server.ps1', 'Set-ServerState.ps1', 'Publish-Device.ps1', 'Write-DebugEvent.ps1', 'New-BackendMutex.ps1', 'Set-BackendProcessAccess.ps1', 'Native-Capture.ps1'
     )) { Copy-Item -LiteralPath (Join-Path $root $file) -Destination $app }
+    $unityDirectory = Join-Path $app 'components\unity-capture'
+    New-Item -ItemType Directory -Path $unityDirectory -Force | Out-Null
+    Copy-Item -LiteralPath $unityFile -Destination (Join-Path $unityDirectory 'UnityCaptureFilter64.dll')
+    if ((Get-FileHash -LiteralPath (Join-Path $unityDirectory 'UnityCaptureFilter64.dll')).Hash -ne $unityPin.sha256) { throw 'Copied Unity Capture hash mismatch.' }
+    Copy-Item -LiteralPath (Join-Path $root 'licenses\unity-capture') -Destination $licenses -Recurse
     $driverNotices = Join-Path $root 'licenses\drivers'
     foreach ($item in @(Get-ChildItem -LiteralPath $driverNotices -Recurse -Force)) {
         if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw ('Driver notices cannot contain links: ' + $item.FullName) }

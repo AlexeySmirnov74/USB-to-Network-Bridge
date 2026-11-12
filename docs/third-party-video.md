@@ -21,12 +21,18 @@ Choose one integration:
 | Producer | Setup on the client PC | Source to select in USB Bridge |
 | --- | --- | --- |
 | Any app whose window or video OBS can capture | Add the application/window/video to an OBS scene, set the output to 1280 × 720 / 30 FPS, and click **Start Virtual Camera** | The installed OBS Virtual Camera source |
-| Unity rendering a camera or RenderTexture | Install the x64 Unity Capture DirectShow filter, import its Unity assets and connect the producer camera/texture using the upstream examples | The installed Unity Capture source, normally Unity Video Capture |
+| Unity rendering a camera or RenderTexture | Use the bundled x64 Unity Capture filter; import the upstream Unity assets into the producer and connect its camera/texture to the chosen slot | Unity Capture Server (slot 0) for the server camera, or Unity Capture Client (slot 1) for the client-local camera |
 | An application that already exposes a DirectShow camera | Start the producer and enable its output | Its exact enumerated camera source |
 
 For OBS, check the Virtual Camera output selection (Program/Scene/Source) so it sends the intended image. See the [official OBS guide](https://obsproject.com/kb/virtual-camera-guide).
 
-For Unity, follow the [official Unity Capture installation and examples](https://github.com/schellingb/UnityCapture): install the filter from a permanent location using `Install/Install.bat`, import its assets and use its camera or `CaptureTexture` example as appropriate. The upstream implementation documents **Direct3D 11** support; verify the producer's graphics API before integrating it rather than changing a working application's settings blindly. Match texture/output dimensions and preserve upstream licenses when redistributing its components. USB Bridge does not install or bundle OBS/Unity Capture.
+The complete Bridge ZIP and MSI include the x64 Unity Capture filter. Client first-run setup registers **Unity Capture Server** (slot 0) and **Unity Capture Client** (slot 1) from local files, without a download. To check or repair the sources, close video consumers and run this from the packaged `app` directory in **64-bit Windows PowerShell**:
+
+```powershell
+.\Ensure-VideoPrerequisites.ps1 -Role Client -RuntimeDirectory . -Elevate
+```
+
+Approve UAC if required. Existing compatible sources are reused; conflicting registrations must be resolved explicitly. Do not run the upstream installation batch over a working Bridge registration. For the producer code, follow the [official Unity Capture examples](https://github.com/schellingb/UnityCapture): import its Unity assets and select slot 0 or 1 in the camera/`CaptureTexture` integration. The upstream implementation documents **Direct3D 11** support; verify the producer's graphics API before integrating it. Match texture/output dimensions and preserve upstream licenses when redistributing its components. OBS and the video-producing application are not bundled or downloaded by Bridge.
 
 Run the producer and sender under the **same interactive Windows user/session**. A service or a different remote-desktop session may not share a software camera's image buffers. Close extra viewers if the source only permits one capture consumer. A selected source is never replaced with another camera when it disappears.
 

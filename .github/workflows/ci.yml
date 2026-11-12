@@ -27,9 +27,20 @@ jobs:
       - name: Fetch pinned signed driver installers (build time only)
         shell: powershell
         run: ./Download-Drivers.ps1 -Role Both
+      - name: Fetch pinned video component (build time only)
+        shell: powershell
+        run: ./Download-VideoComponents.ps1
       - name: Verify offline setup and fresh server driver staging
         shell: powershell
         run: |
+          ./tests/Test-UnityComponent.ps1 -AllowMachineRegistration
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./tests/Test-ExistingVideoRepair.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./tests/Test-UnitySharedAcl.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./tests/Test-VideoPrerequisites.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./tests/Test-OfflineDrivers.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ./tests/Test-OfflineIntermediate.ps1

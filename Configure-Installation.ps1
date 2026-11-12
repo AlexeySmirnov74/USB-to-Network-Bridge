@@ -85,7 +85,7 @@ try {
    if($item.Attributes-band [IO.FileAttributes]::ReparsePoint){throw 'The app folder contains a junction or symlink.'}
    if($item.FullName.StartsWith((Join-Path $runtime 'data')+'\',[StringComparison]::OrdinalIgnoreCase)-or $item.FullName-match '\\first-run-backups(?:\\|$)'){continue}
    if($item.PSIsContainer){Protect-Directory $item.FullName $false}else{
-    if($item.Extension-notin @('.exe','.msi','.dll','.ps1','.psm1','.psd1','.bat','.cmd')-and $item.Name-ne 'driver-installers.json'){continue}
+    if($item.Extension-notin @('.exe','.msi','.dll','.ps1','.psm1','.psd1','.bat','.cmd')-and $item.Name-notin @('driver-installers.json','unity-capture.json')){continue}
     $acl=New-Object Security.AccessControl.FileSecurity
     $acl.SetAccessRuleProtection($true,$false)
     $acl.SetOwner((New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')))
@@ -106,6 +106,11 @@ try {
 
  $driverResult=& (Join-Path $runtime 'Ensure-ProductionDrivers.ps1') -Role $Role -RuntimeDirectory $runtime
  if(-not $?){throw 'Bundled signed driver setup failed.'}
+ if($Role-eq 'Client'){
+  . (Join-Path $runtime 'Ensure-VideoPrerequisites.ps1') -Role $Role -RuntimeDirectory $runtime -FunctionsOnly
+  $videoResult=Ensure-BridgeVideoPrerequisites -Role $Role -RuntimeDirectory $runtime
+  if(-not $videoResult.Ready){throw 'The bundled Unity Capture sources could not be prepared.'}
+ }
  if(-not $preserve){
   $sourceExists=Test-Path -LiteralPath $sourceConfig -PathType Leaf
   if($sourceExists-and -not(Test-BridgeSamePath $sourceConfig $config)){

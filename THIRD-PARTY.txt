@@ -26,6 +26,17 @@ the pinned usbipd-win and VirtualBox corresponding source. See
 docs/driver-sources.md for the exact versions and original source locations.
 USBIP-WIN2's source is also provided for reproducibility.
 
+UNITY CAPTURE DIRECTSHOW FILTER (included offline)
+
+Unity Capture x64 filter, MIT, Copyright (c) 2018 Bernhard Schelling;
+based on UnityCam, Copyright (c) 2016 MHD Yamen Saraiji.
+  https://github.com/schellingb/UnityCapture
+  Exact upstream commit and SHA-256: unity-capture.json
+  Unmodified userspace DLL: components/unity-capture/UnityCaptureFilter64.dll
+  Full notice and source location: licenses/unity-capture/
+The separate Unity producer plugin/assets (zlib) are not included. OBS and
+producer applications must be installed/configured separately if used.
+
 The USBIP-WIN2 installer embeds the Microsoft Visual C++ Redistributable.
 It remains inside the unchanged upstream installer and retains its original
 Microsoft terms. Our Rust EXEs use the static CRT and do not require a
