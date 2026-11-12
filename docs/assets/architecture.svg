@@ -1,121 +1,155 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="1052" viewBox="0 0 1320 1052" role="img" aria-labelledby="title desc">
-  <title id="title">USB to Network Bridge — physical USB sharing and client-to-server video</title>
-  <desc id="desc">Windows 11 x64 architecture. Physical USB devices connect to a server using the unchanged signed VBoxUSB driver and either Rust Native or usbipd-win; Windows clients import selected devices through the signed USBIP-WIN2 controller over USB/IP, TCP 3240 by default. Discovery and catalog use UDP/TCP 3241. Independently, a video application, OBS Virtual Camera, Unity Capture or a camera on the client feeds a DirectShow sender. Authenticated TCP/MJPEG video goes back to the server on TCP 13251. The server's software UVC endpoint is imported locally over loopback TCP 13250 through USBIP-WIN2 and Windows usbvideo.sys, producing a camera with a configurable name and stable serial for video applications. Video source loss keeps the camera registered and shows black after two seconds. Use a trusted LAN or VPN; video authentication does not encrypt images. All ports shown are configurable defaults.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1424" viewBox="0 0 1200 1424" role="img" aria-labelledby="title desc">
+  <title id="title">USB to Network Bridge v0.2.13 — USB sharing and two video destinations</title>
+  <desc id="desc">Windows 11 x64. Three independent paths: physical USB devices from server to clients over USB/IP TCP 3240; client video from Unity Capture Server slot 0 or another selected source to a server USB/UVC camera over authenticated MJPEG TCP 13251; and Unity Capture Client slot 1 to a separate client-local USB/UVC camera over loopback TCP 13251. Each generated camera is imported on its own PC over loopback USB/IP TCP 13250 using the signed USBIP-WIN2 controller and inbox Windows camera driver. Camera names and serials are independent. Optional microphones generate local silence only. Native is the Rust userspace server, using the same unchanged signed VBoxUSB capture driver as usbipd-win. Complete MSI and portable packages include signed driver installers for offline setup and repair. Ports are configurable defaults; use a trusted LAN or VPN.</desc>
   <defs>
-    <linearGradient id="background" x2="1" y2="1"><stop stop-color="#0b1220"/><stop offset="1" stop-color="#122237"/></linearGradient>
-    <marker id="usb-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#43d7e6"/></marker>
-    <marker id="video-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#bdabff"/></marker>
+    <linearGradient id="background" x2="1" y2="1"><stop stop-color="#0b1220"/><stop offset="1" stop-color="#14273a"/></linearGradient>
+    <marker id="usb-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#4cdae8"/></marker>
+    <marker id="video-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#bdacff"/></marker>
+    <marker id="local-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#72e2b6"/></marker>
     <style>
       text{font-family:Segoe UI,Arial,sans-serif;fill:#edf4fc}
-      .title{font-size:23px;font-weight:700}.body{font-size:17px}.small{font-size:15px}
-      .muted{fill:#b5c5d9}.cyan{fill:#67e4ed}.purple{fill:#c8baff}
-      .card{fill:#18263a;stroke:#344760;stroke-width:1.2}
+      .heading{font-size:23px;font-weight:700}.body{font-size:18px}.small{font-size:16px}
+      .label{font-size:16px;font-weight:700;letter-spacing:.7px}.muted{fill:#b5c7dc}
+      .cyan{fill:#72e6ef}.purple{fill:#cebeff}.green{fill:#86edc4}
+      .card{fill:#18283b;stroke:#3b506b;stroke-width:1.2}
       .icon{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-      .usb{fill:none;stroke:#43d7e6;stroke-width:3;marker-end:url(#usb-arrow)}
-      .video{fill:none;stroke:#bdabff;stroke-width:3;marker-end:url(#video-arrow)}
+      .usb{fill:none;stroke:#4cdae8;stroke-width:3;marker-end:url(#usb-arrow)}
+      .video{fill:none;stroke:#bdacff;stroke-width:3;marker-end:url(#video-arrow)}
+      .local{fill:none;stroke:#72e2b6;stroke-width:3;marker-end:url(#local-arrow)}
     </style>
     <symbol id="camera" viewBox="0 0 32 32"><g class="icon"><rect x="4" y="7" width="24" height="18" rx="5"/><circle cx="16" cy="16" r="5"/><path d="M11 29h10M16 25v4M8 11h1"/></g></symbol>
     <symbol id="phone" viewBox="0 0 32 32"><g class="icon"><rect x="8" y="2" width="16" height="28" rx="3"/><path d="M13 6h6M14 26h4"/></g></symbol>
-    <symbol id="disk" viewBox="0 0 32 32"><g class="icon"><path d="m8 5-5 17v5h26v-5L24 5Z"/><path d="M3 22h26M22 25h2"/><circle cx="16" cy="13" r="5"/></g></symbol>
     <symbol id="usb" viewBox="0 0 32 32"><g class="icon"><path d="M16 28V4m-4 4 4-4 4 4M16 18l-7-5v-3M16 23l7-5v-5"/><circle cx="9" cy="8" r="2"/><path d="M21 9h4v4h-4Z"/><circle cx="16" cy="28" r="2"/></g></symbol>
     <symbol id="computer" viewBox="0 0 32 32"><g class="icon"><rect x="3" y="4" width="26" height="19" rx="3"/><path d="M11 29h10M16 23v6M3 19h26"/></g></symbol>
+    <symbol id="microphone" viewBox="0 0 32 32"><g class="icon"><rect x="11" y="3" width="10" height="17" rx="5"/><path d="M7 14v2a9 9 0 0 0 18 0v-2M16 25v5M11 30h10"/></g></symbol>
   </defs>
-  <rect width="1320" height="1052" rx="24" fill="url(#background)"/>
-  <text x="40" y="55" font-size="32" font-weight="700">USB to Network Bridge</text>
-  <text x="40" y="87" font-size="18" class="muted">Windows 11 x64 · Physical USB over the network + remote video as a USB camera</text>
-  <rect x="1160" y="30" width="120" height="38" rx="19" fill="#223650" stroke="#405c7b"/>
-  <text x="1220" y="55" text-anchor="middle" font-size="17" font-weight="600">v0.2.4</text>
 
-  <!-- Physical devices: equipment -> server -> network -> Windows client. -->
-  <rect x="24" y="116" width="1272" height="348" rx="18" fill="#101d2d" stroke="#2e4a60"/>
-  <circle cx="61" cy="152" r="17" fill="#174956"/>
-  <text x="61" y="158" text-anchor="middle" font-size="18" font-weight="700" class="cyan">1</text>
-  <text x="92" y="160" class="title">Share physical USB devices</text>
-  <text x="1272" y="158" text-anchor="end" class="body cyan">SERVER → CLIENT</text>
+  <rect width="1200" height="1424" rx="24" fill="url(#background)"/>
+  <text x="40" y="49" font-size="32" font-weight="700">USB to Network Bridge</text>
+  <text x="40" y="81" class="body muted">Physical USB over IP + two independent video destinations</text>
+  <rect x="1024" y="22" width="136" height="36" rx="18" fill="#223b53" stroke="#47637d"/>
+  <text x="1092" y="46" text-anchor="middle" font-size="18" font-weight="600">v0.2.13</text>
+  <text x="1160" y="81" text-anchor="end" class="small muted">Windows 11 x64</text>
 
-  <rect x="48" y="192" width="224" height="208" rx="12" class="card"/>
-  <text x="66" y="224" font-size="19" font-weight="600">USB equipment</text>
-  <g color="#91c2dd">
-    <use href="#camera" x="65" y="242" width="25" height="25"/>
-    <use href="#phone" x="65" y="280" width="25" height="25"/>
-    <use href="#disk" x="65" y="318" width="25" height="25"/>
-    <use href="#usb" x="65" y="356" width="25" height="25"/>
-  </g>
-  <text x="100" y="261" class="body">Webcams + audio</text>
-  <text x="100" y="299" class="body">Phone: ADB / files</text>
-  <text x="100" y="337" class="body">Disk / flash drive</text>
-  <text x="100" y="375" class="body">Bluetooth / HID</text>
-  <path d="M278 294H300" class="usb"/>
+  <!-- Path 1: real USB devices, with full-duplex USB/IP traffic. -->
+  <rect x="24" y="112" width="1152" height="288" rx="18" fill="#101f30" stroke="#30556a"/>
+  <circle cx="59" cy="147" r="17" fill="#174c59"/>
+  <text x="59" y="153" text-anchor="middle" font-size="18" font-weight="700" class="cyan">1</text>
+  <text x="91" y="155" class="heading">Share physical USB devices</text>
+  <text x="1152" y="153" text-anchor="end" class="label cyan">SERVER → CLIENT</text>
 
-  <rect x="312" y="192" width="332" height="208" rx="12" class="card"/>
-  <use href="#computer" x="330" y="209" width="28" height="28" color="#67e4ed"/>
-  <text x="370" y="232" class="title">Windows server</text>
-  <text x="330" y="268" class="body">Unchanged signed VBoxUSB driver</text>
-  <rect x="330" y="285" width="296" height="39" rx="7" fill="#1c4050"/>
-  <text x="478" y="311" text-anchor="middle" font-size="18" font-weight="600" class="cyan">Rust Native or usbipd-win</text>
-  <text x="330" y="352" class="body muted">Share selected devices</text>
-  <text x="330" y="380" class="small muted">One remote owner per device</text>
+  <rect x="44" y="178" width="208" height="176" rx="12" class="card"/>
+  <text x="62" y="208" font-size="19" font-weight="600">USB equipment</text>
+  <g color="#91c8e2"><use href="#camera" x="62" y="225" width="25" height="25"/><use href="#phone" x="62" y="266" width="25" height="25"/><use href="#usb" x="62" y="307" width="25" height="25"/></g>
+  <text x="97" y="244" class="body">Webcam / mic</text>
+  <text x="97" y="285" class="body">Phone / storage</text>
+  <text x="97" y="326" class="body">HID / Bluetooth</text>
+  <path d="M258 269H273" class="usb"/>
 
-  <text x="748" y="254" text-anchor="middle" font-size="18" font-weight="600" class="cyan">LAN / VPN</text>
-  <path d="M670 294H826" class="usb" marker-start="url(#usb-arrow)"/>
-  <text x="748" y="328" text-anchor="middle" class="body">USB/IP · TCP 3240</text>
-  <text x="748" y="355" text-anchor="middle" class="small muted">Full-duplex USB traffic</text>
+  <rect x="280" y="178" width="300" height="176" rx="12" class="card"/>
+  <use href="#computer" x="298" y="192" width="27" height="27" color="#72e6ef"/>
+  <text x="336" y="213" font-size="22" font-weight="700">Windows server</text>
+  <text x="298" y="250" class="body">Unchanged signed VBoxUSB</text>
+  <rect x="298" y="265" width="264" height="36" rx="7" fill="#1c4352"/>
+  <text x="430" y="289" text-anchor="middle" font-size="18" font-weight="600" class="cyan">Rust Native or usbipd-win</text>
+  <text x="298" y="333" class="small muted">One remote owner per device</text>
 
-  <rect x="852" y="192" width="420" height="208" rx="12" class="card"/>
-  <use href="#computer" x="872" y="209" width="28" height="28" color="#67e4ed"/>
-  <text x="912" y="232" class="title">Windows client(s)</text>
-  <text x="872" y="273" font-size="19">Signed USBIP-WIN2 controller</text>
-  <text x="872" y="308" class="body">Imported USB device → normal apps</text>
-  <text x="872" y="345" class="body muted">Saved selections · automatic reconnect</text>
-  <text x="872" y="378" class="small muted">Multiple clients and servers on the same network</text>
+  <text x="720" y="227" text-anchor="middle" font-size="19" font-weight="600" class="cyan">LAN / VPN</text>
+  <path d="M608 269H832" class="usb" marker-start="url(#usb-arrow)"/>
+  <text x="720" y="304" text-anchor="middle" class="body">USB/IP · TCP 3240</text>
+  <text x="720" y="331" text-anchor="middle" class="small muted">Full-duplex USB traffic</text>
 
-  <text x="48" y="436" class="body muted">Discovery / catalog: UDP/TCP 3241 · Direct IP or saved servers · Optional HTTP(S) / SOCKS5 for USB connections</text>
+  <rect x="860" y="178" width="296" height="176" rx="12" class="card"/>
+  <use href="#computer" x="878" y="192" width="27" height="27" color="#72e6ef"/>
+  <text x="916" y="213" font-size="22" font-weight="700">Windows client(s)</text>
+  <text x="878" y="250" class="body">Signed USBIP-WIN2 controller</text>
+  <text x="878" y="286" class="body">Windows device-class drivers</text>
+  <text x="878" y="322" class="small muted">Imported USB → normal apps</text>
+  <text x="44" y="382" class="small muted">Discovery: UDP 3241 · Device catalog: TCP 3241 · Direct IP / saved servers · Multiple clients and servers</text>
 
-  <!-- Video source: Windows client -> network -> receiver -> local USB camera on server. -->
-  <rect x="24" y="488" width="1272" height="360" rx="18" fill="#171c32" stroke="#494264"/>
-  <circle cx="61" cy="524" r="17" fill="#3a315a"/>
-  <text x="61" y="530" text-anchor="middle" font-size="18" font-weight="700" class="purple">2</text>
-  <text x="92" y="532" class="title">Turn client video into a USB camera on the server</text>
-  <text x="1272" y="530" text-anchor="end" class="body purple">CLIENT → SERVER</text>
+  <!-- Path 2: the producer is on the client; the resulting USB camera is on the server. -->
+  <rect x="24" y="424" width="1152" height="280" rx="18" fill="#1a2035" stroke="#55496f"/>
+  <circle cx="59" cy="459" r="17" fill="#40345f"/>
+  <text x="59" y="465" text-anchor="middle" font-size="18" font-weight="700" class="purple">2</text>
+  <text x="91" y="467" class="heading">Send client video to the server</text>
+  <text x="1152" y="465" text-anchor="end" class="label purple">CLIENT → SERVER</text>
 
-  <rect x="48" y="564" width="224" height="216" rx="12" fill="#29253e" stroke="#70618e"/>
-  <text x="66" y="597" font-size="17" font-weight="600" class="purple">SERVER CAMERA</text>
-  <use href="#camera" x="66" y="615" width="34" height="34" color="#c8baff"/>
-  <text x="66" y="682" font-size="22" font-weight="600">4k web camera</text>
-  <text x="66" y="716" class="body">Use in video apps</text>
-  <text x="66" y="747" class="small muted">Custom name · stable serial</text>
-  <path d="M302 672H280" class="video"/>
+  <rect x="44" y="490" width="400" height="180" rx="12" class="card"/>
+  <text x="64" y="517" class="label purple">CLIENT PC · VIDEO SOURCE</text>
+  <text x="64" y="554" font-size="21" font-weight="600">Unity Capture Server · slot 0</text>
+  <text x="64" y="586" class="body muted">DeepLive / OBS / selected DirectShow source</text>
+  <text x="64" y="623" class="body">Capture → MJPEG encoding → sender</text>
+  <text x="64" y="652" font-size="15" class="muted">Producer + sender in the same Windows user session</text>
 
-  <rect x="312" y="564" width="332" height="216" rx="12" class="card"/>
-  <use href="#computer" x="330" y="581" width="28" height="28" color="#c8baff"/>
-  <text x="370" y="604" class="title">Windows server</text>
-  <text x="330" y="642" class="body">Video receiver → UVC endpoint</text>
-  <text x="330" y="676" class="body purple">Local USB/IP · TCP 13250</text>
-  <text x="330" y="704" class="small muted">Loopback only: 127.0.0.1</text>
-  <text x="330" y="740" class="small">Signed USBIP-WIN2 + usbvideo.sys</text>
-  <text x="330" y="764" class="small muted">DirectShow + Media Foundation name</text>
+  <text x="578" y="525" text-anchor="middle" class="small purple">LAN / VPN</text>
+  <text x="578" y="563" text-anchor="middle" font-size="20" font-weight="600">TCP 13251</text>
+  <path d="M470 590H688" class="video"/>
+  <text x="578" y="625" text-anchor="middle" font-size="17">Authenticated MJPEG</text>
+  <text x="578" y="651" text-anchor="middle" font-size="15" class="muted">Images are not encrypted</text>
 
-  <text x="748" y="623" text-anchor="middle" font-size="18" font-weight="600" class="purple">TCP 13251</text>
-  <path d="M826 672H670" class="video"/>
-  <text x="748" y="708" text-anchor="middle" class="body">MJPEG video</text>
-  <text x="748" y="736" text-anchor="middle" class="small muted">Mutually authenticated</text>
+  <rect x="724" y="490" width="432" height="180" rx="12" fill="#272a43" stroke="#79699b"/>
+  <text x="746" y="517" class="label purple">SERVER PC · USB/UVC CAMERA</text>
+  <use href="#camera" x="746" y="532" width="33" height="33" color="#cebeff"/>
+  <text x="791" y="560" font-size="27" font-weight="600">4k web camera</text>
+  <text x="746" y="594" class="body">Receiver → USB camera → server video apps</text>
+  <text x="746" y="624" class="body purple">Local USB/IP · 127.0.0.1:13250</text>
+  <text x="746" y="652" font-size="17" class="muted">Signed USBIP-WIN2 + inbox usbvideo.sys</text>
+  <text x="44" y="693" class="small muted">The receiver exposes a software USB/UVC endpoint on the server through its signed virtual USB controller.</text>
 
-  <rect x="852" y="564" width="420" height="216" rx="12" class="card"/>
-  <use href="#computer" x="872" y="581" width="28" height="28" color="#c8baff"/>
-  <text x="912" y="604" class="title">Windows client · video source</text>
-  <text x="872" y="642" class="body">Third-party app → OBS / Unity Capture</text>
-  <text x="872" y="674" class="body muted">Or an installed DirectShow camera</text>
-  <text x="872" y="713" class="body">Capture → MJPEG encoding → sender</text>
-  <text x="872" y="748" class="small muted">Producer + sender in the same user session</text>
-  <text x="48" y="817" class="body muted">Independent video path · Name and resolution are separate · Source loss: camera stays connected, black after 2 s</text>
+  <!-- Path 3: an independent sender and receiver, both on the client. -->
+  <rect x="24" y="728" width="1152" height="252" rx="18" fill="#112a2b" stroke="#39605b"/>
+  <circle cx="59" cy="763" r="17" fill="#205646"/>
+  <text x="59" y="769" text-anchor="middle" font-size="18" font-weight="700" class="green">3</text>
+  <text x="91" y="771" class="heading">Keep a second camera on the client</text>
+  <text x="1152" y="769" text-anchor="end" class="label green">CLIENT → SAME CLIENT</text>
 
-  <rect x="24" y="872" width="624" height="124" rx="14" fill="#111e2e" stroke="#344760"/>
-  <text x="48" y="907" font-size="20" font-weight="600" class="cyan">Control &amp; recovery</text>
-  <text x="48" y="940" class="body">GUI / tray / CLI · startup / logon · health checks</text>
-  <text x="48" y="972" class="small muted">Reconnect saved devices and video without replacing the source</text>
-  <rect x="672" y="872" width="624" height="124" rx="14" fill="#111e2e" stroke="#344760"/>
-  <text x="696" y="907" font-size="20" font-weight="600" class="purple">Trust &amp; drivers</text>
-  <text x="696" y="940" class="body">LAN / VPN · video authentication does not encrypt images</text>
-  <text x="696" y="972" class="small muted">Upstream production-signed drivers · Secure Boot can stay enabled</text>
-  <text x="40" y="1028" class="small muted">Ports shown are configurable defaults · Performance depends on hardware, source, drivers and network</text>
+  <rect x="44" y="794" width="400" height="154" rx="12" class="card"/>
+  <text x="64" y="821" class="label green">CLIENT PC · SEPARATE VIDEO SOURCE</text>
+  <text x="64" y="858" font-size="21" font-weight="600">Unity Capture Client · slot 1</text>
+  <text x="64" y="891" class="body">Independent local sender and key</text>
+  <text x="64" y="924" class="small muted">Kept separate from the server video route</text>
+
+  <text x="578" y="818" text-anchor="middle" class="label green">LOOPBACK ONLY</text>
+  <text x="578" y="851" text-anchor="middle" font-size="19" font-weight="600">127.0.0.1:13251</text>
+  <path d="M470 870H688" class="local"/>
+  <text x="578" y="905" text-anchor="middle" font-size="17">Authenticated MJPEG</text>
+  <text x="578" y="931" text-anchor="middle" font-size="15" class="muted">No LAN video connection</text>
+
+  <rect x="724" y="794" width="432" height="154" rx="12" fill="#183a35" stroke="#4f8974"/>
+  <text x="746" y="821" class="label green">CLIENT PC · LOCAL USB/UVC CAMERA</text>
+  <use href="#camera" x="746" y="831" width="33" height="33" color="#86edc4"/>
+  <text x="791" y="858" font-size="27" font-weight="600">2k web camera</text>
+  <text x="746" y="891" class="body">Receiver → USB camera → client video apps</text>
+  <text x="746" y="924" class="body green">Local USB/IP · 127.0.0.1:13250</text>
+  <text x="44" y="971" class="small muted">Each producer output feeds its selected destination; the two routes keep independent senders, keys and settings.</text>
+
+  <!-- Shared camera behavior, including receiver-local silent audio. -->
+  <rect x="24" y="1004" width="1152" height="102" rx="14" fill="#152439" stroke="#3c536c"/>
+  <text x="44" y="1034" font-size="20" font-weight="600">Both USB/UVC cameras</text>
+  <text x="44" y="1062" class="small muted">Editable names · stable serials · inbox camera driver</text>
+  <text x="44" y="1089" font-size="15" class="muted">No frames for 2 s → black; the camera stays connected</text>
+  <path d="M594 1022V1088" stroke="#3c536c"/>
+  <use href="#microphone" x="615" y="1014" width="24" height="24" color="#f1ce91"/>
+  <text x="650" y="1034" font-size="20" font-weight="600">Optional USB microphone</text>
+  <text x="616" y="1062" class="small muted">Off by default · receiver-local 48 kHz mono silence</text>
+  <text x="616" y="1089" font-size="15" class="muted">No physical microphone capture or audio forwarding</text>
+
+  <rect x="24" y="1130" width="568" height="218" rx="14" fill="#111e30" stroke="#354d68"/>
+  <text x="44" y="1165" font-size="22" font-weight="600" class="cyan">Control &amp; recovery</text>
+  <text x="44" y="1198" font-size="17">GUI / tray / CLI · startup · supervisors + health checks</text>
+  <text x="44" y="1228" font-size="17">Saved servers and devices · automatic USB reconnect</text>
+  <text x="44" y="1258" font-size="17">Full Exit stops this role's owned background processes</text>
+  <text x="44" y="1288" class="small muted">Trusted LAN/VPN · IP allowlist · HTTP(S) / SOCKS5 for USB</text>
+  <text x="44" y="1319" class="small muted">OBS / Unity Capture are optional external installations</text>
+
+  <rect x="608" y="1130" width="568" height="218" rx="14" fill="#111e30" stroke="#354d68"/>
+  <text x="628" y="1165" font-size="22" font-weight="600" class="green">Portable + MSI · offline setup</text>
+  <text x="628" y="1198" font-size="17">Copy both launchers with the complete app/ folder</text>
+  <text x="628" y="1228" font-size="17">Bundled signed usbipd-win + USBIP-WIN2 installers</text>
+  <text x="628" y="1258" font-size="17">New PC: fresh server setup; client chooses Keep / New</text>
+  <text x="628" y="1288" class="small muted">Local signature checks · no runtime downloads</text>
+  <text x="628" y="1319" class="small muted">Upstream drivers unchanged · Secure Boot can stay enabled</text>
+
+  <text x="40" y="1378" class="small muted">Ports are configurable defaults. Each PC has its own 13250/13251 pair. Camera names do not set resolution.</text>
+  <text x="40" y="1404" class="small muted">Native is the Rust userspace server; both backends use the same signed capture driver.</text>
 </svg>

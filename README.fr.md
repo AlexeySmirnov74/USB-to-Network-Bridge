@@ -17,7 +17,7 @@ Un redirecteur USB over IP (USB/IP) open source pour Windows 11 x64. Partagez de
 
 **État des agents dans la v0.2.1 :** les contrôleurs serveur et client ont des superviseurs distincts. Un contrôleur arrêté redémarre automatiquement ; un signal de vie figé est détecté après deux minutes. Des tâches indépendantes vérifient aussi les superviseurs chaque minute. Les anciens rapports ne déclarent plus un périphérique connecté. Diagnostic : `usbbridge --config FILE server health` ou `client health`. [Modifications](CHANGELOG.md).
 
-![Architecture USB Bridge : USB physiques du serveur vers les clients et vidéo OBS/Unity Capture du client vers la caméra USB/UVC du serveur ; schéma en anglais](docs/assets/architecture.svg)
+![USB to Network Bridge v0.2.13 : partage USB physique, caméras indépendantes sur le serveur et le client, microphones silencieux et installation hors ligne des pilotes ; schéma en anglais](docs/assets/architecture.svg)
 
 
 **v0.2.3 :** le nom est synchronisé entre DirectShow et Media Foundation. La capture se réveille à l’arrivée d’une image, réutilise des tampons bornés et publie ses temps de traitement. Pour une application source sur le PC client, suivre le [guide OBS/Unity Capture](docs/third-party-video.md) en anglais, avec exemples CLI et consignes pour un autre projet.

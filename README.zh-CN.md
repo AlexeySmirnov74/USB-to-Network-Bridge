@@ -17,7 +17,7 @@
 
 **v0.2.1 代理健康检查：**服务器和客户端控制器分别由监控程序管理。退出的控制器会自动重启；心跳停止两分钟后会被检测到。独立的 Windows 任务每分钟还会检查并恢复监控程序。过期状态不再显示设备已连接。诊断命令：`usbbridge --config FILE server health` 或 `client health`。[更新记录](CHANGELOG.md)。
 
-![USB Bridge 架构：服务器向客户端共享物理 USB 设备，客户端的 OBS/Unity Capture 视频发送到服务器 USB/UVC 摄像头；英文示意图](docs/assets/architecture.svg)
+![USB to Network Bridge v0.2.13：物理 USB 共享、服务器和客户端的独立摄像头、静音麦克风及离线驱动安装；英文示意图](docs/assets/architecture.svg)
 
 
 **v0.2.3：** 摄像头名称在 DirectShow 与 Media Foundation 之间同步。捕获在新帧到达时唤醒，重复使用有容量限制的工作缓冲区，并报告处理耗时。客户端电脑上的第三方视频应用可参考 [OBS/Unity Capture 集成指南](docs/third-party-video.md)（英文），其中包括命令行示例及其他项目的集成任务说明。

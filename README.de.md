@@ -17,7 +17,7 @@ Ein quelloffener USB-over-IP-Redirector (USB/IP) für Windows 11 x64. Teilen Sie
 
 **Agentenprüfung in v0.2.1:** Server- und Client-Controller haben eigene Supervisoren. Beendete Controller starten automatisch neu; ein eingefrorener Heartbeat wird nach zwei Minuten erkannt. Unabhängige Aufgaben prüfen die Supervisoren jede Minute. Veraltete Berichte melden Geräte nicht mehr als verbunden. Diagnose: `usbbridge --config FILE server health` oder `client health`. [Änderungen](CHANGELOG.md).
 
-![USB-Bridge-Architektur: physische USB-Geräte vom Server zu Clients und OBS-/Unity-Capture-Video vom Client zur USB/UVC-Kamera des Servers; englische Grafik](docs/assets/architecture.svg)
+![USB to Network Bridge v0.2.13: physische USB-Freigabe, unabhängige Kameras auf Server und Client, stumme Mikrofone und Offline-Treiberinstallation; englische Grafik](docs/assets/architecture.svg)
 
 
 **v0.2.3:** Kameranamen werden zwischen DirectShow und Media Foundation synchronisiert. Die Aufnahme wacht bei einem neuen Bild auf, verwendet begrenzte Arbeitspuffer erneut und meldet Verarbeitungszeiten. Für eine Videoanwendung auf dem Client-PC gibt es eine [OBS-/Unity-Capture-Anleitung](docs/third-party-video.md) auf Englisch mit CLI-Beispielen und Aufgabenbeschreibung für ein weiteres Projekt.

@@ -17,7 +17,7 @@ An open-source USB over IP (USB/IP) redirector for Windows 11 x64. Share real US
 
 **Agent health in v0.2.1:** server and client controllers run under separate supervisors. Exited controllers restart automatically; stopped heartbeat progress is detected after two minutes. Independent one-minute scheduled checks also recover a missing or stalled supervisor. Stale reports no longer claim a connected device. Use `usbbridge --config FILE server health` or `client health` to inspect current health. See [changes](CHANGELOG.md).
 
-![Windows USB bridge architecture: physical USB devices from server to clients, and OBS/Unity Capture video from a client to the server USB/UVC camera](docs/assets/architecture.svg)
+![USB to Network Bridge v0.2.13: physical USB sharing, independent server and client-local video cameras, optional silent microphones and offline driver setup](docs/assets/architecture.svg)
 
 
 **v0.2.3:** camera names are synchronized across DirectShow and Media Foundation. Video capture wakes when a frame arrives, reuses bounded working buffers and reports processing timings. For a producer running on the client PC, follow the [OBS/Unity Capture integration guide](docs/third-party-video.md), including command-line examples and a handoff task for another project.

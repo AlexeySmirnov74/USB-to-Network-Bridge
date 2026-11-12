@@ -2,6 +2,8 @@
 
 ## 0.2.13
 
+- Refresh the English architecture diagram for both video destinations, silent USB microphones and offline deployment.
+
 - Include the missing pinned GlobalSign issuing CA certificate for offline client-installer verification on a clean Windows PC.
 - Cache only that non-root intermediate under the current user; retain Windows root trust and full cache-only Authenticode verification of the unchanged installer.
 - Add read-only, network-free developer diagnostics for driver certificate chains.
